@@ -1,0 +1,35 @@
+# 忽略构建目录
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+
+# 忽略二进制产物
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+*.lib
+*.pdb
+
+# 忽略编辑器配置
+.idea/
+.vscode/
+.vs/
+
+# 忽略临时或缓存文件
+*.log
+*.tmp
+*~
+.DS_Store
+Thumbs.db
+
+# 忽略 extern 中的构建输出（但保留源码）
+extern/**/build/
+extern/**/bin/
+extern/**/obj/
+extern/**/CMakeFiles/
