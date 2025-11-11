@@ -392,6 +392,17 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
  When you are not sure about an old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2025/11/06 (1.92.5) - BeginChild: commented out some legacy names which were obsoleted in 1.90.0 (Nov 2023), 1.90.9 (July 2024), 1.91.1 (August 2024):
+                         - ImGuiChildFlags_Border                    --> ImGuiChildFlags_Borders
+                         - ImGuiWindowFlags_NavFlattened             --> ImGuiChildFlags_NavFlattened (moved to ImGuiChildFlags). BeginChild(name, size, 0, ImGuiWindowFlags_NavFlattened) --> BeginChild(name, size, ImGuiChildFlags_NavFlattened, 0)
+                         - ImGuiWindowFlags_AlwaysUseWindowPadding   --> ImGuiChildFlags_AlwaysUseWindowPadding (moved to ImGuiChildFlags). BeginChild(name, size, 0, ImGuiWindowFlags_AlwaysUseWindowPadding) --> BeginChild(name, size, ImGuiChildFlags_AlwaysUseWindowPadding, 0)
+ - 2025/11/06 (1.92.5) - Keys: commented out legacy names which were obsoleted in 1.89.0 (August 2022):
+                         - ImGuiKey_ModCtrl  --> ImGuiMod_Ctrl
+                         - ImGuiKey_ModShift --> ImGuiMod_Shift
+                         - ImGuiKey_ModAlt   --> ImGuiMod_Alt
+                         - ImGuiKey_ModSuper --> ImGuiMod_Super
+ - 2025/11/06 (1.92.5) - IO: commented out legacy io.ClearInputCharacters() obsoleted in 1.89.8 (Aug 2023). Calling io.ClearInputKeys() is enough.
+ - 2025/11/06 (1.92.5) - Commented out legacy SetItemAllowOverlap() obsoleted in 1.89.7: this never worked right. Use SetNextItemAllowOverlap() _before_ item instead.
  - 2025/10/14 (1.92.4) - TreeNode, Selectable, Clipper: commented out legacy names which were obsoleted in 1.89.7 (July 2023) and 1.89.9 (Sept 2023);
                          - ImGuiTreeNodeFlags_AllowItemOverlap       --> ImGuiTreeNodeFlags_AllowOverlap
                          - ImGuiSelectableFlags_AllowItemOverlap     --> ImGuiSelectableFlags_AllowOverlap
@@ -437,7 +448,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
                              ImFontConfig cfg2;
                              cfg2.MergeMode = true;
                              io.Fonts->AddFontFromFileTTF("FontAwesome4.ttf", 0.0f, &cfg2);
-                         - You can use `Metrics/Debugger->Fonts->Font->Input Glyphs Overlap Detection Tool` to see list of glyphs available in multiple font sources. This can facilitate unde
+                         - You can use `Metrics/Debugger->Fonts->Font->Input Glyphs Overlap Detection Tool` to see list of glyphs available in multiple font sources. This can facilitate understanding which font input is providing which glyph.
                        - Fonts: **IMPORTANT** on Thread Safety:
                           - A few functions such as font->CalcTextSizeA() were, by sheer luck (== accidentally) thread-safe even thou we had never provided that guarantee. They are definitively not thread-safe anymore as new glyphs may be loaded.
                        - Fonts: ImFont::FontSize was removed and does not make sense anymore. ImFont::LegacySize is the size passed to AddFont().
@@ -1327,7 +1338,7 @@ static void             UpdateFontsEndFrame();
 static void             UpdateTexturesNewFrame();
 static void             UpdateTexturesEndFrame();
 static void             UpdateSettings();
-static int              UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_hovered, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect);
+static int              UpdateWindowManualResize(ImGuiWindow* window, int* border_hovered, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect);
 static void             RenderWindowOuterBorders(ImGuiWindow* window);
 static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, bool handle_borders_and_resize_grips, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size);
 static void             RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open);
@@ -1436,6 +1447,9 @@ ImGuiStyle::ImGuiStyle()
     TreeLinesFlags              = ImGuiTreeNodeFlags_DrawLinesNone;
     TreeLinesSize               = 1.0f;             // Thickness of outlines when using ImGuiTreeNodeFlags_DrawLines.
     TreeLinesRounding           = 0.0f;             // Radius of lines connecting child nodes to the vertical line.
+    DragDropTargetRounding      = 0.0f;             // Radius of the drag and drop target frame.
+    DragDropTargetBorderSize    = 2.0f;             // Thickness of the drag and drop target border.
+    DragDropTargetPadding       = 3.0f;             // Size to expand the drag and drop target from actual target item size.
     ColorButtonPosition         = ImGuiDir_Right;   // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
     ButtonTextAlign             = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.
     SelectableTextAlign         = ImVec2(0.0f,0.0f);// Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
@@ -1500,6 +1514,9 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     TabCloseButtonMinWidthUnselected = (TabCloseButtonMinWidthUnselected > 0.0f && TabCloseButtonMinWidthUnselected != FLT_MAX) ? ImTrunc(TabCloseButtonMinWidthUnselected * scale_factor) : TabCloseButtonMinWidthUnselected;
     TabBarOverlineSize = ImTrunc(TabBarOverlineSize * scale_factor);
     TreeLinesRounding = ImTrunc(TreeLinesRounding * scale_factor);
+    DragDropTargetRounding = ImTrunc(DragDropTargetRounding * scale_factor);
+    DragDropTargetBorderSize = ImTrunc(DragDropTargetBorderSize * scale_factor);
+    DragDropTargetPadding = ImTrunc(DragDropTargetPadding * scale_factor);
     SeparatorTextPadding = ImTrunc(SeparatorTextPadding * scale_factor);
     DisplayWindowPadding = ImTrunc(DisplayWindowPadding * scale_factor);
     DisplaySafeAreaPadding = ImTrunc(DisplaySafeAreaPadding * scale_factor);
@@ -1698,15 +1715,6 @@ void ImGuiIO::ClearInputMouse()
     }
     MouseWheel = MouseWheelH = 0.0f;
 }
-
-// Removed this as it is ambiguous/misleading and generally incorrect to use with the existence of a higher-level input queue.
-// Current frame character buffer is now also cleared by ClearInputKeys().
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-void ImGuiIO::ClearInputCharacters()
-{
-    InputQueueCharacters.resize(0);
-}
-#endif
 
 static ImGuiInputEvent* FindLatestInputEvent(ImGuiContext* ctx, ImGuiInputEventType type, int arg = -1)
 {
@@ -3711,6 +3719,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_TextSelectedBg: return "TextSelectedBg";
     case ImGuiCol_TreeLines: return "TreeLines";
     case ImGuiCol_DragDropTarget: return "DragDropTarget";
+    case ImGuiCol_DragDropTargetBg: return "DragDropTargetBg";
     case ImGuiCol_UnsavedMarker: return "UnsavedMarker";
     case ImGuiCol_NavCursor: return "NavCursor";
     case ImGuiCol_NavWindowingHighlight: return "NavWindowingHighlight";
@@ -4181,7 +4190,7 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     DragDropMouseButton = -1;
     DragDropTargetId = 0;
     DragDropTargetFullViewport = 0;
-    DragDropAcceptFlags = ImGuiDragDropFlags_None;
+    DragDropAcceptFlagsCurr = DragDropAcceptFlagsPrev = ImGuiDragDropFlags_None;
     DragDropAcceptIdCurrRectSurface = 0.0f;
     DragDropAcceptIdPrev = DragDropAcceptIdCurr = 0;
     DragDropAcceptFrameCount = -1;
@@ -4275,6 +4284,11 @@ ImGuiContext::ImGuiContext(ImFontAtlas* shared_font_atlas)
     FramerateSecPerFrameAccum = 0.0f;
     WantCaptureMouseNextFrame = WantCaptureKeyboardNextFrame = WantTextInputNextFrame = -1;
     memset(TempKeychordName, 0, sizeof(TempKeychordName));
+}
+
+ImGuiContext::~ImGuiContext()
+{
+    IM_ASSERT(Initialized == false && "Forgot to call DestroyContext()?");
 }
 
 void ImGui::Initialize()
@@ -5514,6 +5528,8 @@ void ImGui::NewFrame()
     // Drag and drop
     g.DragDropAcceptIdPrev = g.DragDropAcceptIdCurr;
     g.DragDropAcceptIdCurr = 0;
+    g.DragDropAcceptFlagsPrev = g.DragDropAcceptFlagsCurr;
+    g.DragDropAcceptFlagsCurr = ImGuiDragDropFlags_None;
     g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
     g.DragDropWithinSource = false;
     g.DragDropWithinTarget = false;
@@ -5865,9 +5881,9 @@ void ImGui::EndFrame()
     ImGuiPlatformImeData* ime_data = &g.PlatformImeData;
     if (g.PlatformIO.Platform_SetImeDataFn != NULL && memcmp(ime_data, &g.PlatformImeDataPrev, sizeof(ImGuiPlatformImeData)) != 0)
     {
-        IMGUI_DEBUG_LOG_IO("[io] Calling Platform_SetImeDataFn(): WantVisible: %d, InputPos (%.2f,%.2f)\n", ime_data->WantVisible, ime_data->InputPos.x, ime_data->InputPos.y);
         IM_ASSERT(ime_data->ViewportId == IMGUI_VIEWPORT_DEFAULT_ID); // master branch
         ImGuiViewport* viewport = GetMainViewport();
+        IMGUI_DEBUG_LOG_IO("[io] Calling Platform_SetImeDataFn(): WantVisible: %d, InputPos (%.2f,%.2f) for Viewport 0x%08X\n", ime_data->WantVisible, ime_data->InputPos.x, ime_data->InputPos.y, viewport->ID);
         g.PlatformIO.Platform_SetImeDataFn(&g, viewport, ime_data);
     }
     g.WantTextInputNextFrame = ime_data->WantTextInput ? 1 : 0;
@@ -6214,16 +6230,16 @@ void ImGui::SetNextItemAllowOverlap()
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 // Allow last item to be overlapped by a subsequent item. Both may be activated during the same frame before the later one takes priority.
-// FIXME-LEGACY: Use SetNextItemAllowOverlap() *before* your item instead.
-void ImGui::SetItemAllowOverlap()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiID id = g.LastItemData.ID;
-    if (g.HoveredId == id)
-        g.HoveredIdAllowOverlap = true;
-    if (g.ActiveId == id) // Before we made this obsolete, most calls to SetItemAllowOverlap() used to avoid this path by testing g.ActiveId != id.
-        g.ActiveIdAllowOverlap = true;
-}
+// Use SetNextItemAllowOverlap() *before* your item instead of calling this!
+//void ImGui::SetItemAllowOverlap()
+//{
+//    ImGuiContext& g = *GImGui;
+//    ImGuiID id = g.LastItemData.ID;
+//    if (g.HoveredId == id)
+//        g.HoveredIdAllowOverlap = true;
+//    if (g.ActiveId == id) // Before we made this obsolete, most calls to SetItemAllowOverlap() used to avoid this path by testing g.ActiveId != id.
+//        g.ActiveIdAllowOverlap = true;
+//}
 #endif
 
 // This is a shortcut for not taking ownership of 100+ keys, frequently used by drag operations.
@@ -6291,10 +6307,10 @@ bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, I
         IM_ASSERT((child_flags & (ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY)) != 0 && "Must use ImGuiChildFlags_AutoResizeX or ImGuiChildFlags_AutoResizeY with ImGuiChildFlags_AlwaysAutoResize!");
     }
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    if (window_flags & ImGuiWindowFlags_AlwaysUseWindowPadding)
-        child_flags |= ImGuiChildFlags_AlwaysUseWindowPadding;
-    if (window_flags & ImGuiWindowFlags_NavFlattened)
-        child_flags |= ImGuiChildFlags_NavFlattened;
+    //if (window_flags & ImGuiWindowFlags_AlwaysUseWindowPadding)
+    //    child_flags |= ImGuiChildFlags_AlwaysUseWindowPadding;
+    //if (window_flags & ImGuiWindowFlags_NavFlattened)
+    //    child_flags |= ImGuiChildFlags_NavFlattened;
 #endif
     if (child_flags & ImGuiChildFlags_AutoResizeX)
         child_flags &= ~ImGuiChildFlags_ResizeX;
@@ -6609,14 +6625,16 @@ static void CalcWindowContentSizes(ImGuiWindow* window, ImVec2* content_size_cur
     content_size_ideal->y = (window->ContentSizeExplicit.y != 0.0f) ? window->ContentSizeExplicit.y : ImTrunc64(ImMax(window->DC.CursorMaxPos.y, window->DC.IdealMaxPos.y) - window->DC.CursorStartPos.y);
 }
 
-static ImVec2 CalcWindowAutoFitSize(ImGuiWindow* window, const ImVec2& size_contents)
+static ImVec2 CalcWindowAutoFitSize(ImGuiWindow* window, const ImVec2& size_contents, int axis_mask)
 {
     ImGuiContext& g = *GImGui;
     ImGuiStyle& style = g.Style;
     const float decoration_w_without_scrollbars = window->DecoOuterSizeX1 + window->DecoOuterSizeX2 - window->ScrollbarSizes.x;
     const float decoration_h_without_scrollbars = window->DecoOuterSizeY1 + window->DecoOuterSizeY2 - window->ScrollbarSizes.y;
     ImVec2 size_pad = window->WindowPadding * 2.0f;
-    ImVec2 size_desired = size_contents + size_pad + ImVec2(decoration_w_without_scrollbars, decoration_h_without_scrollbars);
+    ImVec2 size_desired;
+    size_desired[ImGuiAxis_X] = (axis_mask & 1) ? size_contents.x + size_pad.x + decoration_w_without_scrollbars : window->Size.x;
+    size_desired[ImGuiAxis_Y] = (axis_mask & 2) ? size_contents.y + size_pad.y + decoration_h_without_scrollbars : window->Size.y;
 
     // Determine maximum window size
     // Child windows are layed within their parent (unless they are also popups/menus) and thus have no restriction
@@ -6658,7 +6676,7 @@ ImVec2 ImGui::CalcWindowNextAutoFitSize(ImGuiWindow* window)
     ImVec2 size_contents_current;
     ImVec2 size_contents_ideal;
     CalcWindowContentSizes(window, &size_contents_current, &size_contents_ideal);
-    ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, size_contents_ideal);
+    ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, size_contents_ideal, ~0);
     ImVec2 size_final = CalcWindowSizeAfterConstraint(window, size_auto_fit);
     return size_final;
 }
@@ -6764,7 +6782,7 @@ ImGuiID ImGui::GetWindowResizeBorderID(ImGuiWindow* window, ImGuiDir dir)
 
 // Handle resize for: Resize Grips, Borders, Gamepad
 // Return true when using auto-fit (double-click on resize grip)
-static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_hovered, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect)
+static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, int* border_hovered, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindowFlags flags = window->Flags;
@@ -6814,6 +6832,7 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
         if (held && g.IO.MouseDoubleClicked[0])
         {
             // Auto-fit when double-clicking
+            ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal, ~0);
             size_target = CalcWindowSizeAfterConstraint(window, size_auto_fit);
             ret_auto_fit_mask = 0x03; // Both axes
             ClearActiveID();
@@ -6860,10 +6879,10 @@ static int ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& si
         if (held && g.IO.MouseDoubleClicked[0])
         {
             // Double-clicking bottom or right border auto-fit on this axis
-            // FIXME: CalcWindowAutoFitSize() doesn't take into account that only one side may be auto-fit when calculating scrollbars.
             // FIXME: Support top and right borders: rework CalcResizePosSizeFromAnyCorner() to be reusable in both cases.
             if (border_n == 1 || border_n == 3) // Right and bottom border
             {
+                ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal, 1 << axis);
                 size_target[axis] = CalcWindowSizeAfterConstraint(window, size_auto_fit)[axis];
                 ret_auto_fit_mask |= (1 << axis);
                 hovered = held = false; // So border doesn't show highlighted at new position
@@ -7559,7 +7578,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->ScrollbarSizes = ImVec2(0.0f, 0.0f);
 
         // Calculate auto-fit size, handle automatic resize
-        const ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal);
+        const ImVec2 size_auto_fit = CalcWindowAutoFitSize(window, window->ContentSizeIdeal, ~0);
         if ((flags & ImGuiWindowFlags_AlwaysAutoResize) && !window->Collapsed)
         {
             // Using SetNextWindowSize() overrides ImGuiWindowFlags_AlwaysAutoResize, so it can be used on tooltips/popups, etc.
@@ -7692,7 +7711,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         const float resize_grip_draw_size = IM_TRUNC(ImMax(g.FontSize * 1.10f, window->WindowRounding + 1.0f + g.FontSize * 0.2f));
         if (handle_borders_and_resize_grips && !window->Collapsed)
-            if (int auto_fit_mask = UpdateWindowManualResize(window, size_auto_fit, &border_hovered, &border_held, resize_grip_count, &resize_grip_col[0], visibility_rect))
+            if (int auto_fit_mask = UpdateWindowManualResize(window, &border_hovered, &border_held, resize_grip_count, &resize_grip_col[0], visibility_rect))
             {
                 if (auto_fit_mask & (1 << ImGuiAxis_X))
                     use_current_size_for_scrollbar_x = true;
@@ -7942,9 +7961,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             g.TooltipPreviousWindow = window;
 
         // Set default BgClickFlags
-        // This is set at the end of this function, so UpdateManualResize()/ClampWindowPos() may use last-frame value if overriden by user code.
+        // This is set at the end of this function, so UpdateWindowManualResize()/ClampWindowPos() may use last-frame value if overriden by user code.
         // FIXME: The general intent is that we will later expose config options to default to enable scrolling + select scrolling mouse button.
-        window->BgClickFlags = g.IO.ConfigWindowsMoveFromTitleBarOnly ? ImGuiWindowBgClickFlags_None : ImGuiWindowBgClickFlags_Move;
+        window->BgClickFlags = (flags & ImGuiWindowFlags_ChildWindow) ? parent_window->BgClickFlags : (g.IO.ConfigWindowsMoveFromTitleBarOnly ? ImGuiWindowBgClickFlags_None : ImGuiWindowBgClickFlags_Move);
 
         // We fill last item data based on Title Bar/Tab, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
         // This is useful to allow creating context menus on title bar only, etc.
@@ -11115,7 +11134,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg, ImGu
         // If we crash on a NULL g.NavWindow we need to fix the bug elsewhere.
         if (!(g.LastItemData.ItemFlags & ImGuiItemFlags_NoNav))
         {
-            // FIMXE-NAV: investigate changing the window tests into a simple 'if (g.NavFocusScopeId == g.CurrentFocusScopeId)' test.
+            // FIXME-NAV: investigate changing the window tests into a simple 'if (g.NavFocusScopeId == g.CurrentFocusScopeId)' test.
             window->DC.NavLayersActiveMaskNext |= (1 << window->DC.NavLayerCurrent);
             if (g.NavId == id || g.NavAnyRequest)
                 if (g.NavWindow->RootWindowForNav == window->RootWindowForNav)
@@ -11897,7 +11916,7 @@ bool ImGui::BeginTooltipEx(ImGuiTooltipFlags tooltip_flags, ImGuiWindowFlags ext
         }
 
         SetNextWindowBgAlpha(g.Style.Colors[ImGuiCol_PopupBg].w * 0.60f);
-        //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.60f); // This would be nice but e.g ColorButton with checkboard has issue with transparent colors :(
+        //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.60f); // This would be nice but e.g ColorButton with checkerboard has issue with transparent colors :(
         tooltip_flags |= ImGuiTooltipFlags_OverridePrevious;
     }
 
@@ -12454,10 +12473,10 @@ ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& s
     // Combo Box policy (we want a connecting edge)
     if (policy == ImGuiPopupPositionPolicy_ComboBox)
     {
-        const ImGuiDir dir_prefered_order[ImGuiDir_COUNT] = { ImGuiDir_Down, ImGuiDir_Right, ImGuiDir_Left, ImGuiDir_Up };
+        const ImGuiDir dir_preferred_order[ImGuiDir_COUNT] = { ImGuiDir_Down, ImGuiDir_Right, ImGuiDir_Left, ImGuiDir_Up };
         for (int n = (*last_dir != ImGuiDir_None) ? -1 : 0; n < ImGuiDir_COUNT; n++)
         {
-            const ImGuiDir dir = (n == -1) ? *last_dir : dir_prefered_order[n];
+            const ImGuiDir dir = (n == -1) ? *last_dir : dir_preferred_order[n];
             if (n != -1 && dir == *last_dir) // Already tried this direction?
                 continue;
             ImVec2 pos;
@@ -12476,10 +12495,10 @@ ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& s
     // (Always first try the direction we used on the last frame, if any)
     if (policy == ImGuiPopupPositionPolicy_Tooltip || policy == ImGuiPopupPositionPolicy_Default)
     {
-        const ImGuiDir dir_prefered_order[ImGuiDir_COUNT] = { ImGuiDir_Right, ImGuiDir_Down, ImGuiDir_Up, ImGuiDir_Left };
+        const ImGuiDir dir_preferred_order[ImGuiDir_COUNT] = { ImGuiDir_Right, ImGuiDir_Down, ImGuiDir_Up, ImGuiDir_Left };
         for (int n = (*last_dir != ImGuiDir_None) ? -1 : 0; n < ImGuiDir_COUNT; n++)
         {
-            const ImGuiDir dir = (n == -1) ? *last_dir : dir_prefered_order[n];
+            const ImGuiDir dir = (n == -1) ? *last_dir : dir_preferred_order[n];
             if (n != -1 && dir == *last_dir) // Already tried this direction?
                 continue;
 
@@ -14538,7 +14557,7 @@ void ImGui::ClearDragDrop()
         IMGUI_DEBUG_LOG_ACTIVEID("[dragdrop] ClearDragDrop()\n");
     g.DragDropActive = false;
     g.DragDropPayload.Clear();
-    g.DragDropAcceptFlags = ImGuiDragDropFlags_None;
+    g.DragDropAcceptFlagsCurr = ImGuiDragDropFlags_None;
     g.DragDropAcceptIdCurr = g.DragDropAcceptIdPrev = 0;
     g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
     g.DragDropAcceptFrameCount = -1;
@@ -14667,11 +14686,11 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
         // Target can request the Source to not display its tooltip (we use a dedicated flag to make this request explicit)
         // We unfortunately can't just modify the source flags and skip the call to BeginTooltip, as caller may be emitting contents.
         bool ret;
-        if (g.DragDropAcceptIdPrev && (g.DragDropAcceptFlags & ImGuiDragDropFlags_AcceptNoPreviewTooltip))
+        if (g.DragDropAcceptIdPrev && (g.DragDropAcceptFlagsPrev & ImGuiDragDropFlags_AcceptNoPreviewTooltip))
             ret = BeginTooltipHidden();
         else
             ret = BeginTooltip();
-        IM_ASSERT(ret); // FIXME-NEWBEGIN: If this ever becomes false, we need to Begin("##Hidden", NULL, ImGuiWindowFlags_NoSavedSettings) + SetWindowHiddendAndSkipItemsForCurrentFrame().
+        IM_ASSERT(ret); // FIXME-NEWBEGIN: If this ever becomes false, we need to Begin("##Hidden", NULL, ImGuiWindowFlags_NoSavedSettings) + SetWindowHiddenAndSkipItemsForCurrentFrame().
         IM_UNUSED(ret);
     }
 
@@ -14848,7 +14867,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     if (r_surface > g.DragDropAcceptIdCurrRectSurface)
         return NULL;
 
-    g.DragDropAcceptFlags = flags;
+    g.DragDropAcceptFlagsCurr = flags;
     g.DragDropAcceptIdCurr = g.DragDropTargetId;
     g.DragDropAcceptIdCurrRectSurface = r_surface;
     //IMGUI_DEBUG_LOG("AcceptDragDropPayload(): %08X: accept\n", g.DragDropTargetId);
@@ -14888,7 +14907,7 @@ void ImGui::RenderDragDropTargetRectForItem(const ImRect& bb)
     ImGuiWindow* window = g.CurrentWindow;
     ImRect bb_display = bb;
     bb_display.ClipWith(g.DragDropTargetClipRect); // Clip THEN expand so we have a way to visualize that target is not entirely visible.
-    bb_display.Expand(3.5f);
+    bb_display.Expand(g.Style.DragDropTargetPadding);
     bool push_clip_rect = !window->ClipRect.Contains(bb_display);
     if (push_clip_rect)
         window->DrawList->PushClipRectFullScreen();
@@ -14899,7 +14918,9 @@ void ImGui::RenderDragDropTargetRectForItem(const ImRect& bb)
 
 void ImGui::RenderDragDropTargetRectEx(ImDrawList* draw_list, const ImRect& bb)
 {
-    draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTarget), 0.0f, 0, 2.0f); // FIXME-DPI
+    ImGuiContext& g = *GImGui;
+    draw_list->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTargetBg), g.Style.DragDropTargetRounding, 0);
+    draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_DragDropTarget), g.Style.DragDropTargetRounding, 0, g.Style.DragDropTargetBorderSize);
 }
 
 const ImGuiPayload* ImGui::GetDragDropPayload()
@@ -16416,7 +16437,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
                 BulletText("Table 0x%08X (%d columns, in '%s')", table->ID, table->ColumnsCount, table->OuterWindow->Name);
                 if (IsItemHovered())
-                    GetForegroundDrawList()->AddRect(table->OuterRect.Min - ImVec2(1, 1), table->OuterRect.Max + ImVec2(1, 1), IM_COL32(255, 255, 0, 255), 0.0f, 0, 2.0f);
+                    GetForegroundDrawList(table->OuterWindow)->AddRect(table->OuterRect.Min - ImVec2(1, 1), table->OuterRect.Max + ImVec2(1, 1), IM_COL32(255, 255, 0, 255), 0.0f, 0, 2.0f);
                 Indent();
                 char buf[128];
                 for (int rect_n = 0; rect_n < TRT_Count; rect_n++)
@@ -16431,7 +16452,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                             ImFormatString(buf, IM_ARRAYSIZE(buf), "(%6.1f,%6.1f) (%6.1f,%6.1f) Size (%6.1f,%6.1f) Col %d %s", r.Min.x, r.Min.y, r.Max.x, r.Max.y, r.GetWidth(), r.GetHeight(), column_n, trt_rects_names[rect_n]);
                             Selectable(buf);
                             if (IsItemHovered())
-                                GetForegroundDrawList()->AddRect(r.Min - ImVec2(1, 1), r.Max + ImVec2(1, 1), IM_COL32(255, 255, 0, 255), 0.0f, 0, 2.0f);
+                                GetForegroundDrawList(table->OuterWindow)->AddRect(r.Min - ImVec2(1, 1), r.Max + ImVec2(1, 1), IM_COL32(255, 255, 0, 255), 0.0f, 0, 2.0f);
                         }
                     }
                     else
@@ -16440,7 +16461,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                         ImFormatString(buf, IM_ARRAYSIZE(buf), "(%6.1f,%6.1f) (%6.1f,%6.1f) Size (%6.1f,%6.1f) %s", r.Min.x, r.Min.y, r.Max.x, r.Max.y, r.GetWidth(), r.GetHeight(), trt_rects_names[rect_n]);
                         Selectable(buf);
                         if (IsItemHovered())
-                            GetForegroundDrawList()->AddRect(r.Min - ImVec2(1, 1), r.Max + ImVec2(1, 1), IM_COL32(255, 255, 0, 255), 0.0f, 0, 2.0f);
+                            GetForegroundDrawList(table->OuterWindow)->AddRect(r.Min - ImVec2(1, 1), r.Max + ImVec2(1, 1), IM_COL32(255, 255, 0, 255), 0.0f, 0, 2.0f);
                     }
                 }
                 Unindent();
@@ -17328,7 +17349,7 @@ void ImGui::DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label)
     if (!is_active) { PopStyleColor(); }
     if (is_active && IsItemHovered())
     {
-        ImDrawList* draw_list = GetForegroundDrawList();
+        ImDrawList* draw_list = GetForegroundDrawList(tab_bar->Window);
         draw_list->AddRect(tab_bar->BarRect.Min, tab_bar->BarRect.Max, IM_COL32(255, 255, 0, 255));
         draw_list->AddLine(ImVec2(tab_bar->ScrollingRectMinX, tab_bar->BarRect.Min.y), ImVec2(tab_bar->ScrollingRectMinX, tab_bar->BarRect.Max.y), IM_COL32(0, 255, 0, 255));
         draw_list->AddLine(ImVec2(tab_bar->ScrollingRectMaxX, tab_bar->BarRect.Min.y), ImVec2(tab_bar->ScrollingRectMaxX, tab_bar->BarRect.Max.y), IM_COL32(0, 255, 0, 255));

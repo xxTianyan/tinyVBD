@@ -53,7 +53,6 @@
 #include "imgui_impl_wgpu.h"
 #include <limits.h>
 #include <stdio.h>
-#include <webgpu/webgpu.h>
 
 // One of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be provided. See imgui_impl_wgpu.h for more details.
 #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) == defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
@@ -1016,7 +1015,7 @@ void ImGui_ImplWGPU_DebugPrintAdapterInfo(const WGPUAdapter& adapter)
     wgpuAdapterInfoFreeMembers(info);
 }
 
-#if defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU) || defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) && !defined(__EMSCRIPTEN__)
+#ifndef __EMSCRIPTEN__
 
 #if defined(__APPLE__)
 // MacOS specific: is necessary to compile with "-x objective-c++" flags
@@ -1080,7 +1079,7 @@ WGPUSurface ImGui_ImplWGPU_CreateWGPUSurfaceHelper(ImGui_ImplWGPU_CreateSurfaceI
 #endif
     return surface;
 }
-#endif
+#endif // #ifndef __EMSCRIPTEN__
 
 //-----------------------------------------------------------------------------
 
