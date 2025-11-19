@@ -8,9 +8,15 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include <unordered_map>
 #include "Types.h"
 
+struct tetrahedron {
+    std::array<VertexId, 4> vertices{0,0,0,0};
+
+    tetrahedron() = default;
+    tetrahedron(const VertexId vtex1, const VertexId vtex2, const VertexId vtex3, const VertexId vtex4) :
+    vertices{vtex1, vtex2, vtex3, vtex4} {};
+};
 
 struct mesh_on_cpu {
     std::vector<float> px, py, pz;  // last frame pos
@@ -20,6 +26,12 @@ struct mesh_on_cpu {
     std::vector<float> nx, ny, nz;  // normal
 
     [[nodiscard]] inline size_t size() const {return nx.size();}
+
+    std::vector<tetrahedron> m_tets_local;
+    std::vector<VertexId> m_surface_tris_local;  // for rendering
+    std::vector<float> m_normals;
+
+    size_t base_offest = 0;
 
     void resize(size_t n) {
         auto rsf = [&](auto& v){ v.resize(n); };
@@ -31,19 +43,6 @@ struct mesh_on_cpu {
     }
 };
 
-struct mesh_on_gpu {
-    std::vector<float> vertices;
-    std::vector<float> norm;
-};
-
-struct tetrahedron {
-    std::array<VertexId, 4> vertices{0,0,0,0};
-
-    tetrahedron() = default;
-    tetrahedron(const VertexId vtex1, const VertexId vtex2, const VertexId vtex3, const VertexId vtex4) :
-    vertices{vtex1, vtex2, vtex3, vtex4} {};
-};
-
 struct NodeTetAdj {
     IndexBuffer offsets;
     IndexBuffer incidentTets;
@@ -51,14 +50,12 @@ struct NodeTetAdj {
 
 NodeTetAdj buildNodeTetAdj(size_t num_nodes, const std::vector<tetrahedron>& tets);
 
-std::vector<tetrahedron> ParseMSH(const std::string& path, mesh_on_cpu& cpu_mesh);
+void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh);
 
-IndexBuffer ParseOBJ(const std::string& path, size_t num_nodes);
-
-std::vector<float> ComputeNormal(mesh_on_cpu& cpu_mesh, const IndexBuffer& tri_indices);
+std::vector<float> ComputeNormal(mesh_on_cpu* cpu_mesh);
 
 IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets);
 
-std::vector<float> assemble_vertices(const mesh_on_cpu& cpu_mesh);
+std::vector<float> assemble_vertices(const mesh_on_cpu* cpu_mesh);
 
 #endif //MESHLOADER_HPP

@@ -60,7 +60,9 @@ target_link_libraries(rlImGui PUBLIC raylib imgui)
 
 # ---------- My executable ----------
 add_executable(tinyVBD src/main.cpp
-        src/Mesh.cpp)
+        src/Mesh.cpp
+        src/World.cpp
+        src/BroadPhase.cpp)
 
 target_include_directories(tinyVBD
         PRIVATE
