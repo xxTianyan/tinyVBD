@@ -14,7 +14,7 @@ set(EXTERN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/extern")
 message(STATUS "EXTERN_DIR = ${EXTERN_DIR}")
 
 # -----------  Eigen --------------
-set(EIGEN_DIR "${EXTERN_DIR}/eigen-master")
+set(EIGEN_DIR "${EXTERN_DIR}/eigen-3.4.0")
 if(NOT EXISTS "${EIGEN_DIR}/Eigen/Core")
     message(FATAL_ERROR
             "Eigen not found in ${EIGEN_DIR}\n"

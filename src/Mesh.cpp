@@ -3,6 +3,7 @@
 //
 
 #include "Mesh.h"
+#include <fstream>
 
 static std::string trim(const std::string& str) {
     const size_t a = str.find_first_not_of("\t\r\n");

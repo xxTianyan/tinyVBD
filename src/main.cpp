@@ -2,6 +2,8 @@
 #include "Mesh.h"
 #include "Types.h"
 #include <functional>
+#include <memory>
+
 #include "World.h"
 #include "RenderHelper.hpp"
 #include "BroadPhase.h"
@@ -145,7 +147,7 @@ int main(){
                                      SphericalToCartesian(orbit.radius, orbit.yaw, orbit.pitch));
 
         // 维持世界上方向
-        camera.up = (Vector3){0,1,0};
+        camera.up = {0,1,0};
 
         BeginDrawing();
 
