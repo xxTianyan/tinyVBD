@@ -2,12 +2,13 @@
 // Created by 徐天焱 on 2025/11/4.
 //
 
-#ifndef MESHLOADER_HPP
-#define MESHLOADER_HPP
+#ifndef MESHLOADER_H
+#define MESHLOADER_H
 
 #include <vector>
 #include <string>
 #include <fstream>
+#include <array>
 #include "Types.h"
 
 struct tetrahedron {
@@ -58,4 +59,4 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets);
 
 std::vector<float> assemble_vertices(const mesh_on_cpu* cpu_mesh);
 
-#endif //MESHLOADER_HPP
+#endif //MESHLOADER_H

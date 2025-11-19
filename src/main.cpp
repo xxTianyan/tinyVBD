@@ -38,9 +38,9 @@ int main(){
 
     // Define the camera to look into our 3d world
     Camera3D camera = {0};
-    camera.position = (Vector3){ 1.5f, 1.5f, 1.5f }; // Camera position
-    camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };      // Camera looking at point
-    camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
+    camera.position = Vector3{ 1.5f, 1.5f, 1.5f }; // Camera position
+    camera.target = Vector3{ 0.0f, 0.0f, 0.0f };      // Camera looking at point
+    camera.up = Vector3{ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 45.0f;                                // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
     DisableCursor();                    // Limit cursor to relative movement inside the window
@@ -53,12 +53,12 @@ int main(){
     ClampPitch(&pitch);
 
     OrbitCtrl orbit = {
-        .yaw = yaw,
-        .pitch = pitch,
-        .radius = radius > 0.001f ? radius : 3.0f, // 防止零半径
-        .rotSens  = 0.0035f,   // 旋转灵敏度（鼠标像素 -> 弧度）
-        .zoomSens = 0.12f,     // 滚轮每格的比例缩放
-        .panSens  = 0.0025f    // 中键平移灵敏度
+        yaw,
+        pitch,
+        radius > 0.001f ? radius : 3.0f, // 防止零半径
+        0.0035f,   // 旋转灵敏度（鼠标像素 -> 弧度）
+        0.12f,     // 滚轮每格的比例缩放
+        0.0025f    // 中键平移灵敏度
     };
 
     SetTargetFPS(60);                   // run at 60 frames-per-second

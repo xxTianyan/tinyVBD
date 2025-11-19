@@ -2,8 +2,8 @@
 // Created by 徐天焱 on 2025/11/5.
 //
 
-#ifndef HELPER_H
-#define HELPER_H
+#ifndef RENDERHELPER_H
+#define RENDERHELPER_H
 
 #include <iostream>
 #include <raylib.h>
@@ -126,4 +126,4 @@ static std::vector<Model> upload_all_models(const World& world)
 }
 
 
-#endif //HELPER_H
+#endif //RENDERHELPER_H
