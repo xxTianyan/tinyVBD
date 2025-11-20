@@ -45,8 +45,7 @@ inline Vector3 SphericalToCartesian(const float r, const float yaw, const float 
 inline void ReframeToModel(Camera3D *cam,
                            OrbitCtrl *orbit,
                            const std::vector<Model> &models,
-                           const float margin)
-{
+                           const float margin) {
     if (!cam || !orbit || models.empty()) return;
 
     BoundingBox box0 = GetModelBoundingBox(models[0]);
@@ -85,9 +84,8 @@ inline void ReframeToModel(Camera3D *cam,
 }
 
 
-// 把一个 mesh_on_cpu 变成 GPU Mesh + Model（动态可更新）
-static Model upload_model_from_cpu_mesh(mesh_on_cpu* M)
-{
+// turn mesh_on_cpu into GPU Mesh + Model (dynamic)
+static Model upload_model_from_cpu_mesh(mesh_on_cpu* M) {
     Mesh gmsh = {0};
     gmsh.vertexCount   = static_cast<int>(M->size());
     gmsh.triangleCount = static_cast<int>(M->m_surface_tris_local.size() / 3);
@@ -115,8 +113,7 @@ static Model upload_model_from_cpu_mesh(mesh_on_cpu* M)
 
 
 // 把 World 里的每个 mesh_on_cpu 都上传成一个 Model
-static std::vector<Model> upload_all_models(const World& world)
-{
+static std::vector<Model> upload_all_models(const World& world) {
     std::vector<Model> models;
     models.reserve(world.meshes.size());
     for (auto& up : world.meshes) {

@@ -30,6 +30,7 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
         if (line == "$Nodes") {
             size_t num_nodes = 0;
             in >> num_nodes;
+            if (num_nodes > INVALID_VERTEX_ID) throw std::runtime_error("Too Much nodes for a single mesh.");
             cpu_mesh->resize(num_nodes);
             for (size_t i = 0; i < num_nodes; i++) {
                 size_t dummy;
@@ -42,9 +43,23 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
             in >> num_tets;
             cpu_mesh->m_tets_local.reserve(num_tets);
             for (size_t i = 0; i < num_tets; i++) {
-                VertexId idx, v1, v2, v3, v4, dummy;
-                in >> idx >> dummy >> dummy >> v1 >> v2 >> v3 >> v4;
-                cpu_mesh->m_tets_local.emplace_back(v1-1, v2-1, v3-1, v4-1);
+                unsigned long idx_l, v1_l, v2_l, v3_l, v4_l, dummy_l;
+
+                in >> idx_l >> dummy_l >> dummy_l >> v1_l >> v2_l >> v3_l >> v4_l;
+
+                if (!isValidVertexId(v1_l) ||
+                    !isValidVertexId(v2_l) ||
+                    !isValidVertexId(v3_l) ||
+                    !isValidVertexId(v4_l)) {
+                    throw std::runtime_error("Invalid vertex id");
+                    }
+
+                const auto v1 = static_cast<VertexId>(v1_l);
+                const auto v2 = static_cast<VertexId>(v2_l);
+                const auto v3 = static_cast<VertexId>(v3_l);
+                const auto v4 = static_cast<VertexId>(v4_l);
+
+                cpu_mesh->m_tets_local.emplace_back(v1 - 1, v2 - 1, v3 - 1, v4 - 1);
             }
             have_tets = true;
         }
@@ -60,7 +75,8 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
     cpu_mesh->m_surface_tris_local = BuildSurfaceTriangles(cpu_mesh->m_tets_local);
 }
 
-NodeTetAdj buildNodeTetAdj(const size_t num_nodes, const std::vector<tetrahedron>& tets) {
+NodeTetAdj BuildNodeTetAdj(const size_t num_nodes, const std::vector<tetrahedron>& tets) {
+
     NodeTetAdj adj;
     adj.offsets.assign(num_nodes+1, 0);
 
@@ -77,13 +93,13 @@ NodeTetAdj buildNodeTetAdj(const size_t num_nodes, const std::vector<tetrahedron
 
     adj.incidentTets.resize(adj.offsets.back());
 
-    IndexBuffer cursor = adj.offsets;
+    auto cursor = adj.offsets;
 
     for (size_t i = 0; i < tets.size(); i++) {
         for (size_t k = 0; k < 4; k++) {
             const VertexId v = tets[i].vertices[k];
-            const VertexId c = cursor[v]++;
-            adj.incidentTets[c] = static_cast<VertexId>(i);
+            const uint32_t c = cursor[v]++;
+            adj.incidentTets[c] = static_cast<uint32_t>(i);
         }
     }
     return adj;

@@ -19,9 +19,8 @@ if(NOT EXISTS "${EIGEN_DIR}/Eigen/Core")
     message(FATAL_ERROR
             "Eigen not found in ${EIGEN_DIR}\n"
             "Expected layout:\n"
-            "  extern/eigen/\n"
-            "    ├─ Eigen/\n"
-            "    └─ unsupported/\n")
+            "  ${EIGEN_DIR}/Eigen/\n"
+            "  ${EIGEN_DIR}/unsupported/\n")
 endif()
 add_library(eigen_headers INTERFACE)
 target_include_directories(eigen_headers INTERFACE "${EIGEN_DIR}")
@@ -77,11 +76,15 @@ if(APPLE)
     target_compile_definitions(tinyVBD PRIVATE PLATFORM_MACOS)
 elseif(WIN32)
     target_compile_definitions(tinyVBD PRIVATE PLATFORM_WINDOWS)
-    if(MSVC)
-        target_compile_options(tinyVBD PRIVATE /W4 /permissive-)
-    else()
-        target_compile_options(tinyVBD PRIVATE -Wall -Wextra -Wpedantic)
-    endif()
-else()
+elseif(UNIX)
+    target_compile_definitions(tinyVBD PRIVATE PLATFORM_LINUX)
+endif()
+
+if(MSVC)
+    target_compile_options(tinyVBD PRIVATE /W4 /permissive- /utf-8 /Zc:__cplusplus)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(tinyVBD PRIVATE -Wall -Wextra -Wpedantic)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(tinyVBD PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+

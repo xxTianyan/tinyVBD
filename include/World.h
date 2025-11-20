@@ -25,7 +25,6 @@ public:
 
     static bool RayNormal;
 
-
 private:
 
     Vec3 gravity;

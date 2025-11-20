@@ -29,7 +29,6 @@ struct mesh_on_cpu {
 
     std::vector<tetrahedron> m_tets_local;
     std::vector<VertexId> m_surface_tris_local;  // for rendering
-    std::vector<float> m_normals;
 
     size_t base_offest = 0;
 
@@ -44,11 +43,16 @@ struct mesh_on_cpu {
 };
 
 struct NodeTetAdj {
-    IndexBuffer offsets;
-    IndexBuffer incidentTets;
+    std::vector<uint32_t> offsets;        // n + 1 size, and tell which segment of incidentTets is relevant.
+    std::vector<uint32_t> incidentTets;
 };
 
-NodeTetAdj buildNodeTetAdj(size_t num_nodes, const std::vector<tetrahedron>& tets);
+inline bool isValidVertexId(const uint32_t value) {
+    return value <= INVALID_VERTEX_ID && value > 0;  // > 0 , since index from msh file begins at 1
+}
+
+
+NodeTetAdj BuildNodeTetAdj(size_t num_nodes, const std::vector<tetrahedron>& tets);
 
 void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh);
 

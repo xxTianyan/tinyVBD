@@ -16,7 +16,7 @@ namespace {
 
 }
 
-/************  demos ************/
+/************ demos ************/
 
 static void demo1() {
     auto m = std::make_unique<mesh_on_cpu>();
@@ -57,10 +57,10 @@ int main(){
     OrbitCtrl orbit = {
         yaw,
         pitch,
-        radius > 0.001f ? radius : 3.0f, // 防止零半径
-        0.0035f,   // 旋转灵敏度（鼠标像素 -> 弧度）
-        0.12f,     // 滚轮每格的比例缩放
-        0.0025f    // 中键平移灵敏度
+        radius > 0.001f ? radius : 3.0f, // Prevent zero radius
+        0.0035f,   // Rotation sensitivity
+        0.12f,     // Wheel zoom step scale
+        0.0025f    // Middle button pan sensitivity
     };
 
     SetTargetFPS(60);                   // run at 60 frames-per-second
@@ -84,7 +84,7 @@ int main(){
     // initial parameters
     constexpr Vector3 lightPos = { 0.0f, 3.0f, 0.0f };
     constexpr float   lightColor[3]   = { 1.0f, 1.0f, 1.0f };
-    constexpr float   albedoColor[3]  = { 1.0f, 0.7f, 0.2f };   // 你的固有色
+    constexpr float   albedoColor[3]  = { 1.0f, 0.7f, 0.2f };   // model's adhere color
     constexpr float   ambient[3]      = { 0.35f, 0.35f, 0.35f };
     constexpr float   shininess       = 24.0f;
     constexpr float   specStrength    = 0.4f;
@@ -96,57 +96,51 @@ int main(){
     SetShaderValue(sh, locShininess,    &shininess,    SHADER_UNIFORM_FLOAT);
     SetShaderValue(sh, locSpecStrength, &specStrength, SHADER_UNIFORM_FLOAT);
 
+    auto adjcentTets = BuildNodeTetAdj(world.meshes[0]->size(), world.meshes[0]->m_tets_local);
+
 
     // main loop
     while (!WindowShouldClose())        // Detect window close button or ESC key
     {
 
         UpdateCamera(&camera, CAMERA_FREE);
-        // 在你的更新循环里加：
+
         if (IsKeyPressed(KEY_Z)) {
-            ReframeToModel(&camera, &orbit, models, 1.2f); // Z：重置到屏幕中央并装满
+            ReframeToModel(&camera, &orbit, models, 1.2f); // Z：reset view to center
         }
 
-        // 鼠标增量
         auto [x, y] = GetMouseDelta();
         const float wheel = GetMouseWheelMove();
 
-        // 右键拖动：绕 target 旋转
         if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON)) {
             orbit.yaw   -= x * orbit.rotSens;
             orbit.pitch -= y * orbit.rotSens;
             ClampPitch(&orbit.pitch);
         }
 
-        // 滚轮：缩放（改变半径）
         if (fabsf(wheel) > 0.0f) {
-            const float factor = 1.0f - wheel * orbit.zoomSens; // 正轮缩小半径（拉近）
-            // 限制缩放范围
+            const float factor = 1.0f - wheel * orbit.zoomSens;
             float newR = orbit.radius * factor;
-            if (newR < 0.2f) newR = 0.2f;        // 最小距离
-            if (newR > 100.0f) newR = 100.0f;    // 最大距离
+            if (newR < 0.2f) newR = 0.2f;
+            if (newR > 100.0f) newR = 100.0f;
             orbit.radius = newR;
         }
 
-        // 中键拖动：平移 target（沿相机右/上方向）
         if (IsMouseButtonDown(MOUSE_MIDDLE_BUTTON)) {
-            // 根据当前 yaw/pitch 求相机的前、右、上向量
             const Vector3 viewDir = Vector3Normalize(SphericalToCartesian(1.0f, orbit.yaw, orbit.pitch));
             const Vector3 right   = Vector3Normalize(Vector3CrossProduct(viewDir, camera.up));
             const Vector3 up      = Vector3Normalize(Vector3CrossProduct(right, viewDir));
 
-            // 像素位移映射到世界位移：右移为 +x，中键上拖为 +y
             const Vector3 delta = Vector3Add(Vector3Scale(right, -x * orbit.panSens * orbit.radius),
                                        Vector3Scale(up,    y * orbit.panSens * orbit.radius));
 
             camera.target = Vector3Add(camera.target, delta);
         }
 
-        // 根据球坐标回写 position
         camera.position = Vector3Add(camera.target,
                                      SphericalToCartesian(orbit.radius, orbit.yaw, orbit.pitch));
 
-        // 维持世界上方向
+        // keep with world up direction
         camera.up = {0,1,0};
 
         BeginDrawing();
