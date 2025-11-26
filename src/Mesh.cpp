@@ -219,3 +219,54 @@ std::vector<float> assemble_vertices(const mesh_on_cpu* cpu_mesh) {
     }
     return vertices;
 }
+
+// Mesh.cpp
+
+void mesh_on_cpu::InitializePhysics(const float density) {
+    tet_Dm_inv.resize(m_tets_local.size());
+    tet_vol.resize(m_tets_local.size());
+    std::fill(mass.begin(), mass.end(), 0.0f);
+
+    for (size_t i = 0; i < m_tets_local.size(); ++i) {
+        const auto& tet = m_tets_local[i];
+        const VertexId id0 = tet.vertices[0];
+        const VertexId id1 = tet.vertices[1];
+        const VertexId id2 = tet.vertices[2];
+        const VertexId id3 = tet.vertices[3];
+
+        Vec3 p0(px[id0], py[id0], pz[id0]);
+        Vec3 p1(px[id1], py[id1], pz[id1]);
+        Vec3 p2(px[id2], py[id2], pz[id2]);
+        Vec3 p3(px[id3], py[id3], pz[id3]);
+
+        // Compute rest shape matrix Dm (using first three edge vectors)
+        // deformation gradient F = Ds Dm^{-1}
+        Mat3 Dm;
+        Dm.col(0) = p1 - p0;
+        Dm.col(1) = p2 - p0;
+        Dm.col(2) = p3 - p0;
+
+        // Compute inverse of Dm
+        if (std::abs(Dm.determinant()) < 1e-6) {
+            tet_Dm_inv[i] = Mat3::Identity();
+            tet_vol[i] = 0.0f;
+        }
+        else {
+            tet_Dm_inv[i] = Dm.inverse();
+            tet_vol[i] = std::abs(Dm.determinant()) / 6.0f;
+        }
+
+        // Distribute mass to vertices (simple volume/4 approach)
+        const float pm = tet_vol[i] * density / 4.0f;
+        mass[id0] += pm; mass[id1] += pm;
+        mass[id2] += pm; mass[id3] += pm;
+    }
+
+    // Compute inverse mass, set fixed points to infinity (inv_mass=0)
+    for(size_t i=0; i<size(); ++i) {
+        if(mass[i] > 1e-9) inv_mass[i] = 1.0f / mass[i];
+        else inv_mass[i] = 0.0f;
+    }
+
+    inited = true;
+}

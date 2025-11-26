@@ -25,10 +25,23 @@ struct mesh_on_cpu {
     std::vector<float> fx, fy, fz;
     std::vector<float> nx, ny, nz;  // normal
 
+    // physical properties
+    std::vector<float> inv_mass; // inverse of vertex mass
+    std::vector<float> mass;     // vertex mass
+
+    // material property / also can make global
+    float mu = 1000.0f;    // Neo-Hookean paras
+    float lambda = 4000.0f;
+    bool inited = false;
+
     [[nodiscard]] inline size_t size() const {return nx.size();}
 
     std::vector<tetrahedron> m_tets_local;
     std::vector<VertexId> m_surface_tris_local;  // for rendering
+
+    // pre-computing of tets
+    std::vector<Mat3> tet_Dm_inv; // inverse of shape matrix Dm^-1
+    std::vector<float> tet_vol;   // the volume of tet
 
     size_t base_offest = 0;
 
@@ -39,7 +52,10 @@ struct mesh_on_cpu {
         rsf(vx); rsf(vy); rsf(vz);
         rsf(fx); rsf(fy); rsf(fz);
         rsf(nx); rsf(ny); rsf(nz);
+        rsf(inv_mass); rsf(mass);
     }
+
+    void InitializePhysics(float density);
 };
 
 struct NodeTetAdj {
@@ -50,7 +66,6 @@ struct NodeTetAdj {
 inline bool isValidVertexId(const uint32_t value) {
     return value <= INVALID_VERTEX_ID && value > 0;  // > 0 , since index from msh file begins at 1
 }
-
 
 NodeTetAdj BuildNodeTetAdj(size_t num_nodes, const std::vector<tetrahedron>& tets);
 

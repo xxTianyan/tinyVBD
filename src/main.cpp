@@ -21,6 +21,7 @@ namespace {
 static void demo1() {
     auto m = std::make_unique<mesh_on_cpu>();
     ParseMSH("../assets/bunny.msh", m.get());
+    m->InitializePhysics(100.0f);
     world.Add(std::move(m));
 }
 
@@ -102,6 +103,7 @@ int main(){
     // main loop
     while (!WindowShouldClose())        // Detect window close button or ESC key
     {
+        float dt = GetFrameTime() == 0? 1.0f/60 : GetFrameTime();
 
         UpdateCamera(&camera, CAMERA_FREE);
 
@@ -142,6 +144,8 @@ int main(){
 
         // keep with world up direction
         camera.up = {0,1,0};
+        world.Step(dt);
+        UpdateModel(models, world.meshes);
 
         BeginDrawing();
 

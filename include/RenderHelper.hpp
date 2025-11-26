@@ -20,16 +20,16 @@ void print_vector(const std::vector<T>& vec) {
 }
 
 struct OrbitCtrl {
-    float yaw;        // 水平角 (弧度)
-    float pitch;      // 俯仰角 (弧度)
-    float radius;     // 目标点到相机的距离
-    float rotSens;    // 旋转灵敏度
-    float zoomSens;   // 缩放灵敏度
-    float panSens;    // 平移灵敏度(像素->世界)
+    float yaw;
+    float pitch;
+    float radius;
+    float rotSens;
+    float zoomSens;
+    float panSens;
 };
 
 inline void ClampPitch(float *pitch) {
-    constexpr float lim = DEG2RAD*89.0f;                 // 避免万向节锁
+    constexpr float lim = DEG2RAD*89.0f;                 // avoid Gimbal Lock
     if (*pitch >  lim) *pitch =  lim;
     if (*pitch < -lim) *pitch = -lim;
 }
@@ -83,7 +83,6 @@ inline void ReframeToModel(Camera3D *cam,
     cam->up       = (Vector3){ 0.0f, 1.0f, 0.0f };
 }
 
-
 // turn mesh_on_cpu into GPU Mesh + Model (dynamic)
 static Model upload_model_from_cpu_mesh(mesh_on_cpu* M) {
     Mesh gmsh = {0};
@@ -111,8 +110,7 @@ static Model upload_model_from_cpu_mesh(mesh_on_cpu* M) {
     return model;
 }
 
-
-// 把 World 里的每个 mesh_on_cpu 都上传成一个 Model
+// put every mesh to a model vector
 static std::vector<Model> upload_all_models(const World& world) {
     std::vector<Model> models;
     models.reserve(world.meshes.size());
@@ -121,6 +119,22 @@ static std::vector<Model> upload_all_models(const World& world) {
     }
     return models;
 }
+
+// update gpu mesh according to cpu mesh
+static void UpdateModel(const std::vector<Model> &models, const std::vector<MeshPtr>& Meshes) {
+    if (models.size() != Meshes.size()) throw std::runtime_error("Model size mismatch");
+    for (size_t i = 0; i < models.size(); ++i) {
+        const Mesh& old_mesh = models[i].meshes[0];
+        const std::vector<float> vertices = assemble_vertices(Meshes[i].get());
+        const size_t dataSize = vertices.size() * sizeof(float);
+        if (dataSize > static_cast<size_t>(std::numeric_limits<int>::max())) {
+            throw std::runtime_error("Data too large for int parameter");
+        }
+        UpdateMeshBuffer(old_mesh, 0, vertices.data(), static_cast<int>(dataSize),0);
+    }
+}
+
+
 
 
 #endif //RENDERHELPER_H

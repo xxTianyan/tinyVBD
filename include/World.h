@@ -13,7 +13,7 @@ public:
     explicit World(Vec3  gravity);
     ~World()= default;
 
-    void Step();
+    void Step(float dt);
 
     void Add(MeshPtr m);
 

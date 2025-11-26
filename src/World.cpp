@@ -24,10 +24,10 @@ void World::Remove() {
 }
 
 
-void World::Step() {
+void World::Step(const float dt) {
     for (const auto& m : meshes) {
         for (size_t i = 0; i < m->size(); ++i) {
-            m->px_pred[i] = m->px[i] + (gravity[0] + m->fx[i]) * 1.0f/60; // at random
+            m->py[i] +=  0.1f * dt; // at random
         }
     }
 }

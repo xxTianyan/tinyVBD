@@ -17,5 +17,7 @@ constexpr VertexId INVALID_VERTEX_ID = 0xFFFF;
 using Vec3 = Eigen::Vector3f;
 using MeshPtr = std::unique_ptr<mesh_on_cpu>;
 
+using Mat3 = Eigen::Matrix3f;
+
 
 #endif //TYPES_H
