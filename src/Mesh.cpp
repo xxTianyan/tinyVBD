@@ -5,6 +5,11 @@
 #include "Mesh.h"
 #include <fstream>
 
+// todo: all about mesh.cpp
+// 需要修正ParseMSH函数，让其可以读取所有类型的element，当前只能读取tets。
+// 物理和渲染数据分离，物理数据储存在所有相应的struct中。渲染数据只有一个surface_triangle，
+// 因此需要修改build surface的函数。让不同类型的mesh都能生成正确的surface triangles vertexId
+
 static std::string trim(const std::string& str) {
     const size_t a = str.find_first_not_of("\t\r\n");
     if (a == std::string::npos)
@@ -23,7 +28,7 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
     if (!in) throw std::runtime_error("Could not open file " + path);
 
     std::string line;
-    bool have_nodes = false, have_tets = false;
+    bool have_nodes = false, have_tris = false, have_tets = false;
 
     while (std::getline(in, line)) {
         line = trim(line);
@@ -69,40 +74,9 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
     }
 
     if (!have_nodes) throw std::runtime_error("MSH parse error: no $Nodes section");
-    if (!have_tets) throw std::runtime_error("MSH parse error: no $Elements section");
 
     // what is necessary
-    cpu_mesh->m_surface_tris_local = BuildSurfaceTriangles(cpu_mesh->m_tets_local);
-}
-
-NodeTetAdj BuildNodeTetAdj(const size_t num_nodes, const std::vector<tetrahedron>& tets) {
-
-    NodeTetAdj adj;
-    adj.offsets.assign(num_nodes+1, 0);
-
-    for (const auto & tet : tets) {
-        for (size_t k = 0; k < 4; k++) {
-            const VertexId v = tet.vertices[k];
-            adj.offsets[v+1]++;
-        }
-    }
-
-    for (size_t i = 1; i < num_nodes+1; i++) {
-        adj.offsets[i] += adj.offsets[i-1];
-    }
-
-    adj.incidentTets.resize(adj.offsets.back());
-
-    auto cursor = adj.offsets;
-
-    for (size_t i = 0; i < tets.size(); i++) {
-        for (size_t k = 0; k < 4; k++) {
-            const VertexId v = tets[i].vertices[k];
-            const uint32_t c = cursor[v]++;
-            adj.incidentTets[c] = static_cast<uint32_t>(i);
-        }
-    }
-    return adj;
+    if (have_tets) cpu_mesh->m_surface_tris_local = BuildSurfaceTriangles(cpu_mesh->m_tets_local);
 }
 
 struct FaceKey {
@@ -220,53 +194,11 @@ std::vector<float> assemble_vertices(const mesh_on_cpu* cpu_mesh) {
     return vertices;
 }
 
-// Mesh.cpp
+void BuildAdjacency(size_t num_nodes, const std::vector<tetrahedron>& tets) {
+
+
+}
+
 
 void mesh_on_cpu::InitializePhysics(const float density) {
-    tet_Dm_inv.resize(m_tets_local.size());
-    tet_vol.resize(m_tets_local.size());
-    std::fill(mass.begin(), mass.end(), 0.0f);
-
-    for (size_t i = 0; i < m_tets_local.size(); ++i) {
-        const auto& tet = m_tets_local[i];
-        const VertexId id0 = tet.vertices[0];
-        const VertexId id1 = tet.vertices[1];
-        const VertexId id2 = tet.vertices[2];
-        const VertexId id3 = tet.vertices[3];
-
-        Vec3 p0(px[id0], py[id0], pz[id0]);
-        Vec3 p1(px[id1], py[id1], pz[id1]);
-        Vec3 p2(px[id2], py[id2], pz[id2]);
-        Vec3 p3(px[id3], py[id3], pz[id3]);
-
-        // Compute rest shape matrix Dm (using first three edge vectors)
-        // deformation gradient F = Ds Dm^{-1}
-        Mat3 Dm;
-        Dm.col(0) = p1 - p0;
-        Dm.col(1) = p2 - p0;
-        Dm.col(2) = p3 - p0;
-
-        // Compute inverse of Dm
-        if (std::abs(Dm.determinant()) < 1e-6) {
-            tet_Dm_inv[i] = Mat3::Identity();
-            tet_vol[i] = 0.0f;
-        }
-        else {
-            tet_Dm_inv[i] = Dm.inverse();
-            tet_vol[i] = std::abs(Dm.determinant()) / 6.0f;
-        }
-
-        // Distribute mass to vertices (simple volume/4 approach)
-        const float pm = tet_vol[i] * density / 4.0f;
-        mass[id0] += pm; mass[id1] += pm;
-        mass[id2] += pm; mass[id3] += pm;
-    }
-
-    // Compute inverse mass, set fixed points to infinity (inv_mass=0)
-    for(size_t i=0; i<size(); ++i) {
-        if(mass[i] > 1e-9) inv_mass[i] = 1.0f / mass[i];
-        else inv_mass[i] = 0.0f;
-    }
-
-    inited = true;
 }

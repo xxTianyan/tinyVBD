@@ -98,7 +98,7 @@ int main(){
     SetShaderValue(sh, locShininess,    &shininess,    SHADER_UNIFORM_FLOAT);
     SetShaderValue(sh, locSpecStrength, &specStrength, SHADER_UNIFORM_FLOAT);
 
-    auto adjcentTets = BuildNodeTetAdj(world.meshes[0]->size(), world.meshes[0]->m_tets_local);
+    // auto adjcentTets = BuildNodeTetAdj(world.meshes[0]->size(), world.meshes[0]->m_tets_local);
 
 
     // main loop

@@ -19,5 +19,10 @@ using MeshPtr = std::unique_ptr<mesh_on_cpu>;
 
 using Mat3 = Eigen::Matrix3f;
 
+enum Dimension {
+    D1,
+    D2
+};
+
 
 #endif //TYPES_H

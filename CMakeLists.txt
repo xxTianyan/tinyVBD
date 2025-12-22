@@ -63,7 +63,8 @@ target_link_libraries(rlImGui PUBLIC raylib imgui)
 add_executable(tinyVBD src/main.cpp
         src/Mesh.cpp
         src/World.cpp
-        src/BroadPhase.cpp)
+        src/BroadPhase.cpp
+        src/VBDDynamics.cpp)
 
 target_include_directories(tinyVBD
         PRIVATE

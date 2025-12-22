@@ -8,16 +8,25 @@
 #include "Mesh.h"
 #include "Types.h"
 
+class VBDSolver {
+    int num_iters;
+    ForceElementAdjacencyInfo adjacencyInfo;
+
+    explicit VBDSolver(const int num_iters) : num_iters(num_iters) {}
+    ~VBDSolver() = default;
+
+    void BuildAdjacency(size_t num_nodes, const std::vector<tetrahedron>& tets);
+
+
+
+};
+
 struct Node {
     VertexId idx = INVALID_VERTEX_ID;
 };
 
-struct ForceElement {
 
 
-
-
-};
 
 
 #endif //VBDDYNAMICS_H
