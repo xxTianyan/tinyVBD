@@ -216,9 +216,9 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
 
     // --- 1. 构建边邻接表 ---
     struct HalfEdge {
-        uint32_t v0, v1; // 原始方向
+        VertexId v0, v1; // 原始方向
         uint32_t tri_idx;
-        uint32_t edge_key[2]; // 排序后的 ID，用于匹配共享边
+        VertexId edge_key[2]; // 排序后的 ID，用于匹配共享边
 
         bool operator<(const HalfEdge& o) const {
             if (edge_key[0] != o.edge_key[0]) return edge_key[0] < o.edge_key[0];
@@ -230,10 +230,10 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
     all_edges.reserve(num_tris * 3);
     for (uint32_t i = 0; i < num_tris; ++i) {
         for (int j = 0; j < 3; ++j) {
-            uint32_t u = tris[i].vertices[j];
-            uint32_t v = tris[i].vertices[(j + 1) % 3];
-            uint32_t k0 = std::min(u, v);
-            uint32_t k1 = std::max(u, v);
+            VertexId u = tris[i].vertices[j];
+            VertexId v = tris[i].vertices[(j + 1) % 3];
+            const VertexId k0 = std::min(u, v);
+            const VertexId k1 = std::max(u, v);
             all_edges.push_back({u, v, i, {k0, k1}});
         }
     }
@@ -252,10 +252,10 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
                all_edges[i].edge_key[1] == all_edges[j].edge_key[1]) {
 
             // 发现共享边：连接两个三角形
-            uint32_t t1 = all_edges[i].tri_idx;
-            uint32_t t2 = all_edges[j].tri_idx;
+            const uint32_t t1 = all_edges[i].tri_idx;
+            const uint32_t t2 = all_edges[j].tri_idx;
             // 如果两个三角形在共享边上方向相同，说明其中一个需要翻转
-            bool same_dir = (all_edges[i].v0 == all_edges[j].v0);
+            const bool same_dir = (all_edges[i].v0 == all_edges[j].v0);
 
             adj[t1].push_back({t2, same_dir});
             adj[t2].push_back({t1, same_dir});
@@ -266,7 +266,7 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
 
     // --- 2. BFS 统一绕序 ---
     std::vector<int8_t> flip(num_tris, 0); // 0: 原样, 1: 翻转
-    std::vector<bool> visited(num_tris, false);
+    std::vector visited(num_tris, false);
     std::queue<uint32_t> q;
 
     for (uint32_t i = 0; i < num_tris; ++i) {
@@ -275,16 +275,16 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
         q.push(i);
 
         while (!q.empty()) {
-            uint32_t u = q.front();
+            const uint32_t u = q.front();
             q.pop();
 
-            for (const auto& nb : adj[u]) {
-                if (!visited[nb.tri_idx]) {
-                    visited[nb.tri_idx] = true;
+            for (const auto&[tri_idx, same_direction] : adj[u]) {
+                if (!visited[tri_idx]) {
+                    visited[tri_idx] = true;
                     // 如果 A 和 B 共享边方向相同，且 A 没翻转，则 B 必须翻转
                     // 逻辑：flip[B] = flip[A] XOR same_direction
-                    flip[nb.tri_idx] = flip[u] ^ (nb.same_direction ? 1 : 0);
-                    q.push(nb.tri_idx);
+                    flip[tri_idx] = flip[u] ^ (same_direction ? 1 : 0);
+                    q.push(tri_idx);
                 }
             }
         }
@@ -306,41 +306,52 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
 }
 
 std::vector<float> ComputeNormal(mesh_on_cpu* cpu_mesh) {
-    std::vector<float> normals;
-    normals.resize((cpu_mesh->size() * 3));
-    const size_t T = cpu_mesh->m_surface_tris.size() / 3;
+    if (!cpu_mesh) return {};
 
-    for (size_t t = 0; t < T; t++) {
-        const size_t v1 = cpu_mesh->m_surface_tris[t*3+0];
-        const size_t v2 = cpu_mesh->m_surface_tris[t*3+1];
-        const size_t v3 = cpu_mesh->m_surface_tris[t*3+2];
+    const size_t nV = cpu_mesh->size();
+    std::vector normals(nV * 3, 0.0f);
 
-        Vec3 edge1 = cpu_mesh->p[v2] - cpu_mesh->p[v1];
-        Vec3 edge2 = cpu_mesh->p[v3] - cpu_mesh->p[v1];
-        const Vec3 face_n = edge1.cross(edge2);
+    const auto& tris = cpu_mesh->m_surface_tris;
+    // Debug 下建议 assert
+    // assert(tris.size() % 3 == 0);
 
-        auto accum = [&](const size_t tri_idx) {
-            normals[3*tri_idx + 0] += face_n.x();
-            normals[3*tri_idx + 1] += face_n.y();
-            normals[3*tri_idx + 2] += face_n.z();
+    const size_t T = tris.size() / 3;
+    for (size_t t = 0; t < T; ++t) {
+        const size_t v1 = tris[t * 3 + 0];
+        const size_t v2 = tris[t * 3 + 1];
+        const size_t v3 = tris[t * 3 + 2];
+
+        if (v1 >= nV || v2 >= nV || v3 >= nV) continue;
+
+        Vec3 e1 = cpu_mesh->p[v2] - cpu_mesh->p[v1];
+        Vec3 e2 = cpu_mesh->p[v3] - cpu_mesh->p[v1];
+        Vec3 fn = e1.cross(e2);
+
+        // 可选：跳过退化面
+        if (fn.squaredNorm() < 1e-24f) continue;
+
+        auto accum = [&](const size_t vi) {
+            normals[3 * vi + 0] += fn.x();
+            normals[3 * vi + 1] += fn.y();
+            normals[3 * vi + 2] += fn.z();
         };
-        accum(v1);accum(v2);accum(v3);
+        accum(v1); accum(v2); accum(v3);
     }
 
-    for (size_t i = 0; i < cpu_mesh->size(); i++) {
+    for (size_t i = 0; i < nV; ++i) {
         Vec3 v(normals[3*i+0], normals[3*i+1], normals[3*i+2]);
-        float norm = v.norm();
-        v = v / norm;
-        if (norm > 1e-12f) v /= norm;
-        else v = Vec3(0, 1, 0); // 默认向上或其他安全值
-        normals[3*i + 0] = v.x();
-        normals[3*i + 1] = v.y();
-        normals[3*i + 2] = v.z();
+        if (const float len = v.norm(); len > 1e-12f) v /= len;
+        else v = Vec3(0, 1, 0);
+
+        normals[3*i+0] = v.x();
+        normals[3*i+1] = v.y();
+        normals[3*i+2] = v.z();
         cpu_mesh->n[i] = v;
     }
 
     return normals;
 }
+
 
 // assemble Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
 std::vector<float> assemble_vertices(const mesh_on_cpu* cpu_mesh) {
@@ -362,7 +373,7 @@ void BuildAdjacency(mesh_on_cpu* mesh) {
         return;
 
     const size_t num_nodes = mesh->size();
-    auto& adj = mesh->adjacencyInfo;
+    auto&[v_adj_edges_offsets, v_adj_edges, v_adj_faces_offsets, v_adj_faces, v_adj_tet_offsets, v_adj_tets] = mesh->adjacencyInfo;
     auto assign_offsets = [num_nodes](std::vector<uint32_t>& offsets) {
         offsets.assign(num_nodes+1, 0u);
     };
@@ -419,14 +430,14 @@ void BuildAdjacency(mesh_on_cpu* mesh) {
             [](auto const& edge, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(edge.vertices[k]);
             },
-            adj.v_adj_edges_offsets,
-            adj.v_adj_edges
+            v_adj_edges_offsets,
+            v_adj_edges
         );
     }
     else {
         // 没有 edges：保持 CSR 合法
-        assign_offsets(adj.v_adj_edges_offsets);
-        adj.v_adj_edges.clear();
+        assign_offsets(v_adj_edges_offsets);
+        v_adj_edges.clear();
     }
 
     // build triangle adjacency (vertex -> incident faces)
@@ -437,13 +448,13 @@ void BuildAdjacency(mesh_on_cpu* mesh) {
             [](auto const& tri, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(tri.vertices[k]);
             },
-            adj.v_adj_faces_offsets,
-            adj.v_adj_faces
+            v_adj_faces_offsets,
+            v_adj_faces
         );
     }
     else {
-        assign_offsets(adj.v_adj_faces_offsets);
-        adj.v_adj_faces.clear();
+        assign_offsets(v_adj_faces_offsets);
+        v_adj_faces.clear();
     }
 
     // build tetrahedron adjacency (vertex -> incident tets)
@@ -454,13 +465,13 @@ void BuildAdjacency(mesh_on_cpu* mesh) {
             [](auto const& tet, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(tet.vertices[k]);
             },
-            adj.v_adj_tet_offsets,
-            adj.v_adj_tets
+            v_adj_tet_offsets,
+            v_adj_tets
         );
     }
     else {
-        assign_offsets(adj.v_adj_tet_offsets);
-        adj.v_adj_tets.clear();
+        assign_offsets(v_adj_tet_offsets);
+        v_adj_tets.clear();
     }
 }
 

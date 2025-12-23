@@ -63,7 +63,7 @@ struct mesh_on_cpu {
     ForceElementAdjacencyInfo adjacencyInfo;
 
     // 渲染信息
-    std::vector<uint32_t> m_surface_tris;
+    std::vector<VertexId> m_surface_tris;
     size_t base_offset = 0;
 
     // 重构后的 resize：从 18 行缩减到 6 行，极难出错
