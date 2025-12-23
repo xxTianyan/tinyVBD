@@ -7,6 +7,7 @@
 #include "World.h"
 #include "RenderHelper.hpp"
 #include "BroadPhase.h"
+#include "MeshBuilder.h"
 
 
 /* for initialize */
@@ -25,7 +26,19 @@ static void demo1() {
     world.Add(std::move(m));
 }
 
-std::function<void()> demos[] = {demo1};
+static void demo2() {
+    auto m = std::make_unique<mesh_on_cpu>();
+    MeshBuilder::BuildBox(m.get(), 1.0f ,1.0f, 1.0f);
+    world.Add(std::move(m));
+}
+
+static void demo3() {
+    auto m = std::make_unique<mesh_on_cpu>();
+    MeshBuilder::BuildSphere(m.get(), 10.0f ,1, 1);
+    world.Add(std::move(m));
+}
+
+std::function<void()> demos[] = {demo1, demo2,demo3};
 
 static void InitDemo(size_t index) {
     world.Clear();
@@ -36,6 +49,7 @@ int main(){
 
     constexpr int screenWidth = 1280;
     constexpr int screenHeight = 720;
+    constexpr size_t demo_id = 2;
 
     InitWindow(screenWidth, screenHeight, "tinyVBD");
 
@@ -46,7 +60,7 @@ int main(){
     camera.up = Vector3{ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 45.0f;                                // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
-    DisableCursor();                    // Limit cursor to relative movement inside the window
+    // DisableCursor();                    // Limit cursor to relative movement inside the window
 
     // 计算初始球坐标（基于当前 position/target）
     const Vector3 toCam = Vector3Subtract(camera.position, camera.target);
@@ -66,7 +80,7 @@ int main(){
 
     SetTargetFPS(60);                   // run at 60 frames-per-second
 
-    InitDemo(0);
+    InitDemo(demo_id);
     const auto models = upload_all_models(world);
 
     // shader

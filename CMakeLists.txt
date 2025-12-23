@@ -64,7 +64,8 @@ add_executable(tinyVBD src/main.cpp
         src/Mesh.cpp
         src/World.cpp
         src/BroadPhase.cpp
-        src/VBDDynamics.cpp)
+        src/VBDDynamics.cpp
+        src/MeshBuilder.cpp)
 
 target_include_directories(tinyVBD
         PRIVATE

@@ -46,57 +46,86 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh, const float width, const float h
     mesh->m_surface_tris = BuildSurfaceTriangles(mesh->m_tris);
 }
 
-void MeshBuilder::BuildBox(mesh_on_cpu* mesh, const float w, const float h, const float d, const int resX, const int resY, const int resZ) {
-    const size_t num_nodes = (resX + 1) * (resY + 1) * (resZ + 1);
-    PrepareMesh(mesh, num_nodes);
+// MeshBuilder.h 里建议新增这个重载
+// static void BuildBox(mesh_on_cpu* mesh, float w, float h, float d);
 
-    const float dx = w / resX;
-    const float dy = h / resY;
-    const float dz = d / resZ;
-    const Vec3 start = Vec3(-w/2, -h/2, -d/2);
+inline float SignedTetVolume6(const Vec3& a, const Vec3& b, const Vec3& c, const Vec3& d) {
+    // 6 * volume (signed)
+    return (b - a).dot((c - a).cross(d - a));
+}
 
-    auto get_idx = [&](const int i, int j, int k) {
-        return k * (resX + 1) * (resY + 1) + j * (resX + 1) + i;
+void MeshBuilder::BuildBox(mesh_on_cpu* mesh, const float w, const float h, const float d) {
+    // 0) 基本检查
+    if (!mesh) return;
+    if (w <= 0.0f || h <= 0.0f || d <= 0.0f) return;
+
+    // 1) 顶点：8 个角点
+    PrepareMesh(mesh, 8);
+
+    // 如果 PrepareMesh 不会清拓扑，这里显式清一下更安全
+    mesh->m_tets.clear();
+    mesh->m_surface_tris.clear();
+
+    const Vec3 p0(-w * 0.5f, -h * 0.5f, -d * 0.5f);
+    const Vec3 p1(+w * 0.5f, -h * 0.5f, -d * 0.5f);
+    const Vec3 p2(+w * 0.5f, +h * 0.5f, -d * 0.5f);
+    const Vec3 p3(-w * 0.5f, +h * 0.5f, -d * 0.5f);
+    const Vec3 p4(-w * 0.5f, -h * 0.5f, +d * 0.5f);
+    const Vec3 p5(+w * 0.5f, -h * 0.5f, +d * 0.5f);
+    const Vec3 p6(+w * 0.5f, +h * 0.5f, +d * 0.5f);
+    const Vec3 p7(-w * 0.5f, +h * 0.5f, +d * 0.5f);
+
+    mesh->p[0] = p0; mesh->p[1] = p1; mesh->p[2] = p2; mesh->p[3] = p3;
+    mesh->p[4] = p4; mesh->p[5] = p5; mesh->p[6] = p6; mesh->p[7] = p7;
+
+    // 2) 体积剖分：标准 5-tet（沿体对角线 0-6）
+    auto add_tet_ccw = [&](uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+        // 保证四面体有正体积（一致取向），避免后续算法/抽面/法线混乱
+        const Vec3& A = mesh->p[a];
+        const Vec3& B = mesh->p[b];
+        const Vec3& C = mesh->p[c];
+        const Vec3& D = mesh->p[d];
+        float v6 = SignedTetVolume6(A, B, C, D);
+        if (v6 < 0.0f) std::swap(c, d);
+        mesh->m_tets.emplace_back(a, b, c, d);
     };
 
-    // 1. 顶点
-    for (int k = 0; k <= resZ; ++k) {
-        for (int j = 0; j <= resY; ++j) {
-            for (int i = 0; i <= resX; ++i) {
-                mesh->p[get_idx(i,j,k)] = start + Vec3(i*dx, j*dy, k*dz);
-            }
-        }
-    }
+    add_tet_ccw(0, 1, 2, 6);
+    add_tet_ccw(0, 2, 3, 6);
+    add_tet_ccw(0, 3, 7, 6);
+    add_tet_ccw(0, 7, 4, 6);
+    add_tet_ccw(0, 4, 5, 6);
 
-    // 2. 将每个小方块切分为 5 个四面体 (Tetrahedralization)
-    for (int k = 0; k < resZ; ++k) {
-        for (int j = 0; j < resY; ++j) {
-            for (int i = 0; i < resX; ++i) {
-                uint32_t v[8] = {
-                    static_cast<uint32_t>(get_idx(i, j, k)),   static_cast<uint32_t>(get_idx(i + 1, j, k)),
-                    static_cast<uint32_t>(get_idx(i + 1, j + 1, k)),   static_cast<uint32_t>(get_idx(i, j + 1, k)),
-                    static_cast<uint32_t>(get_idx(i, j, k + 1)), static_cast<uint32_t>(get_idx(i + 1, j, k + 1)),
-                    static_cast<uint32_t>(get_idx(i + 1, j + 1, k + 1)), static_cast<uint32_t>(get_idx(i, j + 1, k + 1))
-                };
-                // 经典 5-tet 分解法
-                if ((i + j + k) % 2 == 0) {
-                    mesh->m_tets.emplace_back(v[0], v[1], v[2], v[5]);
-                    mesh->m_tets.emplace_back(v[0], v[2], v[3], v[7]);
-                    mesh->m_tets.emplace_back(v[0], v[5], v[7], v[4]);
-                    mesh->m_tets.emplace_back(v[2], v[5], v[7], v[6]);
-                    mesh->m_tets.emplace_back(v[0], v[2], v[5], v[7]);
-                } else {
-                    mesh->m_tets.emplace_back(v[1], v[0], v[3], v[4]);
-                    mesh->m_tets.emplace_back(v[1], v[3], v[2], v[6]);
-                    mesh->m_tets.emplace_back(v[1], v[4], v[6], v[5]);
-                    mesh->m_tets.emplace_back(v[3], v[4], v[6], v[7]);
-                    mesh->m_tets.emplace_back(v[1], v[3], v[4], v[6]);
-                }
-            }
-        }
-    }
-    // 自动提取外表面三角形供渲染
-    mesh->m_surface_tris = BuildSurfaceTriangles(mesh->m_tets);
+    // 3) 渲染外表面：直接生成 6 个面 * 2 三角形，保证 outward winding
+    auto add_tri = [&](uint32_t a, uint32_t b, uint32_t c) {
+        mesh->m_surface_tris.push_back(a);
+        mesh->m_surface_tris.push_back(b);
+        mesh->m_surface_tris.push_back(c);
+    };
+
+    // -Z 面（底面），外法线 -Z：四边形 [0,1,2,3] -> 用 (0,3,2) (0,2,1)
+    add_tri(0, 3, 2);
+    add_tri(0, 2, 1);
+
+    // +Z 面（顶面），外法线 +Z： [4,5,6,7] -> (4,5,6) (4,6,7)
+    add_tri(4, 5, 6);
+    add_tri(4, 6, 7);
+
+    // -Y 面，外法线 -Y： [0,1,5,4] -> (0,1,5) (0,5,4)
+    add_tri(0, 1, 5);
+    add_tri(0, 5, 4);
+
+    // +Y 面，外法线 +Y： [3,2,6,7] -> (3,7,6) (3,6,2)
+    add_tri(3, 7, 6);
+    add_tri(3, 6, 2);
+
+    // -X 面，外法线 -X： [0,3,7,4] -> (0,4,7) (0,7,3)
+    add_tri(0, 4, 7);
+    add_tri(0, 7, 3);
+
+    // +X 面，外法线 +X： [1,2,6,5] -> (1,2,6) (1,6,5)
+    add_tri(1, 2, 6);
+    add_tri(1, 6, 5);
 }
 
 void MeshBuilder::BuildSphere(mesh_on_cpu* mesh, const float radius, const int sectors, const int stacks) {

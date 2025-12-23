@@ -209,6 +209,12 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets) {
     return out;
 }
 
+
+/*
+ * TODO: his functions is extremely incorrect.
+ * Maybe use m_tris index as surface_tri is a good way.
+ */
+
 IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
     if (tris.empty()) return {};
 

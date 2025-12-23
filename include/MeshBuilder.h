@@ -13,7 +13,7 @@ public:
     static void BuildCloth(mesh_on_cpu* mesh, float width, float height, int resX, int resY, const Vec3& center = Vec3(0,0,0));
 
     // 构造一个实体立方体 (由四面体或六面体分解而成)
-    static void BuildBox(mesh_on_cpu* mesh, float w, float h, float d, int resX, int resY, int resZ);
+    static void BuildBox(mesh_on_cpu* mesh, float w, float h, float d);
 
     // 构造一个球体 (UV Sphere)
     static void BuildSphere(mesh_on_cpu* mesh, float radius, int sectors, int stacks);
