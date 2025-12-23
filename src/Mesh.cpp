@@ -32,7 +32,6 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
 
     std::string line;
     bool have_nodes = false;
-    bool have_edges = false;
     bool have_tris  = false;
     bool have_tets  = false;
 
@@ -101,7 +100,6 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
                     read_vertex_id_0based(v0);
                     read_vertex_id_0based(v1);
                     cpu_mesh->m_edges.emplace_back(v0, v1);
-                    have_edges = true;
                 }
                 else if (elm_type == 2) {
                     VertexId v0, v1, v2;
