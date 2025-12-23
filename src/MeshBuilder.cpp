@@ -3,7 +3,7 @@
 //
 
 #include "MeshBuilder.h"
-#include <cmath>
+
 
 void MeshBuilder::PrepareMesh(mesh_on_cpu* mesh, const size_t num_nodes) {
     if (!mesh) return;
