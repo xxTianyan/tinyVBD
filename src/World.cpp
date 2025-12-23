@@ -10,7 +10,7 @@ World::World(Vec3  gravity) : gravity(std::move(gravity)) {}
 
 
 void World::Add(MeshPtr m) {
-    m->base_offest = m_total_vertices;
+    m->base_offset = m_total_vertices;
     m_total_vertices += m->size();
     meshes.push_back(std::move(m));
 }
@@ -28,7 +28,7 @@ void World::Remove() {
 void World::Step(const float dt) {
     for (const auto& m : meshes) {
         for (size_t i = 0; i < m->size(); ++i) {
-            m->py[i] +=  0.1f * dt; // at random
+
         }
     }
 }
