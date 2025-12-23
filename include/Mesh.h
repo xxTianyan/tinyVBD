@@ -44,42 +44,46 @@ struct ForceElementAdjacencyInfo{
 };
 
 struct mesh_on_cpu {
-    std::vector<float> px, py, pz;  // last frame pos
-    std::vector<float> px_pred, py_pred, pz_pred;  // predict pos
-    std::vector<float> inertia_x, inertia_y, inertia_z;  // inertia prediction
-    std::vector<float> vx, vy, vz;
-    std::vector<float> fx, fy, fz;
-    std::vector<float> nx, ny, nz;  // normal
+    // 核心运动学属性 (使用 Vec3 代替散乱的 x, y, z)
+    std::vector<Vec3> p;          // 当前位置 (last frame pos)
+    std::vector<Vec3> p_pred;     // 预测位置 (predict pos)
+    std::vector<Vec3> p_inertia;  // 惯性预测 (inertia prediction)
+    std::vector<Vec3> v;          // 速度
+    std::vector<Vec3> f;          // 力
+    std::vector<Vec3> n;          // 法线
+
     Dimension dim;
 
-    [[nodiscard]] inline size_t size() const {return nx.size();}
+    [[nodiscard]] inline size_t size() const { return p.size(); }
 
-    // for physical simulations
-    std::vector<tetrahedron> m_tets;  // empty if it's 2d mesh
+    // 拓扑信息
+    std::vector<tetrahedron> m_tets;
     std::vector<triangle> m_tris;
     std::vector<edge> m_edges;
     ForceElementAdjacencyInfo adjacencyInfo;
 
-    // for rendering
+    // 渲染信息
     std::vector<uint32_t> m_surface_tris;
+    size_t base_offset = 0;
 
-    size_t base_offest = 0;
-
-    void resize(size_t n) {
-        auto rsf = [&](auto& v){ v.resize(n); };
-        rsf(px); rsf(py); rsf(pz);
-        rsf(px_pred); rsf(py_pred); rsf(pz_pred);
-        rsf(inertia_x); rsf(inertia_y); rsf(inertia_z);
-        rsf(vx); rsf(vy); rsf(vz);
-        rsf(fx); rsf(fy); rsf(fz);
-        rsf(nx); rsf(ny); rsf(nz);
+    // 重构后的 resize：从 18 行缩减到 6 行，极难出错
+    void resize(const size_t n_nodes) {
+        p.resize(n_nodes);
+        p_pred.resize(n_nodes);
+        p_inertia.resize(n_nodes);
+        v.resize(n_nodes);
+        f.resize(n_nodes);
+        n.resize(n_nodes);
     }
 
+    // 清空数据
+    void clear_topology() {
+        m_edges.clear();
+        m_tris.clear();
+        m_tets.clear();
+        m_surface_tris.clear();
+    }
 };
-
-inline bool isValidVertexId(const uint32_t value) {
-    return value <= INVALID_VERTEX_ID && value > 0;  // > 0 , since index from msh file begins at 1
-}
 
 void BuildAdjacency(mesh_on_cpu* mesh);
 

@@ -27,11 +27,7 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
     if (!in) throw std::runtime_error("Could not open file " + path);
 
     // clear old date
-    cpu_mesh->m_edges.clear();
-    cpu_mesh->m_tris.clear();
-    cpu_mesh->m_tets.clear();
-    cpu_mesh->m_surface_tris.clear();
-
+    cpu_mesh->clear_topology();
     size_t num_nodes = 0;
 
     std::string line;
@@ -46,7 +42,6 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
 
         // 基本合法性：Gmsh 节点编号从 1 开始
         if (v_l == 0) throw std::runtime_error("Invalid vertex id (0) in msh element");
-        if (!isValidVertexId(v_l)) throw std::runtime_error("Invalid vertex id (overflow) in msh element");
         if (num_nodes > 0 && v_l > num_nodes) {
             throw std::runtime_error("Invalid vertex id (out of range) in msh element");
         }
@@ -67,7 +62,9 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
 
             for (size_t i = 0; i < num_nodes; i++) {
                 unsigned long node_id = 0;
-                in >> node_id >> cpu_mesh->px[i] >> cpu_mesh->py[i] >> cpu_mesh->pz[i];
+                float x, y, z;
+                in >> node_id >> x >> y >> z;
+                cpu_mesh->p[i] = Vec3(x, y, z);
                 // here we don't ask node id to be continued, but if you want it strictly continue：
                 // if (node_id != i+1) ...
             }
@@ -204,8 +201,8 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
     std::unordered_map<EdgeKey, std::vector<HalfEdgeInfo>, EdgeKeyHash> edge_map;
     edge_map.reserve(tris.size() * 3);
 
-    auto add_half_edge = [&](uint32_t ti, VertexId u, VertexId v) {
-        EdgeKey ek = MakeEdgeKey(u, v);
+    auto add_half_edge = [&](const uint32_t ti, const VertexId u, const VertexId v) {
+        const EdgeKey ek = MakeEdgeKey(u, v);
         edge_map[ek].push_back(HalfEdgeInfo{ti, u, v}); // 方向按原三角形顶点顺序记录
     };
 
@@ -223,18 +220,18 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
     };
 
     std::vector<std::vector<NeighborRel>> adj(tris.size());
-    for (auto& kv : edge_map) {
-        auto& inc = kv.second;
+    for (auto&[fst, snd] : edge_map) {
+        auto& inc = snd;
         if (inc.size() < 2) continue;
 
         // 将该无向边的所有 incident 三角连接到第一个（处理非流形边时至少不崩）
         const auto& base = inc[0];
         for (size_t j = 1; j < inc.size(); ++j) {
-            const auto& cur = inc[j];
+            const auto&[tri, from, to] = inc[j];
 
-            const bool same_dir = (base.from == cur.from && base.to == cur.to);
-            adj[base.tri].push_back(NeighborRel{cur.tri, same_dir});
-            adj[cur.tri].push_back(NeighborRel{base.tri, same_dir});
+            const bool same_dir = (base.from == from && base.to == to);
+            adj[base.tri].push_back(NeighborRel{tri, same_dir});
+            adj[tri].push_back(NeighborRel{base.tri, same_dir});
         }
     }
 
@@ -252,9 +249,9 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
 
         while (!q.empty()) {
             const uint32_t u = q.front(); q.pop();
-            for (const auto& e : adj[u]) {
-                const uint32_t v = e.nb;
-                const auto desired = static_cast<int8_t>(flip[u] ^ (e.same_dir ? 1 : 0));
+            for (const auto&[nb, same_dir] : adj[u]) {
+                const uint32_t v = nb;
+                const auto desired = static_cast<int8_t>(flip[u] ^ (same_dir ? 1 : 0));
                 if (!visited[v]) {
                     visited[v] = 1;
                     flip[v] = desired;
@@ -296,11 +293,10 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets) {
     std::unordered_map<FaceKey, FaceRec, FaceKeyHash> mp;
     mp.reserve(tets.size() * 4 * 2);
 
-    auto add_face = [&](VertexId a, VertexId b, VertexId c,
-                        VertexId oa, VertexId ob, VertexId oc) {
+    auto add_face = [&](const VertexId a, const VertexId b, const VertexId c,
+                        const VertexId oa, const VertexId ob, const VertexId oc) {
         FaceKey k = MakeFaceKey(a, b, c);
-        auto it = mp.find(k);
-        if (it == mp.end()) {
+        if (const auto it = mp.find(k); it == mp.end()) {
             FaceRec rec;
             rec.count = 1;
             rec.oa = oa; rec.ob = ob; rec.oc = oc;
@@ -328,12 +324,11 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets) {
 
     out.reserve(mp.size() * 3);
 
-    for (const auto& kv : mp) {
-        const FaceRec& rec = kv.second;
-        if (rec.count == 1) {
-            out.push_back(rec.oa);
-            out.push_back(rec.ob);
-            out.push_back(rec.oc);
+    for (const auto&[fst, snd] : mp) {
+        if (const auto&[count, oa, ob, oc] = snd; count == 1) {
+            out.push_back(oa);
+            out.push_back(ob);
+            out.push_back(oc);
         }
     }
 
@@ -350,18 +345,14 @@ std::vector<float> ComputeNormal(mesh_on_cpu* cpu_mesh) {
         const size_t v2 = cpu_mesh->m_surface_tris[t*3+1];
         const size_t v3 = cpu_mesh->m_surface_tris[t*3+2];
 
-        Vec3 a(cpu_mesh->px[v1], cpu_mesh->py[v1], cpu_mesh->pz[v1]);
-        Vec3 b(cpu_mesh->px[v2], cpu_mesh->py[v2], cpu_mesh->pz[v2]);
-        Vec3 c(cpu_mesh->px[v3], cpu_mesh->py[v3], cpu_mesh->pz[v3]);
-
-        Vec3 n = (b - a).cross(c - a);
-
-        if (constexpr float EPS2 = 1e-30f; n.squaredNorm() < EPS2) continue;
+        Vec3 edge1 = cpu_mesh->p[v2] - cpu_mesh->p[v1];
+        Vec3 edge2 = cpu_mesh->p[v3] - cpu_mesh->p[v1];
+        const Vec3 face_n = edge1.cross(edge2);
 
         auto accum = [&](const size_t tri_idx) {
-            normals[3*tri_idx + 0] += n.x();
-            normals[3*tri_idx + 1] += n.y();
-            normals[3*tri_idx + 2] += n.z();
+            normals[3*tri_idx + 0] += face_n.x();
+            normals[3*tri_idx + 1] += face_n.y();
+            normals[3*tri_idx + 2] += face_n.z();
         };
         accum(v1);accum(v2);accum(v3);
     }
@@ -370,9 +361,12 @@ std::vector<float> ComputeNormal(mesh_on_cpu* cpu_mesh) {
         Vec3 v(normals[3*i+0], normals[3*i+1], normals[3*i+2]);
         float norm = v.norm();
         v = v / norm;
-        normals[3*i + 0] = cpu_mesh->nx[i] = v.x();
-        normals[3*i + 1] = cpu_mesh->ny[i] = v.y();
-        normals[3*i + 2] = cpu_mesh->nz[i] = v.z();
+        if (norm > 1e-12f) v /= norm;
+        else v = Vec3(0, 1, 0); // 默认向上或其他安全值
+        normals[3*i + 0] = v.x();
+        normals[3*i + 1] = v.y();
+        normals[3*i + 2] = v.z();
+        cpu_mesh->n[i] = v;
     }
 
     return normals;
@@ -385,9 +379,9 @@ std::vector<float> assemble_vertices(const mesh_on_cpu* cpu_mesh) {
     vertices.resize(num_nodes * 3);
 
     for (size_t i = 0; i < num_nodes; i++) {
-        vertices[3*i + 0] = cpu_mesh->px[i];
-        vertices[3*i + 1] = cpu_mesh->py[i];
-        vertices[3*i + 2] = cpu_mesh->pz[i];
+        vertices[3*i + 0] = cpu_mesh->p[i].x();
+        vertices[3*i + 1] = cpu_mesh->p[i].y();
+        vertices[3*i + 2] = cpu_mesh->p[i].z();
     }
     return vertices;
 }
@@ -405,7 +399,7 @@ void BuildAdjacency(mesh_on_cpu* mesh) {
 
     auto build_vertex_incident_csr =
     [num_nodes](auto const& elems,
-                uint32_t verts_per_elem,
+                const uint32_t verts_per_elem,
                 auto&& get_v,
                 std::vector<uint32_t>& offsets,
                 std::vector<uint32_t>& incident) {
