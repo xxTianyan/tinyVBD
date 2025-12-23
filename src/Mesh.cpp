@@ -124,7 +124,6 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
                     std::getline(in, line);
                 }
             }
-            continue;
         }
     }
 
@@ -148,185 +147,158 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
 }
 
 struct FaceKey {
-    VertexId a, b, c; // sorted ascending
+    VertexId a,b,c; // sorted ascending
     bool operator==(const FaceKey& o) const { return a==o.a && b==o.b && c==o.c; }
 };
 
+
 struct FaceKeyHash {
     size_t operator()(const FaceKey& k) const {
+        // simple mix
         return static_cast<size_t>(k.a)*73856093u
              ^ static_cast<size_t>(k.b)*19349663u
              ^ static_cast<size_t>(k.c)*83492791u;
     }
 };
 
-struct EdgeKey {
-    VertexId a, b; // sorted ascending
-    bool operator==(const EdgeKey& o) const { return a==o.a && b==o.b; }
-};
-
-struct EdgeKeyHash {
-    size_t operator()(const EdgeKey& k) const {
-        return static_cast<size_t>(k.a)*73856093u ^ static_cast<size_t>(k.b)*19349663u;
-    }
-};
-
-static inline FaceKey MakeFaceKey(VertexId i0, VertexId i1, VertexId i2) {
-    if (i0 > i1) std::swap(i0, i1);
-    if (i1 > i2) std::swap(i1, i2);
-    if (i0 > i1) std::swap(i0, i1);
-    return FaceKey{i0, i1, i2};
-}
-
-static inline EdgeKey MakeEdgeKey(VertexId i0, VertexId i1) {
-    if (i0 > i1) std::swap(i0, i1);
-    return EdgeKey{i0, i1};
-}
-
-IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
+IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets) {
     IndexBuffer out;
-    out.reserve(tris.size() * 3);
 
-    if (tris.empty()) return out;
-
-    struct HalfEdgeInfo {
-        uint32_t tri;     // triangle index
-        VertexId from;    // directed edge: from -> to (as appears in triangle order)
-        VertexId to;
+    auto make_face = [](VertexId i0, VertexId i1, VertexId i2) {
+        if (i0>i1) std::swap(i0,i1);
+        if (i1>i2) std::swap(i1,i2);
+        if (i0>i1) std::swap(i0,i1);
+        return FaceKey{i0,i1,i2};
     };
 
-    // 对每条无向边，记录出现过的半边（通常 1 或 2 个；非流形可能 >2）
-    std::unordered_map<EdgeKey, std::vector<HalfEdgeInfo>, EdgeKeyHash> edge_map;
-    edge_map.reserve(tris.size() * 3);
+    std::unordered_map<FaceKey, uint8_t, FaceKeyHash> cnt;
+    cnt.reserve(tets.size()*4*2);
 
-    auto add_half_edge = [&](const uint32_t ti, const VertexId u, const VertexId v) {
-        const EdgeKey ek = MakeEdgeKey(u, v);
-        edge_map[ek].push_back(HalfEdgeInfo{ti, u, v}); // 方向按原三角形顶点顺序记录
+    auto add = [&](const VertexId a, const VertexId b, const VertexId c){
+        FaceKey k = make_face(a,b,c);
+        if (const auto it = cnt.find(k); it == cnt.end()) cnt.emplace(k, 1);
+        else ++it->second;
     };
 
-    for (uint32_t ti = 0; ti < static_cast<uint32_t>(tris.size()); ++ti) {
-        const auto& v = tris[ti].vertices; // v0,v1,v2
-        add_half_edge(ti, v[0], v[1]);
-        add_half_edge(ti, v[1], v[2]);
-        add_half_edge(ti, v[2], v[0]);
+    for (const tetrahedron& t : tets) {
+        const auto &v = t.vertices;
+        add(v[0], v[1], v[2]);
+        add(v[0], v[1], v[3]);
+        add(v[0], v[2], v[3]);
+        add(v[1], v[2], v[3]);
     }
 
-    // 构建三角形邻接图：边共享则连边，并记录 same_dir（两三角对该边的方向是否相同）
-    struct NeighborRel {
-        uint32_t nb;
-        bool same_dir; // true: 两个三角在该共享边上方向相同；一致绕序要求共享边方向相反
+    out.reserve(cnt.size());
+
+    auto emit_if_boundary = [&](const VertexId a, const VertexId b, const VertexId c){
+        if (cnt[make_face(a,b,c)] == 1) {
+            out.push_back(a);
+            out.push_back(b);
+            out.push_back(c);
+        }
     };
 
-    std::vector<std::vector<NeighborRel>> adj(tris.size());
-    for (auto&[fst, snd] : edge_map) {
-        auto& inc = snd;
-        if (inc.size() < 2) continue;
-
-        // 将该无向边的所有 incident 三角连接到第一个（处理非流形边时至少不崩）
-        const auto& base = inc[0];
-        for (size_t j = 1; j < inc.size(); ++j) {
-            const auto&[tri, from, to] = inc[j];
-
-            const bool same_dir = (base.from == from && base.to == to);
-            adj[base.tri].push_back(NeighborRel{tri, same_dir});
-            adj[tri].push_back(NeighborRel{base.tri, same_dir});
-        }
-    }
-
-    // BFS/DFS 传播 flip：要求共享边方向相反。
-    // 推导关系：flipB = flipA XOR same_dir
-    std::vector<int8_t> visited(tris.size(), 0);
-    std::vector<int8_t> flip(tris.size(), 0);
-
-    std::queue<uint32_t> q;
-    for (uint32_t s = 0; s < static_cast<uint32_t>(tris.size()); ++s) {
-        if (visited[s]) continue;
-        visited[s] = 1;
-        flip[s] = 0; // 以该连通块第一片三角的输入绕序为“基准正面”
-        q.push(s);
-
-        while (!q.empty()) {
-            const uint32_t u = q.front(); q.pop();
-            for (const auto&[nb, same_dir] : adj[u]) {
-                const uint32_t v = nb;
-                const auto desired = static_cast<int8_t>(flip[u] ^ (same_dir ? 1 : 0));
-                if (!visited[v]) {
-                    visited[v] = 1;
-                    flip[v] = desired;
-                    q.push(v);
-                } else {
-                    // 非流形/自相交/输入绕序混乱时，可能出现矛盾；此处不抛异常，只保持已有结果
-                    // 如需严格，可在这里检测 flip[v] != desired 并报错
-                }
-            }
-        }
-    }
-
-    // 输出 index buffer：flip==1 时交换 v1,v2 反转绕序
-    for (uint32_t ti = 0; ti < static_cast<uint32_t>(tris.size()); ++ti) {
-        const auto& v = tris[ti].vertices;
-        out.push_back(v[0]);
-        if (flip[ti] == 0) {
-            out.push_back(v[1]);
-            out.push_back(v[2]);
-        } else {
-            out.push_back(v[2]);
-            out.push_back(v[1]);
-        }
+    for (const tetrahedron& t : tets) {
+        const auto &v = t.vertices; // 假定为 [v0,v1,v2,v3] 且整体右手/正向
+        emit_if_boundary(v[1], v[2], v[3]);
+        emit_if_boundary(v[0], v[3], v[2]);
+        emit_if_boundary(v[0], v[1], v[3]);
+        emit_if_boundary(v[0], v[2], v[1]);
     }
 
     return out;
 }
 
+IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
+    if (tris.empty()) return {};
 
-IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets) {
-    IndexBuffer out;
-    if (tets.empty()) return out;
+    const auto num_tris = static_cast<uint32_t>(tris.size());
 
-    struct FaceRec {
-        uint32_t count = 0;
-        VertexId oa = 0, ob = 0, oc = 0; // oriented (as we want to emit if boundary)
-    };
+    // --- 1. 构建边邻接表 ---
+    struct HalfEdge {
+        uint32_t v0, v1; // 原始方向
+        uint32_t tri_idx;
+        uint32_t edge_key[2]; // 排序后的 ID，用于匹配共享边
 
-    std::unordered_map<FaceKey, FaceRec, FaceKeyHash> mp;
-    mp.reserve(tets.size() * 4 * 2);
-
-    auto add_face = [&](const VertexId a, const VertexId b, const VertexId c,
-                        const VertexId oa, const VertexId ob, const VertexId oc) {
-        FaceKey k = MakeFaceKey(a, b, c);
-        if (const auto it = mp.find(k); it == mp.end()) {
-            FaceRec rec;
-            rec.count = 1;
-            rec.oa = oa; rec.ob = ob; rec.oc = oc;
-            mp.emplace(k, rec);
-        } else {
-            it->second.count += 1;
+        bool operator<(const HalfEdge& o) const {
+            if (edge_key[0] != o.edge_key[0]) return edge_key[0] < o.edge_key[0];
+            return edge_key[1] < o.edge_key[1];
         }
     };
 
-    // 约定：tet 顶点顺序 v0,v1,v2,v3 为“正向/右手/正体积”
-    // 则外向三角面（与常见 FEM/几何约定一致）可取：
-    // face opposite v0: (v1, v2, v3)
-    // face opposite v1: (v0, v3, v2)
-    // face opposite v2: (v0, v1, v3)
-    // face opposite v3: (v0, v2, v1)
-    for (const tetrahedron& t : tets) {
-        const auto& v = t.vertices;
+    std::vector<HalfEdge> all_edges;
+    all_edges.reserve(num_tris * 3);
+    for (uint32_t i = 0; i < num_tris; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            uint32_t u = tris[i].vertices[j];
+            uint32_t v = tris[i].vertices[(j + 1) % 3];
+            uint32_t k0 = std::min(u, v);
+            uint32_t k1 = std::max(u, v);
+            all_edges.push_back({u, v, i, {k0, k1}});
+        }
+    }
+    std::sort(all_edges.begin(), all_edges.end());
 
-        // 用 (a,b,c) 做 key（无向），用 (oa,ob,oc) 记录有向输出
-        add_face(v[1], v[2], v[3],  v[1], v[2], v[3]);
-        add_face(v[0], v[2], v[3],  v[0], v[3], v[2]);
-        add_face(v[0], v[1], v[3],  v[0], v[1], v[3]);
-        add_face(v[0], v[1], v[2],  v[0], v[2], v[1]);
+    struct Neighbor {
+        uint32_t tri_idx;
+        bool same_direction; // 两个三角形在该边上的采样方向是否一致
+    };
+    std::vector<std::vector<Neighbor>> adj(num_tris);
+
+    for (size_t i = 0; i < all_edges.size(); ) {
+        size_t j = i + 1;
+        while (j < all_edges.size() &&
+               all_edges[i].edge_key[0] == all_edges[j].edge_key[0] &&
+               all_edges[i].edge_key[1] == all_edges[j].edge_key[1]) {
+
+            // 发现共享边：连接两个三角形
+            uint32_t t1 = all_edges[i].tri_idx;
+            uint32_t t2 = all_edges[j].tri_idx;
+            // 如果两个三角形在共享边上方向相同，说明其中一个需要翻转
+            bool same_dir = (all_edges[i].v0 == all_edges[j].v0);
+
+            adj[t1].push_back({t2, same_dir});
+            adj[t2].push_back({t1, same_dir});
+            j++;
+        }
+        i = j;
     }
 
-    out.reserve(mp.size() * 3);
+    // --- 2. BFS 统一绕序 ---
+    std::vector<int8_t> flip(num_tris, 0); // 0: 原样, 1: 翻转
+    std::vector<bool> visited(num_tris, false);
+    std::queue<uint32_t> q;
 
-    for (const auto&[fst, snd] : mp) {
-        if (const auto&[count, oa, ob, oc] = snd; count == 1) {
-            out.push_back(oa);
-            out.push_back(ob);
-            out.push_back(oc);
+    for (uint32_t i = 0; i < num_tris; ++i) {
+        if (visited[i]) continue;
+        visited[i] = true;
+        q.push(i);
+
+        while (!q.empty()) {
+            uint32_t u = q.front();
+            q.pop();
+
+            for (const auto& nb : adj[u]) {
+                if (!visited[nb.tri_idx]) {
+                    visited[nb.tri_idx] = true;
+                    // 如果 A 和 B 共享边方向相同，且 A 没翻转，则 B 必须翻转
+                    // 逻辑：flip[B] = flip[A] XOR same_direction
+                    flip[nb.tri_idx] = flip[u] ^ (nb.same_direction ? 1 : 0);
+                    q.push(nb.tri_idx);
+                }
+            }
+        }
+    }
+
+    // 构建初步 IndexBuffer
+    IndexBuffer out;
+    out.reserve(num_tris * 3);
+    for (uint32_t i = 0; i < num_tris; ++i) {
+        const auto& v = tris[i].vertices;
+        if (flip[i] == 0) {
+            out.push_back(v[0]); out.push_back(v[1]); out.push_back(v[2]);
+        } else {
+            out.push_back(v[0]); out.push_back(v[2]); out.push_back(v[1]);
         }
     }
 
