@@ -10,7 +10,6 @@
 
 class VBDSolver {
     int num_iters;
-    ForceElementAdjacencyInfo adjacencyInfo;
 
     explicit VBDSolver(const int num_iters) : num_iters(num_iters) {}
     ~VBDSolver() = default;

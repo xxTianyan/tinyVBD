@@ -2,8 +2,8 @@
 // Created by 徐天焱 on 2025/11/4.
 //
 
-#ifndef MESHLOADER_H
-#define MESHLOADER_H
+#ifndef MESH_H
+#define MESH_H
 
 #include <vector>
 #include <string>
@@ -52,23 +52,16 @@ struct mesh_on_cpu {
     std::vector<float> nx, ny, nz;  // normal
     Dimension dim;
 
-    // physical properties
-    std::vector<float> inv_mass; // inverse of vertex mass
-    std::vector<float> mass;     // vertex mass
-
     [[nodiscard]] inline size_t size() const {return nx.size();}
 
     // for physical simulations
-    std::vector<tetrahedron> m_tets_local;  // empty if it's 2d mesh
-    std::vector<triangle> m_tets;
+    std::vector<tetrahedron> m_tets;  // empty if it's 2d mesh
+    std::vector<triangle> m_tris;
     std::vector<edge> m_edges;
+    ForceElementAdjacencyInfo adjacencyInfo;
 
     // for rendering
-    std::vector<VertexId> m_surface_tris_local;
-
-    // pre-computing of tets
-    std::vector<Mat3> tet_Dm_inv; // inverse of shape matrix Dm^-1
-    std::vector<float> tet_vol;   // the volume of tet
+    std::vector<uint32_t> m_surface_tris;
 
     size_t base_offest = 0;
 
@@ -80,17 +73,15 @@ struct mesh_on_cpu {
         rsf(vx); rsf(vy); rsf(vz);
         rsf(fx); rsf(fy); rsf(fz);
         rsf(nx); rsf(ny); rsf(nz);
-        rsf(inv_mass); rsf(mass);
     }
 
-    void InitializePhysics(float density);
 };
 
 inline bool isValidVertexId(const uint32_t value) {
     return value <= INVALID_VERTEX_ID && value > 0;  // > 0 , since index from msh file begins at 1
 }
 
-void BuildAdjacency(size_t num_nodes, const std::vector<tetrahedron>& tets);
+void BuildAdjacency(mesh_on_cpu* mesh);
 
 void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh);
 
@@ -98,6 +89,8 @@ std::vector<float> ComputeNormal(mesh_on_cpu* cpu_mesh);
 
 IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets);
 
+IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris);
+
 std::vector<float> assemble_vertices(const mesh_on_cpu* cpu_mesh);
 
-#endif //MESHLOADER_H
+#endif //MESH_H

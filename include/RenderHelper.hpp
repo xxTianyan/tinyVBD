@@ -87,15 +87,15 @@ inline void ReframeToModel(Camera3D *cam,
 static Model upload_model_from_cpu_mesh(mesh_on_cpu* M) {
     Mesh gmsh = {0};
     gmsh.vertexCount   = static_cast<int>(M->size());
-    gmsh.triangleCount = static_cast<int>(M->m_surface_tris_local.size() / 3);
+    gmsh.triangleCount = static_cast<int>(M->m_surface_tris.size() / 3);
 
     const std::vector<float> vertices = assemble_vertices(M);
     // copy vertices
     gmsh.vertices = static_cast<float *>(MemAlloc(vertices.size() * sizeof(float)));
     std::memcpy(gmsh.vertices, vertices.data(), vertices.size() * sizeof(float));
     // copy indices
-    gmsh.indices = static_cast<unsigned short *>(MemAlloc(M->m_surface_tris_local.size() * sizeof(unsigned short)));
-    std::memcpy(gmsh.indices, M->m_surface_tris_local.data(), M->m_surface_tris_local.size() * sizeof(unsigned short));
+    gmsh.indices = static_cast<unsigned short *>(MemAlloc(M->m_surface_tris.size() * sizeof(unsigned short)));
+    std::memcpy(gmsh.indices, M->m_surface_tris.data(), M->m_surface_tris.size() * sizeof(unsigned short));
 
     if (World::RayNormal) {
         const std::vector<float> normals  = ComputeNormal(M);

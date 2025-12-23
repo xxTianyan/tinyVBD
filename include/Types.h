@@ -10,7 +10,7 @@
 #include <vector>
 
 struct mesh_on_cpu;
-using IndexBuffer = std::vector<uint16_t>;
+using IndexBuffer = std::vector<uint32_t>;
 using VertexId = uint16_t;
 constexpr VertexId INVALID_VERTEX_ID = 0xFFFF;
 

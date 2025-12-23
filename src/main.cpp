@@ -20,10 +20,10 @@ namespace {
 /************ demos ************/
 
 static void demo1() {
-    auto m = std::make_unique<mesh_on_cpu>();
+    /*auto m = std::make_unique<mesh_on_cpu>();
     ParseMSH("../assets/bunny.msh", m.get());
     m->InitializePhysics(100.0f);
-    world.Add(std::move(m));
+    world.Add(std::move(m));*/
 }
 
 std::function<void()> demos[] = {demo1};
