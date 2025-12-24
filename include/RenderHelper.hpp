@@ -7,7 +7,8 @@
 
 #include <iostream>
 #include <raylib.h>
-#include "raymath.h"
+#include <raymath.h>
+
 #include "Mesh.h"
 #include"World.h"
 
@@ -126,11 +127,13 @@ static void UpdateModel(const std::vector<Model> &models, const std::vector<Mesh
     for (size_t i = 0; i < models.size(); ++i) {
         const Mesh& old_mesh = models[i].meshes[0];
         const std::vector<float> vertices = assemble_vertices(Meshes[i].get());
+        const std::vector<float> normals = ComputeNormal(Meshes[i].get());
         const size_t dataSize = vertices.size() * sizeof(float);
         if (dataSize > static_cast<size_t>(std::numeric_limits<int>::max())) {
             throw std::runtime_error("Data too large for int parameter");
         }
         UpdateMeshBuffer(old_mesh, 0, vertices.data(), static_cast<int>(dataSize),0);
+        UpdateMeshBuffer(old_mesh, 2, normals.data(), static_cast<int>(dataSize), 0);
     }
 }
 
