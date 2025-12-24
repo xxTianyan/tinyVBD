@@ -5,84 +5,15 @@
 #ifndef RENDERHELPER_H
 #define RENDERHELPER_H
 
+#include <cstring>
 #include <iostream>
+#include <limits>
+#include <stdexcept>
+#include <vector>
 #include <raylib.h>
-#include <raymath.h>
 
 #include "Mesh.h"
-#include"World.h"
-
-template<typename T>
-void print_vector(const std::vector<T>& vec) {
-    for (const auto& elem : vec) {
-        std::cout << elem << " ";
-    }
-    std::cout << std::endl;
-}
-
-struct OrbitCtrl {
-    float yaw;
-    float pitch;
-    float radius;
-    float rotSens;
-    float zoomSens;
-    float panSens;
-};
-
-inline void ClampPitch(float *pitch) {
-    constexpr float lim = DEG2RAD*89.0f;                 // avoid Gimbal Lock
-    if (*pitch >  lim) *pitch =  lim;
-    if (*pitch < -lim) *pitch = -lim;
-}
-
-inline Vector3 SphericalToCartesian(const float r, const float yaw, const float pitch) {
-    const float cp = cosf(pitch);
-    const float sp = sinf(pitch);
-    const float cy = cosf(yaw);
-    const float sy = sinf(yaw);
-    return (Vector3){ r*cp*cy, r*sp, r*cp*sy };
-}
-
-inline void ReframeToModel(Camera3D *cam,
-                           OrbitCtrl *orbit,
-                           const std::vector<Model> &models,
-                           const float margin) {
-    if (!cam || !orbit || models.empty()) return;
-
-    BoundingBox box0 = GetModelBoundingBox(models[0]);
-    Vector3 min = box0.min;
-    Vector3 max = box0.max;
-
-    for (size_t i = 1; i < models.size(); ++i) {
-        BoundingBox bi = GetModelBoundingBox(models[i]);
-        min.x = fminf(min.x, bi.min.x);
-        min.y = fminf(min.y, bi.min.y);
-        min.z = fminf(min.z, bi.min.z);
-
-        max.x = fmaxf(max.x, bi.max.x);
-        max.y = fmaxf(max.y, bi.max.y);
-        max.z = fmaxf(max.z, bi.max.z);
-    }
-
-    const Vector3 center = {
-        (min.x + max.x) * 0.5f,
-        (min.y + max.y) * 0.5f,
-        (min.z + max.z) * 0.5f
-    };
-
-    const Vector3 diag = Vector3Subtract(max, min);
-    const float radiusBox = 0.5f * Vector3Length(diag);
-    const float fitDist   = radiusBox / tanf(DEG2RAD * cam->fovy * 0.5f);
-
-    const float m = (margin > 1.0f ? margin : 1.15f);
-    orbit->radius = fitDist * m;
-
-    cam->target = center;
-
-    const Vector3 offset = SphericalToCartesian(orbit->radius, orbit->yaw, orbit->pitch);
-    cam->position = Vector3Add(cam->target, offset);
-    cam->up       = (Vector3){ 0.0f, 1.0f, 0.0f };
-}
+#include "World.h"
 
 // turn mesh_on_cpu into GPU Mesh + Model (dynamic)
 static Model upload_model_from_cpu_mesh(mesh_on_cpu* M) {
