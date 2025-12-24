@@ -53,7 +53,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 void main()
 {
     vec3 color = colDiffuse.rgb;
-    vec3 normal = normalize(Normal);
+    vec3 normal = normalize(gl_FrontFacing ? Normal : -Normal);
     vec3 lightDirection = normalize(lightDir);
 
     // 1. Ambient (环境光)
