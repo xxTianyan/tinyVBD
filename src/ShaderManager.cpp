@@ -1,7 +1,6 @@
 #include "ShaderManager.h"
 
-ShaderManager::ManagedShader &ShaderManager::LoadShaderProgram(const std::string &name, const char *vertexPath, const char *fragmentPath)
-{
+ShaderManager::ManagedShader &ShaderManager::LoadShaderProgram(const std::string &name, const char *vertexPath, const char *fragmentPath) {
     ManagedShader &managed = EmplaceOrReplace(name);
     managed.shader = LoadShader(vertexPath, fragmentPath);
     managed.viewPosLoc = GetShaderLocation(managed.shader, "viewPos");
@@ -10,13 +9,15 @@ ShaderManager::ManagedShader &ShaderManager::LoadShaderProgram(const std::string
     return managed;
 }
 
-ShaderManager::ManagedShader &ShaderManager::LoadClothShader(const std::string &name)
-{
+ShaderManager::ManagedShader &ShaderManager::LoadClothShader(const std::string &name) {
     return LoadShaderProgram(name, "../shaders/cloth.vs", "../shaders/cloth.fs");
 }
 
-ShaderManager::ManagedShader *ShaderManager::Get(const std::string &name)
-{
+ShaderManager::ManagedShader &ShaderManager::LoadFloorShader(const std::string &name) {
+    return LoadShaderProgram(name, "../shaders/floor.vs", "../shaders/floor.fs");
+}
+
+ShaderManager::ManagedShader *ShaderManager::Get(const std::string &name) {
     auto it = m_shaders.find(name);
     if (it == m_shaders.end())
     {
@@ -25,13 +26,11 @@ ShaderManager::ManagedShader *ShaderManager::Get(const std::string &name)
     return &it->second;
 }
 
-bool ShaderManager::Has(const std::string &name) const
-{
+bool ShaderManager::Has(const std::string &name) const {
     return m_shaders.find(name) != m_shaders.end();
 }
 
-void ShaderManager::ApplyShaderToModel(Model &model, const std::string &name)
-{
+void ShaderManager::ApplyShaderToModel(Model &model, const std::string &name) {
     ManagedShader *shader = Get(name);
     if (shader)
     {
@@ -39,16 +38,14 @@ void ShaderManager::ApplyShaderToModel(Model &model, const std::string &name)
     }
 }
 
-void ShaderManager::ApplyShaderToModels(std::vector<Model> &models, const std::string &name)
-{
+void ShaderManager::ApplyShaderToModels(std::vector<Model> &models, const std::string &name) {
     for (auto &model : models)
     {
         ApplyShaderToModel(model, name);
     }
 }
 
-void ShaderManager::UpdateLighting(const std::string &name, const Vector3 &lightDir, const Vector3 &viewPos)
-{
+void ShaderManager::UpdateLighting(const std::string &name, const Vector3 &lightDir, const Vector3 &viewPos) {
     ManagedShader *shader = Get(name);
     if (!shader)
     {
@@ -66,8 +63,7 @@ void ShaderManager::UpdateLighting(const std::string &name, const Vector3 &light
     }
 }
 
-void ShaderManager::UnloadAll()
-{
+void ShaderManager::UnloadAll() {
     for (auto &entry : m_shaders)
     {
         if (entry.second.shader.id > 0)
@@ -78,13 +74,10 @@ void ShaderManager::UnloadAll()
     m_shaders.clear();
 }
 
-ShaderManager::ManagedShader &ShaderManager::EmplaceOrReplace(const std::string &name)
-{
+ShaderManager::ManagedShader &ShaderManager::EmplaceOrReplace(const std::string &name) {
     auto [it, inserted] = m_shaders.emplace(name, ManagedShader{});
-    if (!inserted)
-    {
-        if (it->second.shader.id > 0)
-        {
+    if (!inserted) {
+        if (it->second.shader.id > 0) {
             UnloadShader(it->second.shader);
         }
         it->second = ManagedShader{};

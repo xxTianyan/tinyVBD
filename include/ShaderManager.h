@@ -19,6 +19,7 @@ public:
 
     ManagedShader &LoadShaderProgram(const std::string &name, const char *vertexPath, const char *fragmentPath);
     ManagedShader &LoadClothShader(const std::string &name = "cloth");
+    ManagedShader &LoadFloorShader(const std::string &name = "floor");
 
     ManagedShader *Get(const std::string &name);
     bool Has(const std::string &name) const;

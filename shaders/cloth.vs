@@ -3,19 +3,27 @@
 in vec3 vertexPosition;
 in vec2 vertexTexCoord;
 in vec3 vertexNormal;
-
-out vec3 FragPos;
-out vec3 Normal;
-out vec2 TexCoord;
+in vec4 vertexColor;
 
 uniform mat4 mvp;
 uniform mat4 matModel;
+uniform mat4 matNormal;
+
+out vec3 vWorldPos;
+out vec3 vWorldNormal;
+out vec2 vTexCoord;
+out vec4 vColor;
 
 void main()
 {
-    FragPos = vec3(matModel * vec4(vertexPosition, 1.0));
-    Normal  = normalize(vec3(matModel * vec4(vertexNormal, 0.0)));
-    TexCoord = vertexTexCoord;
+    vec4 worldPos = matModel * vec4(vertexPosition, 1.0);
+    vWorldPos = worldPos.xyz;
+
+    // matNormal 在 raylib 里是法线矩阵（通常是 inverseTranspose(model)）
+    vWorldNormal = normalize((matNormal * vec4(vertexNormal, 0.0)).xyz);
+
+    vTexCoord = vertexTexCoord;
+    vColor = vertexColor;
 
     gl_Position = mvp * vec4(vertexPosition, 1.0);
 }
