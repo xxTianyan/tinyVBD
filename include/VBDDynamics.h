@@ -9,6 +9,8 @@
 #include "Types.h"
 
 class VBDSolver {
+
+public:
     int num_iters;
 
     explicit VBDSolver(const int num_iters) : num_iters(num_iters) {}

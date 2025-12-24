@@ -4,6 +4,10 @@
 
 #include "MeshBuilder.h"
 
+#ifdef _WIN64
+float M_PI = 3.14159265358979323846;
+#endif
+
 
 void MeshBuilder::PrepareMesh(mesh_on_cpu* mesh, const size_t num_nodes) {
     if (!mesh) return;

@@ -67,7 +67,8 @@ add_executable(tinyVBD src/main.cpp
         src/VBDDynamics.cpp
         src/MeshBuilder.cpp
         src/CameraController.cpp
-        src/ShaderManager.cpp)
+        src/ShaderManager.cpp
+        src/Sample.cpp)
 
 target_include_directories(tinyVBD
         PRIVATE

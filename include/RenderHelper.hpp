@@ -43,10 +43,10 @@ static Model upload_model_from_cpu_mesh(mesh_on_cpu* M) {
 }
 
 // put every mesh to a model vector
-static std::vector<Model> upload_all_models(const World& world) {
+static std::vector<Model> upload_all_models(const World* world) {
     std::vector<Model> models;
-    models.reserve(world.meshes.size());
-    for (auto& up : world.meshes) {
+    models.reserve(world->meshes.size());
+    for (auto& up : world->meshes) {
         models.push_back(upload_model_from_cpu_mesh(up.get()));
     }
     return models;
@@ -55,10 +55,12 @@ static std::vector<Model> upload_all_models(const World& world) {
 // update gpu mesh according to cpu mesh
 static void UpdateModel(const std::vector<Model> &models, const std::vector<MeshPtr>& Meshes) {
     if (models.size() != Meshes.size()) throw std::runtime_error("Model size mismatch");
+    std::vector<float> vertices;
+    std::vector<float> normals;
     for (size_t i = 0; i < models.size(); ++i) {
         const Mesh& old_mesh = models[i].meshes[0];
-        const std::vector<float> vertices = assemble_vertices(Meshes[i].get());
-        const std::vector<float> normals = ComputeNormal(Meshes[i].get());
+        vertices = assemble_vertices(Meshes[i].get());
+        normals = ComputeNormal(Meshes[i].get());
         const size_t dataSize = vertices.size() * sizeof(float);
         if (dataSize > static_cast<size_t>(std::numeric_limits<int>::max())) {
             throw std::runtime_error("Data too large for int parameter");
@@ -67,8 +69,5 @@ static void UpdateModel(const std::vector<Model> &models, const std::vector<Mesh
         UpdateMeshBuffer(old_mesh, 2, normals.data(), static_cast<int>(dataSize), 0);
     }
 }
-
-
-
 
 #endif //RENDERHELPER_H
