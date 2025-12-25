@@ -16,10 +16,6 @@ public:
     explicit VBDSolver(const int num_iters) : num_iters(num_iters) {}
     ~VBDSolver() = default;
 
-    void BuildAdjacency(size_t num_nodes, const std::vector<tetrahedron>& tets);
-
-
-
 };
 
 struct Node {

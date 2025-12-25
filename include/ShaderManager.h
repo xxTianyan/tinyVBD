@@ -12,7 +12,7 @@ struct CommonShaderParams {
     // 1) 背景/雾颜色：决定暗场舞台氛围；fogColor 建议接近背景
     Vector3 skyAmb   = { 0.10f, 0.12f, 0.18f }; // 上方环境：偏冷更高级
     Vector3 gndAmb   = { 0.05f, 0.05f, 0.055f}; // 下方环境：偏灰
-    float ambientStrength = 0.04f;              // 环境亮度：越小越“聚光”对比越强
+    float ambientStrength = 10.14f;              // 环境亮度：越小越“聚光”对比越强
 
     // 2) 曝光：整体亮度；值越大越亮（配合 HDR）
     float exposure = 1.6f;

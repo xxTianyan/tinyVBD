@@ -6,10 +6,6 @@
 #include "MeshBuilder.h"
 #include "RenderHelper.hpp"
 
-/*
- * TODO: Finish Sample class and use new shader from gpt.
- */
-
 Sample::Sample() {
     m_world = std::make_unique<World>(Vec3{0.0f, -9.81f, 0.0f});
     m_shader_manager = std::make_unique<ShaderManager>();
@@ -59,8 +55,8 @@ void Sample::CreateFloor() {
 
     constexpr float floorRough  = 0.55f;                // 越大越哑光，反光越弱
     constexpr float floorBumpStr     = 0.22f;                // 微起伏：增强高级感（太大像橡皮泥）
-    constexpr float floorFogDensity  = 0.035f;               // 雾：让地板“无穷远”+聚光更明显
-    constexpr float floorTileScale   = 6.0f;                 // 网格密度：越大格子越小
+    constexpr float floorFogDensity  = 0.015f;               // 雾：让地板“无穷远”+聚光更明显
+    constexpr float floorTileScale   = 2.0f;                 // 网格密度：越大格子越小
     constexpr float floorLineWidth   = 0.035f;               // 网格线宽：越大线越明显
 
     SetShaderValue(floor_shader, tileScale, &floorTileScale, SHADER_UNIFORM_FLOAT);

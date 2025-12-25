@@ -1,5 +1,4 @@
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <vector>
 #include <raylib.h>
@@ -29,7 +28,7 @@ int main(){
     // get reference of necessary component
     auto& models = falling_cloth.m_models;
     auto& world = falling_cloth.m_world;
-    auto& shader_manager = falling_cloth.m_shader_manager;
+    const auto& shader_manager = falling_cloth.m_shader_manager;
 
     // camera
     OrbitCamera orbitCam = CreateOrbitCamera(Vector3{ 1.5f, 0.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f });
@@ -68,6 +67,7 @@ int main(){
             Color{ 45, 93, 125, 255 },   // 顶部：明显更亮的蓝灰
             Color{ 10, 12, 16, 255 }    // 底部：深色
         );
+        DrawFPS(0, 0);
 
         BeginMode3D(orbitCam.camera);
         // draw floor
@@ -88,11 +88,6 @@ int main(){
         EndDrawing();
     }
 
-    // shaderManager.UnloadAll();
-    /*for (auto& m : models) {
-        UnloadModel(m);             // release gpu resource
-    }*/
-    // UnloadModel(floor);
     CloseWindow();
 
     return 0;
