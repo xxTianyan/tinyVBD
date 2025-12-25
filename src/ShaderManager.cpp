@@ -38,7 +38,7 @@ void ShaderManager::ApplyShaderToModels(const std::vector<Model> &models, const 
     }
 }
 
-void ShaderManager::UpdateLighting(const std::string &name, const Vector3 &lightDir, const Vector3 &viewPos) {
+void ShaderManager::UpdateViewPos(const std::string &name, const Vector3 &viewPos) {
     const ManagedShader *shader = Get(name);
     if (!shader){
         return;
@@ -48,9 +48,6 @@ void ShaderManager::UpdateLighting(const std::string &name, const Vector3 &light
         SetShaderValue(shader->shader, shader->viewPosLoc, &viewPos, SHADER_UNIFORM_VEC3);
     }
 
-    if (shader->lightDirLoc >= 0){
-        SetShaderValue(shader->shader, shader->lightDirLoc, &lightDir, SHADER_UNIFORM_VEC3);
-    }
 }
 
 void ShaderManager::UnloadAll() {

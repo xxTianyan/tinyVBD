@@ -10,6 +10,12 @@
  * TODO: Finish Sample class and use new shader from gpt.
  */
 
+Sample::Sample() {
+    m_world = std::make_unique<World>(Vec3{0.0f, -9.81f, 0.0f});
+    m_shader_manager = std::make_unique<ShaderManager>();
+    m_solver = std::make_unique<VBDSolver>(10);
+}
+
 Sample::~Sample() {
     auto UnloadModelIfLoaded = [](Model& m) {
         if ((m.meshCount > 0) && (m.meshes != nullptr)) {
@@ -68,12 +74,6 @@ void Sample::CreateFloor() {
     SetShaderValue(floor_shader, fogDensity, &floorFogDensity, SHADER_UNIFORM_FLOAT);
     SetShaderValue(floor_shader, fogColor, &floorFogColor, SHADER_UNIFORM_VEC3);
 
-}
-
-HangingCloth::HangingCloth() {
-    m_world = std::make_unique<World>(Vec3{0.0f, -9.81f, 0.0f});
-    m_shader_manager = std::make_unique<ShaderManager>();
-    m_solver = std::make_unique<VBDSolver>(10);
 }
 
 void HangingCloth::CreateWorld() {

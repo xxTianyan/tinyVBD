@@ -23,8 +23,8 @@ struct CommonShaderParams {
     Vector3 lightColor  = { 0.25f, 0.25f, 0.25f };   // 很弱！如果你想更暗，可降到 0.1
 
     // 4) 聚光灯
-    Vector3 spotPos   = { 0.0f, 8.0f, 0.0f };      // 灯的位置：越高光圈越大更柔
-    Vector3 spotDir   = Vector3Normalize(Vector3{ 0.0f, -1.0f, 0.0f }); // 朝下
+    Vector3 spotPos   = { 8.0f, 8.0f, 8.0f };      // 灯的位置：越高光圈越大更柔
+    Vector3 spotDir   = Vector3Normalize(Vector3{ -1.0f, -1.0f, -1.0f }); // 朝下
     Vector3 spotColor = { 1.0f, 0.95f, 0.85f };    // 略暖色，舞台灯感觉
     float spotIntensity = 22.0f;                   // 光圈亮度强弱（主要旋钮）
     float spotRange     = 30.0f;                   // 光能覆盖多远（太小会断崖式黑）
@@ -50,7 +50,7 @@ public:
     void ApplyShaderToModel(const Model &model, const std::string &name);
     void ApplyShaderToModels(const std::vector<Model> &models, const std::string &name);
 
-    void UpdateLighting(const std::string &name, const Vector3 &lightDir, const Vector3 &viewPos);
+    void UpdateViewPos(const std::string &name, const Vector3 &viewPos);
     void UnloadAll();
 
     static void BindMatrices(const Shader &sh);

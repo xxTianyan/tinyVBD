@@ -5,14 +5,11 @@
 #include <raylib.h>
 #include <rlgl.h>
 
-#include "World.h"
+
 #include "RenderHelper.hpp"
-#include "BroadPhase.h"
-#include "MeshBuilder.h"
 #include "Mesh.h"
-#include "Types.h"
 #include "CameraController.h"
-#include "ShaderManager.h"
+#include "Sample.h"
 
 
 int main(){
@@ -20,14 +17,24 @@ int main(){
     constexpr int screenWidth = 1920;
     constexpr int screenHeight = 1080;
 
-
-    SetConfigFlags(FLAG_MSAA_4X_HINT); // 抗锯齿
+    SetConfigFlags(FLAG_MSAA_4X_HINT); // anti alias
     InitWindow(screenWidth, screenHeight, "tinyVBD");
 
+    // set sample
+    HangingCloth falling_cloth;
+    falling_cloth.CreateWorld();
+    falling_cloth.CreateFloor();
+    falling_cloth.BindShaders();
+
+    // get reference of necessary component
+    auto& models = falling_cloth.m_models;
+    auto& world = falling_cloth.m_world;
+    auto& shader_manager = falling_cloth.m_shader_manager;
+
+    // camera
     OrbitCamera orbitCam = CreateOrbitCamera(Vector3{ 1.5f, 0.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f });
 
     SetTargetFPS(60);                   // run at 60 frames-per-second
-
 
 
     // main loop
@@ -41,13 +48,17 @@ int main(){
                                IsMouseButtonDown(MOUSE_RIGHT_BUTTON), IsMouseButtonDown(MOUSE_MIDDLE_BUTTON));
 
         if (IsKeyPressed(KEY_Z)) {
-            // ReframeOrbitToModels(orbitCam, models, 1.2f);
+            ReframeOrbitToModels(orbitCam, models, 1.2f);
         }
-
         RefreshCameraTransform(orbitCam);
 
-        // step simulation and update
+        const auto& viewPos = orbitCam.camera.position;
 
+        // step simulation and update
+        falling_cloth.m_world->Step(dt);
+        // update shader
+        shader_manager->UpdateViewPos("cloth", viewPos);
+        shader_manager->UpdateViewPos("floor", viewPos);
 
         // ordinary rendering
         BeginDrawing();
@@ -58,21 +69,20 @@ int main(){
             Color{ 10, 12, 16, 255 }    // 底部：深色
         );
 
-
         BeginMode3D(orbitCam.camera);
-        // 1. 画地板
+        // draw floor
+        DrawModel(falling_cloth.m_floor, Vector3Zero(), 1.0f, WHITE);
 
-
-        // 2. 画布料
+        // draw cloth
         rlDisableBackfaceCulling();
-        /*for (auto& m : models) {
+        for (const auto& m : models) {
             DrawModel(m, Vector3Zero(), 1.0f, DARKBLUE);
-        }*/
+        }
         rlEnableBackfaceCulling();
 
         DrawAxisGizmo(0.8f);
 
-        // DrawGrid(10, 1.0f); // 辅助网格可以留着，但它是线框，没阴影
+        // DrawGrid(10, 1.0f);
 
         EndMode3D();
         EndDrawing();
