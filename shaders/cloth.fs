@@ -5,96 +5,136 @@ in vec3 vWorldNormal;
 in vec2 vTexCoord;
 in vec4 vColor;
 
-uniform vec3 viewPos;                  // camera position in world space
-
-// Directional light
-// Definition: lightDir is the light RAY direction (from light -> scene), normalized.
-// So the direction from surface -> light is L = -lightDir.
-uniform vec3  lightDir;                // normalized
-uniform vec3  lightColor;              // linear HDR intensity allowed (can be > 1.0)
-
-// Hemispheric ambient (cheap "environment")
-uniform vec3  skyAmbientColor;         // linear
-uniform vec3  groundAmbientColor;      // linear
-uniform float ambientStrength;         // 0..1, usually 0.03..0.12 for dark scenes
-
-// Material controls
-uniform float shininess;               // 32..128 typical
-uniform float specStrength;            // 0.15..0.6 for cloth-ish look
-uniform float wrapDiffuse;             // 0..0.5, 0.15..0.35 recommended for cloth
-
-// Post / output
-uniform float exposure;                // 1.0..2.5 typical
-
-uniform sampler2D texture0;
-uniform vec4 colDiffuse;               // raylib supplies from material.maps[ALBEDO].color
-
 out vec4 fragColor;
 
-// Fresnel (Schlick)
+// ====================== [Shared / Common Lighting Params] ======================
+// Camera
+uniform vec3  viewPos;
+
+// Time (optional for subtle variation; also keeps interface consistent)
+uniform float iTime;
+
+// Hemispheric ambient (dark scene friendly)
+uniform vec3  skyAmbientColor;      // 上半球环境色（偏冷/偏蓝更像 Newton）
+uniform vec3  groundAmbientColor;   // 下半球环境色（偏灰）
+uniform float ambientStrength;      // 环境光强度：越小越暗、对比越强
+
+// Weak directional fill light (optional, keep small)
+uniform vec3  lightDir;             // 方向光传播方向（Light -> Scene）
+uniform vec3  lightColor;           // HDR 可>1，但这里建议很小（补光用）
+
+// Spotlight (the “light pool” / 光圈)
+uniform vec3  spotPos;              // 聚光灯位置（World）
+uniform vec3  spotDir;              // 聚光灯传播方向（Light -> Scene），需归一化
+uniform vec3  spotColor;            // 聚光颜色（线性空间）
+uniform float spotIntensity;        // 聚光强度（主要用它来“打出光圈”）
+uniform float spotRange;            // 作用距离（越大照得越远）
+uniform float spotInnerCos;         // 内锥 cos(θ_in)：中心全亮区域
+uniform float spotOuterCos;         // 外锥 cos(θ_out)：软边缘结束（外侧为0）
+
+// Tonemap
+uniform float exposure;             // 曝光：越大越亮（配合 HDR）
+
+// ====================== [Material Params - Cloth] ======================
+uniform sampler2D texture0;         // Raylib 默认贴图采样器名
+uniform vec4 colDiffuse;            // Raylib 材质 albedo tint（material.maps[ALBEDO].color）
+
+uniform float roughness;            // 0..1：越大越“哑光”（布料建议 0.6~0.9）
+uniform float specStrength;         // 高光强度（布料建议 0.10~0.35）
+uniform float wrapDiffuse;          // 0..0.5：漫反射“包裹”程度（布料建议 0.15~0.35）
+
+// ------------------ Helpers ------------------
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
+// Soft spotlight factor (cone + range attenuation)
+float spotAttenuation(vec3 worldPos)
+{
+    vec3 toP = worldPos - spotPos;               // light -> point
+    float dist = length(toP);
+    vec3 Sd = normalize(spotDir);                // light direction (light->scene)
+
+    // angular falloff
+    float cosAngle = dot(normalize(toP), Sd);    // 1 at center, smaller at edges
+    float cone = smoothstep(spotOuterCos, spotInnerCos, cosAngle);
+
+    // range falloff (smooth)
+    float rangeAtt = 1.0 - clamp(dist / max(spotRange, 1e-6), 0.0, 1.0);
+    rangeAtt = rangeAtt * rangeAtt;
+
+    return cone * rangeAtt;
+}
+
 void main()
 {
-    // Double-sided normal handling
+    // Double-sided normal (cloth often needs this)
     vec3 N = normalize(gl_FrontFacing ? vWorldNormal : -vWorldNormal);
+    vec3 V = normalize(viewPos - vWorldPos);
 
-    // Base color
+    // Base albedo (you can ignore texture0 if you want solid color)
     vec4 texel = texture(texture0, vTexCoord);
-    vec4 base  = colDiffuse * texel;         // includes alpha
+    vec4 base  = colDiffuse * texel * vColor;
     vec3 albedo = base.rgb;
 
-    // View and light
-    vec3 V = normalize(viewPos - vWorldPos);
-    vec3 L = normalize(-lightDir);           // surface -> light
-    vec3 H = normalize(L + V);
-
-    // ---- Diffuse (Lambert + optional wrap) ----
-    float NdotL = dot(N, L);
-    float diff;
-    if (wrapDiffuse > 0.0)
-    {
-        // "wrap" diffuse for softer cloth shading
-        diff = clamp((NdotL + wrapDiffuse) / (1.0 + wrapDiffuse), 0.0, 1.0);
-    }
-    else
-    {
-        diff = max(NdotL, 0.0);
-    }
-    vec3 diffuse = albedo * diff * lightColor;
-
-    // ---- Specular (Blinn-Phong + Fresnel) ----
-    float NdotH = max(dot(N, H), 0.0);
-    float specPow = pow(NdotH, max(shininess, 1.0));
-
-    // Dielectric F0 ~ 0.02..0.08; cloth usually closer to ~0.04
-    vec3 F0 = vec3(0.04);
-    float VdotH = max(dot(V, H), 0.0);
-    vec3 F = fresnelSchlick(VdotH, F0);
-
-    // Simple energy-ish normalization so shininess changes don't blow intensity too much
-    float normFactor = (shininess + 8.0) / 8.0;
-
-    // Gate spec by NdotL to avoid highlights on the dark side
-    vec3 specular = specStrength * normFactor * specPow * F * lightColor * max(NdotL, 0.0);
-
-    // ---- Hemispheric Ambient ----
-    // Use normal.y to blend sky/ground environment
+    // ------------------ Ambient (Hemispheric) ------------------
     float hemi = clamp(N.y * 0.5 + 0.5, 0.0, 1.0);
     vec3 ambientHemi = mix(groundAmbientColor, skyAmbientColor, hemi);
     vec3 ambient = ambientStrength * ambientHemi * albedo;
 
-    // ---- Combine (linear HDR) ----
-    vec3 color = ambient + diffuse + specular;
+    // ------------------ Weak directional fill (optional) ------------------
+    // Directional ray direction: lightDir (light->scene), so surface->light is Ld = -lightDir
+    vec3 Ld = normalize(-lightDir);
+    float NdotLd = dot(N, Ld);
 
-    // ---- Tonemap + Gamma ----
-    // Exposure + exponential tonemap (stable for HDR)
+    float diffD;
+    if (wrapDiffuse > 0.0)
+        diffD = clamp((NdotLd + wrapDiffuse) / (1.0 + wrapDiffuse), 0.0, 1.0);
+    else
+        diffD = max(NdotLd, 0.0);
+
+    vec3 dirDiffuse = albedo * diffD * lightColor;
+
+    // Directional spec (keep subtle)
+    vec3 Hd = normalize(Ld + V);
+    float shininess = mix(256.0, 16.0, clamp(roughness, 0.0, 1.0)); // rough high -> broad highlight
+    float specPowD = pow(max(dot(N, Hd), 0.0), shininess);
+
+    vec3 F0 = vec3(0.04);
+    vec3 Fd = fresnelSchlick(max(dot(V, Hd), 0.0), F0);
+    vec3 dirSpec = specStrength * 0.35 * specPowD * Fd * lightColor * max(NdotLd, 0.0); // 0.35: reduce dir spec
+
+    // ------------------ Spotlight (main character) ------------------
+    // For spotlight, the surface->light direction depends on position
+    vec3 toP = vWorldPos - spotPos;           // light -> point
+    float dist = length(toP);
+    vec3 Ls = normalize(-toP);                // point -> light
+
+    float spotAtt = spotAttenuation(vWorldPos);
+    float NdotLs = max(dot(N, Ls), 0.0);
+
+    // Spotlight diffuse
+    float diffS;
+    if (wrapDiffuse > 0.0)
+        diffS = clamp((dot(N, Ls) + wrapDiffuse) / (1.0 + wrapDiffuse), 0.0, 1.0);
+    else
+        diffS = NdotLs;
+
+    vec3 spotDiffuse = albedo * diffS * spotColor * (spotIntensity * spotAtt);
+
+    // Spotlight spec (makes “light pool” feel more real)
+    vec3 Hs = normalize(Ls + V);
+    float specPowS = pow(max(dot(N, Hs), 0.0), shininess);
+    vec3 Fs = fresnelSchlick(max(dot(V, Hs), 0.0), F0);
+    vec3 spotSpec = specStrength * specPowS * Fs * spotColor * (spotIntensity * spotAtt) * NdotLs;
+
+    // ------------------ Combine in linear HDR ------------------
+    vec3 color = ambient + dirDiffuse + dirSpec + spotDiffuse + spotSpec;
+
+    // ------------------ Tonemap + Gamma ------------------
     vec3 mapped = vec3(1.0) - exp(-color * max(exposure, 0.0001));
-    // Gamma encode to sRGB-ish
-    mapped = pow(mapped, vec3(1.0 / 2.2));
+    mapped = pow(mapped, vec3(1.0/2.2));
 
     fragColor = vec4(mapped, base.a);
 }

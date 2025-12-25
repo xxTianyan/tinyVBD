@@ -12,12 +12,12 @@
 
 class Sample {
 public:
-    Sample();
-    virtual ~Sample() = default;
+    Sample()= default;
+    virtual ~Sample();
 
     virtual void CreateWorld() {};
     virtual void Update() {};
-    virtual void BindShaders() {};
+    virtual void CreateFloor();
 
     // for simulation
     std::unique_ptr<World> m_world;
@@ -28,13 +28,14 @@ public:
     std::unique_ptr<ShaderManager> m_shader_manager;
 
     bool isPaused = false;
+    Model m_floor;
 };
 
 class HangingCloth final : public Sample {
     HangingCloth();
     void CreateWorld() override;
     void Update() override;
-    void BindShaders() override;
+    void BindShaders() const;
 
 };
 

@@ -15,6 +15,22 @@
 #include "Mesh.h"
 #include "World.h"
 
+static void DrawAxisGizmo(float length = 0.5f) {
+    constexpr Vector3 origin = { 0.0f, 0.0f, 0.0f };
+    const Vector3 x = { length, 0.0f, 0.0f };
+    const Vector3 y = { 0.0f, length, 0.0f };
+    const Vector3 z = { 0.0f, 0.0f, length };
+
+    DrawLine3D(origin, x, RED);
+    DrawLine3D(origin, y, GREEN);
+    DrawLine3D(origin, z, BLUE);
+
+    const float radius = length * 0.03f;
+    DrawSphereWires(x, radius, 1, 6, RED);
+    DrawSphereWires(y, radius, 1, 6, GREEN);
+    DrawSphereWires(z, radius, 1, 6, BLUE);
+}
+
 // turn mesh_on_cpu into GPU Mesh + Model (dynamic)
 static Model upload_model_from_cpu_mesh(mesh_on_cpu* M) {
     Mesh gmsh = {0};
@@ -43,10 +59,10 @@ static Model upload_model_from_cpu_mesh(mesh_on_cpu* M) {
 }
 
 // put every mesh to a model vector
-static std::vector<Model> upload_all_models(const World* world) {
+static std::vector<Model> upload_all_models(const World& world) {
     std::vector<Model> models;
-    models.reserve(world->meshes.size());
-    for (auto& up : world->meshes) {
+    models.reserve(world.meshes.size());
+    for (auto& up : world.meshes) {
         models.push_back(upload_model_from_cpu_mesh(up.get()));
     }
     return models;
