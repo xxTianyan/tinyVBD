@@ -161,6 +161,8 @@ public:
 
             // 颜色动态变化：低帧率红色，高帧率绿色
             ImVec4 fpsColor = (m_displayFps < 30.0f) ? ImVec4(1.0f, 0.4f, 0.4f, 1.0f) : ImVec4(0.4f, 1.0f, 0.4f, 1.0f);
+            float plotWidth = ImGui::GetContentRegionAvail().x;
+            if (plotWidth < 200.0f) plotWidth = 220.0f;
 
             ImGui::TextColored(fpsColor, "%.0f FPS", m_displayFps);
             ImGui::SetWindowFontScale(1.0f); // 还原字体大小
@@ -195,7 +197,8 @@ public:
 
             // PlotLines 参数解释：label, values, count, offset, overlay_text, scale_min, scale_max, graph_size
             // scale_max 设为 33.3ms (即 30FPS)，超过这个数值的波峰会被切断，适合观察流畅度
-            ImGui::PlotLines("##FrameTimes", m_frameTimes.data(), HISTORY_SIZE, m_offset, nullptr, 0.0f, 33.3f, ImVec2(220, 50));
+            ImGui::PlotLines(
+                "##FrameTimes", m_frameTimes.data(), HISTORY_SIZE, m_offset, nullptr, 0.0f, 33.3f, ImVec2(plotWidth, 50));
         }
         ImGui::End();
     }

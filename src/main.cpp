@@ -17,6 +17,7 @@ int main(){
     constexpr int screenHeight = 600; // 1080
 
     SetConfigFlags(FLAG_MSAA_4X_HINT); // anti alias
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "tinyVBD");
     // initialize rlImGui
     rlImGuiSetup(true);
