@@ -19,7 +19,7 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
                              const float width, const float height,
                              const int resX, const int resY,
                              const Vec3& center,
-                             ClothOrientation orientation)
+                             const ClothOrientation orientation)
 {
     const size_t num_nodes = (resX + 1) * (resY + 1);
     PrepareMesh(mesh, num_nodes);
@@ -27,7 +27,6 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
     const float dx = width / resX;
     const float dy = height / resY;
 
-    // --- 核心修改开始 ---
 
     // 定义局部坐标系的基向量
     Vec3 u_dir, v_dir;
@@ -62,9 +61,8 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
             // Horizontal 模式法线通常是 (0, 1, 0)
         }
     }
-    // --- 核心修改结束 ---
 
-    // 2. 生成三角形索引 (拓扑结构不变，这部分代码完全不用动)
+    // 2. 生成三角形索引
     for (int j = 0; j < resY; ++j) {
         for (int i = 0; i < resX; ++i) {
             uint32_t v0 = j * (resX + 1) + i;

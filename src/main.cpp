@@ -1,4 +1,3 @@
-#include <functional>
 #include <vector>
 #include <raylib.h>
 #include <rlgl.h>
@@ -67,7 +66,7 @@ int main(){
 
         // step simulation and update model
         if (!isPaused) {
-            falling_cloth.Step(dt);
+            // falling_cloth.Step(dt);
         }
         UpdateModel(models, falling_cloth.m_world->meshes);
 

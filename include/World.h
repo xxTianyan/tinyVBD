@@ -16,9 +16,9 @@ struct SimView {
     std::span<Vec3> accel;
     std::span<Vec3> normal;
     std::span<Vec3> inv_m;
-    /*const std::span<tetrahedron> tets;
+    const std::span<edge> edges;
     const std::span<triangle> tris;
-    const std::span<edge> edges;*/
+    const std::span<tetrahedron> tets;
     const ForceElementAdjacencyInfo* adj = nullptr;
 };
 

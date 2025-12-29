@@ -32,6 +32,9 @@ SimView World::MakeSimView(mesh_on_cpu& m) {
         .accel = m.accel,
         .normal = m.n,
         .inv_m = m.inv_m,
+        .edges = m.m_edges,
+        .tris = m.m_tris,
+        .tets = m.m_tets,
         .adj = &m.adjacencyInfo
     };
 }

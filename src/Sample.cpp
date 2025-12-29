@@ -85,7 +85,7 @@ void Sample::CreateFloor() {
 void HangingCloth::CreateWorld() {
     m_world->ChangeGravity(Vec3{0.0f, -1.5f, 0.0f});
     auto m = std::make_unique<mesh_on_cpu>();
-    MeshBuilder::BuildCloth(m.get(), 1.0f, 2.0f, 10, 20, Vec3{0.0f, 30.0f, 0.0f}, ClothOrientation::Horizontal);
+    MeshBuilder::BuildCloth(m.get(), 1.0f, 2.0f, 10, 20, Vec3{0.0f, 2.0f, 0.0f}, ClothOrientation::Horizontal);
     if (!m_world) throw std::runtime_error("m_world is empty pointer");
     m_world->Add(std::move(m));
     m_models = upload_all_models(*m_world);
