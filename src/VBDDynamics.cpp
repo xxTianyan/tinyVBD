@@ -4,6 +4,7 @@
 
 #include "VBDDynamics.h"
 
+
 void VBDSolver::forward_step(SimView &view, const float dt) {
     const size_t num_nodes = view.pos.size();
     for (size_t i = 0; i < num_nodes; ++i) {

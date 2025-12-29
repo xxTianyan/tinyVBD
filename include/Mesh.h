@@ -9,6 +9,7 @@
 #include <string>
 #include <array>
 #include "Types.h"
+#include "AdjacencyCSR.hpp"
 
 struct tetrahedron {
     std::array<VertexId, 4> vertices{0,0,0,0};
@@ -30,17 +31,6 @@ struct edge {
     edge(const VertexId vtex1, const VertexId vtex2) :
     vertices{vtex1, vtex2} {};
 
-};
-
-struct ForceElementAdjacencyInfo{
-    std::vector<uint32_t> v_adj_edges_offsets;
-    std::vector<uint32_t> v_adj_edges;
-
-    std::vector<uint32_t> v_adj_faces_offsets;
-    std::vector<uint32_t> v_adj_faces;
-
-    std::vector<uint32_t> v_adj_tet_offsets;
-    std::vector<uint32_t> v_adj_tets;
 };
 
 struct mesh_on_cpu {

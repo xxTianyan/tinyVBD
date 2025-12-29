@@ -376,7 +376,7 @@ std::vector<float> assemble_vertices(const mesh_on_cpu* cpu_mesh) {
 void BuildAdjacency(mesh_on_cpu& mesh) {
 
     const size_t num_nodes = mesh.size();
-    auto&[v_adj_edges_offsets, v_adj_edges, v_adj_faces_offsets, v_adj_faces, v_adj_tet_offsets, v_adj_tets] = mesh.adjacencyInfo;
+    auto&[vertex_edges, vertex_faces, vertex_tets] = mesh.adjacencyInfo;
     auto assign_offsets = [num_nodes](std::vector<uint32_t>& offsets) {
         offsets.assign(num_nodes+1, 0u);
     };
@@ -385,14 +385,20 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
     [num_nodes](auto const& elems,
                 const uint32_t verts_per_elem,
                 auto&& get_v,
-                std::vector<uint32_t>& offsets,
-                std::vector<uint32_t>& incident) {
-        offsets.assign(num_nodes + 1, 0u);
-        incident.clear();
+                AdjacencyCSR& adj) {
+        auto& offsets = adj.offsets;
+        auto& incidents = adj.incidents;
 
-        if (elems.empty()) {
+        offsets.assign(num_nodes + 1, 0u);
+        incidents.clear();
+
+        if (elems.empty())
             // offsets 全 0，incident 空
             return;
+
+        // 本实现使用 pack(ei,k)，k 占低2位 => k 必须 < 4
+        if (verts_per_elem > 4u) {
+            throw std::runtime_error("verts_per_elem > 4 is not supported by AdjacencyCSR::pack");
         }
 
         // 1) count degree
@@ -411,15 +417,15 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
         }
 
         // 3) fill
-        incident.resize(offsets.back());
+        incidents.resize(offsets.back());
         std::vector<uint32_t> cursor = offsets;
 
-        for (uint32_t ei = 0; ei < static_cast<uint32_t>(elems.size()); ++ei) {
+        for (size_t ei = 0; ei < elems.size(); ++ei) {
             const auto& e = elems[ei];
             for (uint32_t k = 0; k < verts_per_elem; ++k) {
                 const auto v = static_cast<uint32_t>(get_v(e, k));
                 const uint32_t dst = cursor[v]++;  // 写入位置
-                incident[dst] = ei;                // 存 incident 元素编号
+                incidents[dst] = AdjacencyCSR::pack(ei, k);                // 存 incident 元素编号
             }
         }
     };
@@ -433,14 +439,13 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
             [](auto const& edge, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(edge.vertices[k]);
             },
-            v_adj_edges_offsets,
-            v_adj_edges
+            vertex_edges
         );
     }
     else {
         // 没有 edges：保持 CSR 合法
-        assign_offsets(v_adj_edges_offsets);
-        v_adj_edges.clear();
+        assign_offsets(vertex_edges.offsets);
+        vertex_edges.incidents.clear();
     }
 
     // build triangle adjacency (vertex -> incident faces)
@@ -451,13 +456,12 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
             [](auto const& tri, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(tri.vertices[k]);
             },
-            v_adj_faces_offsets,
-            v_adj_faces
+            vertex_faces
         );
     }
     else {
-        assign_offsets(v_adj_faces_offsets);
-        v_adj_faces.clear();
+        assign_offsets(vertex_faces.offsets);
+        vertex_faces.incidents.clear();
     }
 
     // build tetrahedron adjacency (vertex -> incident tets)
@@ -468,13 +472,12 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
             [](auto const& tet, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(tet.vertices[k]);
             },
-            v_adj_tet_offsets,
-            v_adj_tets
+            vertex_tets
         );
     }
     else {
-        assign_offsets(v_adj_tet_offsets);
-        v_adj_tets.clear();
+        assign_offsets(vertex_tets.offsets);
+        vertex_tets.incidents.clear();
     }
 }
 
