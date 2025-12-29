@@ -63,7 +63,7 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
                 unsigned long node_id = 0;
                 float x, y, z;
                 in >> node_id >> x >> y >> z;
-                cpu_mesh->p[i] = Vec3(x, y, z);
+                cpu_mesh->pos[i] = Vec3(x, y, z);
                 // here we don't ask node id to be continued, but if you want it strictly continue：
                 // if (node_id != i+1) ...
             }
@@ -329,8 +329,8 @@ std::vector<float> ComputeNormal(mesh_on_cpu* cpu_mesh) {
 
         if (v1 >= nV || v2 >= nV || v3 >= nV) continue;
 
-        Vec3 e1 = cpu_mesh->p[v2] - cpu_mesh->p[v1];
-        Vec3 e2 = cpu_mesh->p[v3] - cpu_mesh->p[v1];
+        Vec3 e1 = cpu_mesh->pos[v2] - cpu_mesh->pos[v1];
+        Vec3 e2 = cpu_mesh->pos[v3] - cpu_mesh->pos[v1];
         Vec3 fn = e1.cross(e2);
 
         // 可选：跳过退化面
@@ -366,9 +366,9 @@ std::vector<float> assemble_vertices(const mesh_on_cpu* cpu_mesh) {
     vertices.resize(num_nodes * 3);
 
     for (size_t i = 0; i < num_nodes; i++) {
-        vertices[3*i + 0] = cpu_mesh->p[i].x();
-        vertices[3*i + 1] = cpu_mesh->p[i].y();
-        vertices[3*i + 2] = cpu_mesh->p[i].z();
+        vertices[3*i + 0] = cpu_mesh->pos[i].x();
+        vertices[3*i + 1] = cpu_mesh->pos[i].y();
+        vertices[3*i + 2] = cpu_mesh->pos[i].z();
     }
     return vertices;
 }

@@ -51,7 +51,7 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
             const int idx = j * (resX + 1) + i;
 
             // 现在的顶点位置 = 起点 + (i * dx * u方向) + (j * dy * v方向)
-            mesh->p[idx] = start_pos + u_dir * (float(i) * dx) + v_dir * (float(j) * dy);
+            mesh->pos[idx] = start_pos + u_dir * (float(i) * dx) + v_dir * (float(j) * dy);
 
             mesh->v[idx].setZero();
             mesh->accel[idx].setZero();
@@ -107,16 +107,16 @@ void MeshBuilder::BuildBox(mesh_on_cpu* mesh, const float w, const float h, cons
     const Vec3 p6(+w * 0.5f, +h * 0.5f, +d * 0.5f);
     const Vec3 p7(-w * 0.5f, +h * 0.5f, +d * 0.5f);
 
-    mesh->p[0] = p0; mesh->p[1] = p1; mesh->p[2] = p2; mesh->p[3] = p3;
-    mesh->p[4] = p4; mesh->p[5] = p5; mesh->p[6] = p6; mesh->p[7] = p7;
+    mesh->pos[0] = p0; mesh->pos[1] = p1; mesh->pos[2] = p2; mesh->pos[3] = p3;
+    mesh->pos[4] = p4; mesh->pos[5] = p5; mesh->pos[6] = p6; mesh->pos[7] = p7;
 
     // 2) 体积剖分：标准 5-tet（沿体对角线 0-6）
     auto add_tet_ccw = [&](uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
         // 保证四面体有正体积（一致取向），避免后续算法/抽面/法线混乱
-        const Vec3& A = mesh->p[a];
-        const Vec3& B = mesh->p[b];
-        const Vec3& C = mesh->p[c];
-        const Vec3& D = mesh->p[d];
+        const Vec3& A = mesh->pos[a];
+        const Vec3& B = mesh->pos[b];
+        const Vec3& C = mesh->pos[c];
+        const Vec3& D = mesh->pos[d];
         float v6 = SignedTetVolume6(A, B, C, D);
         if (v6 < 0.0f) std::swap(c, d);
         mesh->m_tets.emplace_back(a, b, c, d);
@@ -172,7 +172,7 @@ void MeshBuilder::BuildSphere(mesh_on_cpu* mesh, const float radius, const int s
             float y = radius * cos(phi);
             float z = radius * sin(phi) * sin(theta);
 
-            mesh->p[i * (sectors + 1) + j] = Vec3(x, y, z);
+            mesh->pos[i * (sectors + 1) + j] = Vec3(x, y, z);
         }
     }
 

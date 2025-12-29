@@ -25,9 +25,9 @@ void World::Remove() {
 
 SimView World::MakeSimView(mesh_on_cpu& m) {
     return SimView{
-        .pos = m.p,
-        .pred_pos = m.p_pred,
-        .inertia_pos = m.p_inertia,
+        .pos = m.pos,
+        .pred_pos = m.pred_pos,
+        .inertia_pos = m.inertia_pos,
         .vel = m.v,
         .accel = m.accel,
         .normal = m.n,
