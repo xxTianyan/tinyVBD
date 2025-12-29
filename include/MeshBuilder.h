@@ -7,10 +7,16 @@
 
 #include "Mesh.h"
 
+enum class ClothOrientation {
+    Vertical,   //  (XY Plane)
+    Horizontal  //  (XZ Plane)
+};
+
 class MeshBuilder {
 public:
     // 构造一个矩形布料 (2D 网格)
-    static void BuildCloth(mesh_on_cpu* mesh, float width, float height, int resX, int resY, const Vec3& center = Vec3(0,0,0));
+    static void BuildCloth(mesh_on_cpu* mesh, float width, float height, int resX, int resY,
+                            const Vec3& center = Vec3(0,0,0), ClothOrientation orientation = ClothOrientation::Vertical);
 
     // 构造一个实体立方体 (由四面体或六面体分解而成)
     static void BuildBox(mesh_on_cpu* mesh, float w, float h, float d);

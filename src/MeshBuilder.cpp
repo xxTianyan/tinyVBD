@@ -15,25 +15,56 @@ void MeshBuilder::PrepareMesh(mesh_on_cpu* mesh, const size_t num_nodes) {
     mesh->resize(num_nodes); // 调整 SoA 数组大小
 }
 
-void MeshBuilder::BuildCloth(mesh_on_cpu* mesh, const float width, const float height, const int resX, const int resY, const Vec3& center) {
+void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
+                             const float width, const float height,
+                             const int resX, const int resY,
+                             const Vec3& center,
+                             ClothOrientation orientation)
+{
     const size_t num_nodes = (resX + 1) * (resY + 1);
     PrepareMesh(mesh, num_nodes);
 
     const float dx = width / resX;
     const float dy = height / resY;
-    const Vec3 start_pos = center - Vec3(width * 0.5f, height * 0.5f, 0.0f);
+
+    // --- 核心修改开始 ---
+
+    // 定义局部坐标系的基向量
+    Vec3 u_dir, v_dir;
+
+    if (orientation == ClothOrientation::Vertical) {
+        // 竖直模式 (XY平面): 宽沿X轴，高沿Y轴
+        u_dir = Vec3(1.0f, 0.0f, 0.0f);
+        v_dir = Vec3(0.0f, 1.0f, 0.0f);
+    } else {
+        // 水平模式 (XZ平面): 宽沿X轴，高沿Z轴
+        u_dir = Vec3(1.0f, 0.0f, 0.0f);
+        v_dir = Vec3(0.0f, 0.0f, 1.0f);
+    }
+
+    // 计算起始点 (左下角/左上角，取决于你的纹理坐标习惯，这里保持几何中心对齐)
+    // start_pos = center - (宽的一半 * u方向) - (高的一半 * v方向)
+    const Vec3 start_pos = center - u_dir * (width * 0.5f) - v_dir * (height * 0.5f);
 
     // 1. 生成顶点
     for (int j = 0; j <= resY; ++j) {
         for (int i = 0; i <= resX; ++i) {
             const int idx = j * (resX + 1) + i;
-            mesh->p[idx] = start_pos + Vec3(i * dx, j * dy, 0.0f);
+
+            // 现在的顶点位置 = 起点 + (i * dx * u方向) + (j * dy * v方向)
+            mesh->p[idx] = start_pos + u_dir * (float(i) * dx) + v_dir * (float(j) * dy);
+
             mesh->v[idx].setZero();
             mesh->accel[idx].setZero();
+
+            // 如果你的 mesh 结构体里有法线(normal)，别忘了在这里初始化
+            // Vertical 模式法线通常是 (0, 0, 1) 或 (0, 0, -1)
+            // Horizontal 模式法线通常是 (0, 1, 0)
         }
     }
+    // --- 核心修改结束 ---
 
-    // 2. 生成三角形索引
+    // 2. 生成三角形索引 (拓扑结构不变，这部分代码完全不用动)
     for (int j = 0; j < resY; ++j) {
         for (int i = 0; i < resX; ++i) {
             uint32_t v0 = j * (resX + 1) + i;
@@ -46,7 +77,6 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh, const float width, const float h
         }
     }
 
-    // 生成渲染用的表面索引 (对于 2D 布料，表面就是它自己)
     mesh->m_surface_tris = BuildSurfaceTriangles(mesh->m_tris);
 }
 
