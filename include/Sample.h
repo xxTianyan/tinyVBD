@@ -13,12 +13,13 @@
 class Sample {
 public:
     Sample();
-    virtual ~Sample();
+    virtual ~Sample() = default;
 
     virtual void CreateWorld() {};
     virtual void Update() {};
     virtual void CreateFloor();
     virtual void Step(float dt);
+    virtual void CleanUp();
 
     // for simulation
     std::unique_ptr<World> m_world;

@@ -12,13 +12,14 @@ Sample::Sample() {
     m_solver = std::make_unique<VBDSolver>(10);
 }
 
-Sample::~Sample() {
+void Sample::CleanUp() {
     auto UnloadModelIfLoaded = [](Model& m) {
         if ((m.meshCount > 0) && (m.meshes != nullptr)) {
             UnloadModel(m);
             m = Model{};
         }
     };
+    UnloadModelIfLoaded(m_floor);
     for (auto& m : m_models) {
         UnloadModelIfLoaded(m);
     }
@@ -27,6 +28,8 @@ Sample::~Sample() {
 }
 
 void Sample::Step(float dt) {
+    m_world->InitStep();
+
     auto& meshes = m_world->meshes;
     for (auto& m:meshes) {
         SimView view = World::MakeSimView(*m);
