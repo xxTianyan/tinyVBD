@@ -44,15 +44,13 @@ struct ForceElementAdjacencyInfo{
 };
 
 struct mesh_on_cpu {
-    // 核心运动学属性 (使用 Vec3 代替散乱的 x, y, z)
     std::vector<Vec3> p;          // 当前位置 (last frame pos)
     std::vector<Vec3> p_pred;     // 预测位置 (predict pos)
     std::vector<Vec3> p_inertia;  // 惯性预测 (inertia prediction)
     std::vector<Vec3> v;          // 速度
     std::vector<Vec3> f;          // 力
     std::vector<Vec3> n;          // 法线
-
-    Dimension dim;
+    std::vector<Vec3> inv_m;          // 质量
 
     [[nodiscard]] inline size_t size() const { return p.size(); }
 
@@ -74,6 +72,7 @@ struct mesh_on_cpu {
         v.resize(n_nodes);
         f.resize(n_nodes);
         n.resize(n_nodes);
+        inv_m.resize(n_nodes);
     }
 
     // 清空数据
@@ -85,7 +84,7 @@ struct mesh_on_cpu {
     }
 };
 
-void BuildAdjacency(mesh_on_cpu* mesh);
+void BuildAdjacency(mesh_on_cpu& mesh);
 
 void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh);
 

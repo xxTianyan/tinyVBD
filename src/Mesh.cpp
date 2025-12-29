@@ -373,13 +373,10 @@ std::vector<float> assemble_vertices(const mesh_on_cpu* cpu_mesh) {
     return vertices;
 }
 
-void BuildAdjacency(mesh_on_cpu* mesh) {
+void BuildAdjacency(mesh_on_cpu& mesh) {
 
-    if (!mesh)
-        return;
-
-    const size_t num_nodes = mesh->size();
-    auto&[v_adj_edges_offsets, v_adj_edges, v_adj_faces_offsets, v_adj_faces, v_adj_tet_offsets, v_adj_tets] = mesh->adjacencyInfo;
+    const size_t num_nodes = mesh.size();
+    auto&[v_adj_edges_offsets, v_adj_edges, v_adj_faces_offsets, v_adj_faces, v_adj_tet_offsets, v_adj_tets] = mesh.adjacencyInfo;
     auto assign_offsets = [num_nodes](std::vector<uint32_t>& offsets) {
         offsets.assign(num_nodes+1, 0u);
     };
@@ -429,9 +426,9 @@ void BuildAdjacency(mesh_on_cpu* mesh) {
 
 
     // build edge adjacency (vertex -> incident edges)
-    if (!mesh->m_edges.empty()) {
+    if (!mesh.m_edges.empty()) {
         build_vertex_incident_csr(
-            mesh->m_edges,
+            mesh.m_edges,
             /*verts_per_elem=*/2u,
             [](auto const& edge, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(edge.vertices[k]);
@@ -447,9 +444,9 @@ void BuildAdjacency(mesh_on_cpu* mesh) {
     }
 
     // build triangle adjacency (vertex -> incident faces)
-    if (!mesh->m_tris.empty()) {
+    if (!mesh.m_tris.empty()) {
         build_vertex_incident_csr(
-            mesh->m_tris,
+            mesh.m_tris,
             /*verts_per_elem=*/3u,
             [](auto const& tri, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(tri.vertices[k]);
@@ -464,9 +461,9 @@ void BuildAdjacency(mesh_on_cpu* mesh) {
     }
 
     // build tetrahedron adjacency (vertex -> incident tets)
-    if (!mesh->m_tets.empty()) {
+    if (!mesh.m_tets.empty()) {
         build_vertex_incident_csr(
-            mesh->m_tets,
+            mesh.m_tets,
             /*verts_per_elem=*/4u,
             [](auto const& tet, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(tet.vertices[k]);
