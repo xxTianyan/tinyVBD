@@ -26,6 +26,14 @@ Sample::~Sample() {
     m_shader_manager->UnloadAll();
 }
 
+void Sample::Step(float dt) {
+    auto& meshes = m_world->meshes;
+    for (auto& m:meshes) {
+        SimView view = World::MakeSimView(*m);
+        m_solver->solve(view, dt);
+    }
+}
+
 void Sample::CreateFloor() {
     m_shader_manager->LoadShaderProgram("floor", "../shaders/floor.vs", "../shaders/floor.fs");
     const auto floor_shader = m_shader_manager->Get("floor")->shader;
@@ -75,13 +83,14 @@ void Sample::CreateFloor() {
 void HangingCloth::CreateWorld() {
     auto m = std::make_unique<mesh_on_cpu>();
     MeshBuilder::BuildCloth(m.get(), 1.0f, 2.0f, 10, 20, Vec3{0.0f, 2.0f, 0.0f});
+    if (!m_world) throw std::runtime_error("m_world is empty pointer");
     m_world->Add(std::move(m));
     m_models = upload_all_models(*m_world);
 }
 
 void HangingCloth::BindShaders() const {
     m_shader_manager->LoadShaderProgram("cloth", "../shaders/cloth.vs", "../shaders/cloth.fs");
-    auto cloth_shader = m_shader_manager->Get("cloth")->shader;
+    const auto cloth_shader = m_shader_manager->Get("cloth")->shader;
     ShaderManager::BindMatrices(cloth_shader);
     ShaderManager::SetCommonShaderParams(cloth_shader);
     cloth_shader.locs[SHADER_LOC_MAP_DIFFUSE] = GetShaderLocation(cloth_shader, "texture0");

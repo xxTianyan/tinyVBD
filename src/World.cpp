@@ -8,30 +8,36 @@ bool World::RayNormal = true;
 
 World::World(Vec3  gravity) : gravity(std::move(gravity)) {}
 
-
 void World::Add(MeshPtr m) {
     m->base_offset = m_total_vertices;
     m_total_vertices += m->size();
+    BuildAdjacency(*m);
     meshes.push_back(std::move(m));
 }
 
+SimView World::MakeSimView(mesh_on_cpu& m) {
+    return SimView{
+        .pos = m.p,
+        .pred_pos = m.p_pred,
+        .inertia_pos = m.p_inertia,
+        .vel = m.v,
+        .force = m.f,
+        .normal = m.n,
+        .inv_m = m.inv_m,
+        .adj = &m.adjacencyInfo
+    };
+}
+
 void World::Clear() {
-    meshes.clear();
+    ;
 }
 
 void World::Remove() {
-
-
+    ;
 }
 
 
-void World::Step(const float dt) {
-    for (const auto& m : meshes) {
-        for (size_t i = 0; i < m->size(); ++i) {
 
-        }
-    }
-}
 
 
 

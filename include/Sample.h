@@ -18,6 +18,7 @@ public:
     virtual void CreateWorld() {};
     virtual void Update() {};
     virtual void CreateFloor();
+    virtual void Step(float dt);
 
     // for simulation
     std::unique_ptr<World> m_world;

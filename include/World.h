@@ -5,7 +5,22 @@
 #ifndef WORLD_H
 #define WORLD_H
 
+#include <span>
 #include "Mesh.h"
+
+struct SimView {
+    std::span<Vec3> pos;
+    std::span<Vec3> pred_pos;
+    std::span<Vec3> inertia_pos;
+    std::span<Vec3> vel;
+    std::span<Vec3> force;
+    std::span<Vec3> normal;
+    std::span<Vec3> inv_m;
+    /*const std::span<tetrahedron> tets;
+    const std::span<triangle> tris;
+    const std::span<edge> edges;*/
+    const ForceElementAdjacencyInfo* adj = nullptr;
+};
 
 class World {
 
@@ -13,7 +28,7 @@ public:
     explicit World(Vec3  gravity);
     ~World()= default;
 
-    void Step(float dt);
+    static SimView MakeSimView(mesh_on_cpu& m);
 
     void Add(MeshPtr m);
 
