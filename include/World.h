@@ -13,7 +13,7 @@ struct SimView {
     std::span<Vec3> pred_pos;
     std::span<Vec3> inertia_pos;
     std::span<Vec3> vel;
-    std::span<Vec3> force;
+    std::span<Vec3> accel;
     std::span<Vec3> normal;
     std::span<Vec3> inv_m;
     /*const std::span<tetrahedron> tets;
@@ -28,13 +28,19 @@ public:
     explicit World(Vec3  gravity);
     ~World()= default;
 
-    static SimView MakeSimView(mesh_on_cpu& m);
-
     void Add(MeshPtr m);
 
     void Remove();
 
     void Clear();
+
+    static SimView MakeSimView(mesh_on_cpu& m);
+
+    void InitStep();
+
+    void ApplyGravity();
+
+    void ChangeGravity(const Vec3& new_g){gravity = new_g;};
 
     std::vector<MeshPtr>  meshes;
 

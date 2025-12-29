@@ -10,7 +10,6 @@
 #include "CameraController.h"
 #include "Sample.h"
 
-
 int main(){
 
     constexpr int screenWidth = 800;  // 1920
@@ -32,8 +31,8 @@ int main(){
 
     // get reference of necessary component
     auto& models = falling_cloth.m_models;
-    auto& world = falling_cloth.m_world;
     const auto& shader_manager = falling_cloth.m_shader_manager;
+    bool& isPaused = falling_cloth.isPaused;
 
     // camera
     OrbitCamera orbitCam = CreateOrbitCamera(Vector3{ 1.5f, 0.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f });
@@ -59,13 +58,18 @@ int main(){
         }
         RefreshCameraTransform(orbitCam);
 
-        const auto& viewPos = orbitCam.camera.position;
+        if (IsKeyPressed(KEY_SPACE)) isPaused = !isPaused;
 
-        // step simulation and update
-        falling_cloth.m_world->Step(dt);
         // update shader
+        const auto& viewPos = orbitCam.camera.position;
         shader_manager->UpdateViewPos("cloth", viewPos);
         shader_manager->UpdateViewPos("floor", viewPos);
+
+        // step simulation and update model
+        if (!isPaused) {
+            falling_cloth.Step(dt);
+        }
+        UpdateModel(models, falling_cloth.m_world->meshes);
 
         // ordinary rendering
         BeginDrawing();
@@ -82,7 +86,8 @@ int main(){
         // draw cloth
         rlDisableBackfaceCulling();
         for (const auto& m : models) {
-            DrawModel(m, Vector3Zero(), 1.0f, DARKBLUE);
+            // DrawModel(m, Vector3Zero(), 1.0f, DARKBLUE);
+            DrawModelWires(m, Vector3Zero(), 1.0f, DARKBLUE);
         }
         rlEnableBackfaceCulling();
         // draw coordinates
@@ -96,7 +101,7 @@ int main(){
 
         EndDrawing();
     }
-
+    falling_cloth.CleanUp();
     rlImGuiShutdown();
     CloseWindow();
 

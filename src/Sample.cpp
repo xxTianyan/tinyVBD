@@ -27,9 +27,8 @@ void Sample::CleanUp() {
     m_shader_manager->UnloadAll();
 }
 
-void Sample::Step(float dt) {
+void Sample::Step(const float dt) {
     m_world->InitStep();
-
     auto& meshes = m_world->meshes;
     for (auto& m:meshes) {
         SimView view = World::MakeSimView(*m);
@@ -84,8 +83,9 @@ void Sample::CreateFloor() {
 }
 
 void HangingCloth::CreateWorld() {
+    m_world->ChangeGravity(Vec3{0.0f, -1.5f, 0.0f});
     auto m = std::make_unique<mesh_on_cpu>();
-    MeshBuilder::BuildCloth(m.get(), 1.0f, 2.0f, 10, 20, Vec3{0.0f, 2.0f, 0.0f});
+    MeshBuilder::BuildCloth(m.get(), 1.0f, 2.0f, 10, 20, Vec3{0.0f, 30.0f, 0.0f});
     if (!m_world) throw std::runtime_error("m_world is empty pointer");
     m_world->Add(std::move(m));
     m_models = upload_all_models(*m_world);

@@ -48,7 +48,7 @@ struct mesh_on_cpu {
     std::vector<Vec3> p_pred;     // 预测位置 (predict pos)
     std::vector<Vec3> p_inertia;  // 惯性预测 (inertia prediction)
     std::vector<Vec3> v;          // 速度
-    std::vector<Vec3> f;          // 力
+    std::vector<Vec3> accel;          // 加速度
     std::vector<Vec3> n;          // 法线
     std::vector<Vec3> inv_m;          // 质量
 
@@ -70,7 +70,7 @@ struct mesh_on_cpu {
         p_pred.resize(n_nodes);
         p_inertia.resize(n_nodes);
         v.resize(n_nodes);
-        f.resize(n_nodes);
+        accel.resize(n_nodes);
         n.resize(n_nodes);
         inv_m.resize(n_nodes);
     }

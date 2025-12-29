@@ -29,7 +29,7 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh, const float width, const float h
             const int idx = j * (resX + 1) + i;
             mesh->p[idx] = start_pos + Vec3(i * dx, j * dy, 0.0f);
             mesh->v[idx].setZero();
-            mesh->f[idx].setZero();
+            mesh->accel[idx].setZero();
         }
     }
 
