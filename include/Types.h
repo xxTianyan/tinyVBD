@@ -15,8 +15,12 @@ using VertexId = uint16_t;
 constexpr VertexId INVALID_VERTEX_ID = 0xFFFF;
 
 using Vec3 = Eigen::Vector3f;
+using Mat3 = Eigen::Matrix3f;
 using MeshPtr = std::unique_ptr<mesh_on_cpu>;
 
-using Mat3 = Eigen::Matrix3f;
+inline Eigen::Matrix3f I3() {
+    return Eigen::Matrix3f::Identity();
+}
+
 
 #endif //TYPES_H
