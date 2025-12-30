@@ -3,10 +3,9 @@
 //
 
 #include "VBDDynamics.h"
-
 #include <iostream>
 
-inline Vec3 SolveSPDOrRegularize(Mat3 H, const Vec3& f, const double eps = 1e-9) {
+static Vec3 SolveSPDOrRegularize(Mat3 H, const Vec3& f, const double eps = 1e-9) {
     using Scalar = typename Mat3::Scalar;
 
     // 强制对称化：用 Mat3 的标量类型，避免 double/float 推导问题
@@ -47,6 +46,10 @@ void VBDSolver::forward_step(SimView &view, const float dt) {
     }
 }
 
+static void accumulate_stvk_triangle_force_hessian(const triangle& face, Vec3& force, Mat3& H) {
+    ;
+}
+
 void VBDSolver::solve(SimView& view, const float dt) {
     const size_t num_nodes = view.pos.size();
 
@@ -73,7 +76,9 @@ void VBDSolver::solve(SimView& view, const float dt) {
         force += - (pos - inertia_pos) / (inv_mass * dt * dt);
         hessian += I3() / (inv_mass * dt * dt);
 
-        // accumulate potential force and hessian
+        // accumulate stvk triangle element force and hessian
+
+        // accumulate bending element force and hessian
 
         // solve linear system and update result
         const auto delta_x = SolveSPDOrRegularize(hessian, force);
