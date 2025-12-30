@@ -26,12 +26,12 @@ void World::Remove() {
 SimView World::MakeSimView(mesh_on_cpu& m) {
     return SimView{
         .pos = m.pos,
-        .pred_pos = m.pred_pos,
+        .prev_pos = m.prev_pos,
         .inertia_pos = m.inertia_pos,
-        .vel = m.v,
+        .vel = m.vel,
         .accel = m.accel,
         .normal = m.n,
-        .inv_m = m.inv_m,
+        .inv_mass = m.inv_mass,
         .edges = m.m_edges,
         .tris = m.m_tris,
         .tets = m.m_tets,

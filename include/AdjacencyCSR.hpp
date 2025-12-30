@@ -26,10 +26,10 @@ struct AdjacencyCSR {
         return packed & ORDER_MASK;
     }
 
-    inline uint32_t begin(const VertexId v) const { return offsets[v]; }
-    inline uint32_t end(const VertexId v) const { return offsets[v + 1]; }
-    inline uint32_t degree(const VertexId v) const { return end(v) - begin(v); }
-    inline uint32_t incident_packed(const VertexId v, const uint32_t k) const { return incidents[begin(v) + k]; }
+    [[nodiscard]] inline uint32_t begin(const VertexId v) const { return offsets[v]; }
+    [[nodiscard]] inline uint32_t end(const VertexId v) const { return offsets[v + 1]; }
+    [[nodiscard]] inline uint32_t degree(const VertexId v) const { return end(v) - begin(v); }
+    [[nodiscard]] inline uint32_t incident_packed(const VertexId v, const uint32_t k) const { return incidents[begin(v) + k]; }
 
 };
 

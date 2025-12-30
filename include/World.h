@@ -10,12 +10,12 @@
 
 struct SimView {
     std::span<Vec3> pos;
-    std::span<Vec3> pred_pos;
+    std::span<Vec3> prev_pos;
     std::span<Vec3> inertia_pos;
     std::span<Vec3> vel;
     std::span<Vec3> accel;
     std::span<Vec3> normal;
-    std::span<Vec3> inv_m;
+    std::span<Vec3> inv_mass;
     const std::span<edge> edges;
     const std::span<triangle> tris;
     const std::span<tetrahedron> tets;

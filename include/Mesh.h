@@ -34,13 +34,13 @@ struct edge {
 };
 
 struct mesh_on_cpu {
-    std::vector<Vec3> pos;          // 当前位置 (last frame pos)
-    std::vector<Vec3> pred_pos;     // 预测位置 (predict pos)
+    std::vector<Vec3> pos;          // 当前位置 (current frame pos)
+    std::vector<Vec3> prev_pos;     // 预测位置 (last frame pos)
     std::vector<Vec3> inertia_pos;  // 惯性预测 (inertia prediction)
-    std::vector<Vec3> v;          // 速度
+    std::vector<Vec3> vel;          // 速度
     std::vector<Vec3> accel;          // 加速度
     std::vector<Vec3> n;          // 法线
-    std::vector<Vec3> inv_m;          // 质量
+    std::vector<Vec3> inv_mass;          // 质量
 
     [[nodiscard]] inline size_t size() const { return pos.size(); }
 
@@ -57,12 +57,12 @@ struct mesh_on_cpu {
     // 重构后的 resize：从 18 行缩减到 6 行，极难出错
     void resize(const size_t n_nodes) {
         pos.resize(n_nodes);
-        pred_pos.resize(n_nodes);
+        prev_pos.resize(n_nodes);
         inertia_pos.resize(n_nodes);
-        v.resize(n_nodes);
+        vel.resize(n_nodes);
         accel.resize(n_nodes);
         n.resize(n_nodes);
-        inv_m.resize(n_nodes);
+        inv_mass.resize(n_nodes);
     }
 
     // 清空数据

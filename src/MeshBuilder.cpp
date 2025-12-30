@@ -53,7 +53,7 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
             // 现在的顶点位置 = 起点 + (i * dx * u方向) + (j * dy * v方向)
             mesh->pos[idx] = start_pos + u_dir * (float(i) * dx) + v_dir * (float(j) * dy);
 
-            mesh->v[idx].setZero();
+            mesh->vel[idx].setZero();
             mesh->accel[idx].setZero();
 
             // 如果你的 mesh 结构体里有法线(normal)，别忘了在这里初始化

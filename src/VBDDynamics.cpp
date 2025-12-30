@@ -20,9 +20,9 @@ void VBDSolver::solve(SimView& view, const float dt) {
 
     // solve
     for (size_t i = 0; i < num_nodes; ++i) {
-        view.pred_pos[i] = view.inertia_pos[i];  // for test
-        view.vel[i] = (view.pred_pos[i] - view.pos[i]) / dt;
-        view.pos[i] = view.pred_pos[i];
+        view.prev_pos[i] = view.inertia_pos[i];  // for test
+        view.vel[i] = (view.prev_pos[i] - view.pos[i]) / dt;
+        view.pos[i] = view.prev_pos[i];
     }
 
 }
