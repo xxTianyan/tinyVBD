@@ -62,6 +62,8 @@ void VBDSolver::solve(SimView& view, const float dt) {
         auto& vel = view.vel[i];
         const auto& inertia_pos = view.inertia_pos[i];
         const auto& prev_pos = view.prev_pos[i];
+        const auto& edge_adjacency = view.adj->vertex_edges;
+        const auto& face_adjacency = view.adj->vertex_faces;
 
         // init force and hessian
         Vec3 force = Vec3::Zero();

@@ -37,7 +37,7 @@ void Sample::Step(const float dt) {
 }
 
 void Sample::CreateFloor() {
-    m_shader_manager->LoadShaderProgram("floor", "../shaders/floor.vs", "../shaders/floor.fs");
+    m_shader_manager->LoadShaderProgram("floor", "../resources/shaders/floor.vs", "../resources/shaders/floor.fs");
     const auto floor_shader = m_shader_manager->Get("floor")->shader;
     ShaderManager::BindMatrices(floor_shader);
     ShaderManager::SetCommonShaderParams(floor_shader);
@@ -92,7 +92,7 @@ void HangingCloth::CreateWorld() {
 }
 
 void HangingCloth::BindShaders() const {
-    m_shader_manager->LoadShaderProgram("cloth", "../shaders/cloth.vs", "../shaders/cloth.fs");
+    m_shader_manager->LoadShaderProgram("cloth", "../resources/shaders/cloth.vs", "../resources/shaders/cloth.fs");
     const auto cloth_shader = m_shader_manager->Get("cloth")->shader;
     ShaderManager::BindMatrices(cloth_shader);
     ShaderManager::SetCommonShaderParams(cloth_shader);

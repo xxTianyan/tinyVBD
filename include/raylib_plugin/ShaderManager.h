@@ -5,8 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include "raymath.h"
+#include <raymath.h>
 
 struct CommonShaderParams {
     // 1) 背景/雾颜色：决定暗场舞台氛围；fogColor 建议接近背景

@@ -60,19 +60,24 @@ target_include_directories(rlImGui PUBLIC "${RLIMGUI_DIR}" "${IMGUI_DIR}")
 target_link_libraries(rlImGui PUBLIC raylib imgui)
 
 # ---------- My executable ----------
-add_executable(tinyVBD src/main.cpp
-        src/Mesh.cpp
-        src/World.cpp
-        src/BroadPhase.cpp
-        src/VBDDynamics.cpp
-        src/MeshBuilder.cpp
-        src/CameraController.cpp
-        src/ShaderManager.cpp
-        src/Sample.cpp)
+add_executable(tinyVBD src/sample/main.cpp
+        src/mesh/Mesh.cpp
+        src/common/World.cpp
+        src/collision/BroadPhase.cpp
+        src/vbd/VBDDynamics.cpp
+        src/mesh/MeshBuilder.cpp
+        src/raylib_plugin/CameraController.cpp
+        src/raylib_plugin/ShaderManager.cpp
+        src/sample/Sample.cpp)
 
 target_include_directories(tinyVBD
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/vbd
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/raylib_plugin
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/mesh
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/sample
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/common
 )
 
 target_link_libraries(tinyVBD PRIVATE Eigen3::Eigen rlImGui imgui raylib)

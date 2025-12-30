@@ -7,7 +7,7 @@
 #include "RenderHelper.hpp"
 #include "Mesh.h"
 #include "CameraController.h"
-#include "Sample.h"
+#include "sample/Sample.h"
 
 inline Vector3 ToRayVec(Vec3& v_pos) {
     return Vector3{v_pos.x(), v_pos.y(), v_pos.z()};
