@@ -29,6 +29,65 @@ struct triangle {
     triangle(const VertexId vtex0, const VertexId vtex1, const VertexId vtex2, const Vec3& vtex0_pos, const Vec3& vtex1_pos, const Vec3& vtex2_pos) :
     vertices{vtex0, vtex1, vtex2} {
 
+        /*
+         * advised by newton add_triangle function in builder.py
+         */
+
+        // build local 2d material basis from rest position
+        const Vec3 e01 = vtex0_pos - vtex0_pos;
+        const float L = e01.norm();
+        constexpr float eps = 1e-8f;
+
+        if (L < eps) {
+            // Degenerate: vtex0_pos == vtex1_pos
+            rest_area = 0.0f;
+            Dm_inv.setZero();
+            return;
+        }
+
+        const Vec3 e1 = e01 / L;
+
+        const Vec3 e02 = vtex2_pos - vtex0_pos;
+        Vec3 n = e01.cross(e02);
+        const float n_len = n.norm();
+        if (n_len < eps) {
+            // Degenerate: collinear triangle in rest pose
+            rest_area = 0.0f;
+            Dm_inv.setZero();
+            return;
+        }
+
+        n /= n_len;
+        const Vec3 e2 = n.cross(e1);  // orthonormal within triangle plane
+
+        // --- Rest 2D coordinates ---
+        // u0 = (0,0)
+        // u1 = (L,0)
+        // u2 = (u,v)
+        const float u = e02.dot(e1);
+        const float v = e02.dot(e2);
+
+        // Dm = [[L, u],
+        //       [0, v]]
+        // det(Dm) = L*v
+        const float det = L * v;
+        if (std::abs(det) < eps) {
+            rest_area = 0.0f;
+            Dm_inv.setZero();
+            return;
+        }
+
+        // --- rest area ---
+        rest_area = 0.5f * std::abs(det);
+
+
+        // --- explicit inverse of upper-triangular Dm ---
+        // Dm^{-1} = [[ 1/L,   -u/(L*v)],
+        //           [ 0,      1/v      ]]
+        Dm_inv(0, 0) = 1.0f / L;
+        Dm_inv(0, 1) = -u / det;  // -u/(L*v)
+        Dm_inv(1, 0) = 0.0f;
+        Dm_inv(1, 1) = 1.0f / v;
     };
 };
 
