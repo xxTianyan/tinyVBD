@@ -40,7 +40,7 @@ struct mesh_on_cpu {
     std::vector<Vec3> vel;          // 速度
     std::vector<Vec3> accel;          // 加速度
     std::vector<Vec3> n;          // 法线
-    std::vector<Vec3> inv_mass;          // 质量
+    std::vector<float> inv_mass;          // 质量
 
     [[nodiscard]] inline size_t size() const { return pos.size(); }
 

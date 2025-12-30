@@ -15,7 +15,7 @@ struct SimView {
     std::span<Vec3> vel;
     std::span<Vec3> accel;
     std::span<Vec3> normal;
-    std::span<Vec3> inv_mass;
+    std::span<float> inv_mass;
     const std::span<edge> edges;
     const std::span<triangle> tris;
     const std::span<tetrahedron> tets;
