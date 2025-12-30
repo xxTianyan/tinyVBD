@@ -13,23 +13,32 @@
 
 struct tetrahedron {
     std::array<VertexId, 4> vertices{0,0,0,0};
-    tetrahedron() = default;
-    tetrahedron(const VertexId vtex1, const VertexId vtex2, const VertexId vtex3, const VertexId vtex4) :
-    vertices{vtex1, vtex2, vtex3, vtex4} {};
+    tetrahedron(const VertexId vtex0, const VertexId vtex1, const VertexId vtex2, const VertexId vtex3,
+        const Vec3& vtex0_pos, const Vec3& vtex1_pos, const Vec3& vtex2_pos, const Vec3& vtex3_pos) :
+    vertices{vtex0, vtex1, vtex2, vtex3} {
+
+
+    };
 };
 
 struct triangle {
     std::array<VertexId, 3> vertices{0,0,0};
-    triangle() = default;
-    triangle(const VertexId vtex1, const VertexId vtex2, const VertexId vtex3) :
-    vertices{vtex1, vtex2, vtex3} {};
+    float rest_area;
+    Mat2 Dm_inv;
+
+    triangle(const VertexId vtex0, const VertexId vtex1, const VertexId vtex2, const Vec3& vtex0_pos, const Vec3& vtex1_pos, const Vec3& vtex2_pos) :
+    vertices{vtex0, vtex1, vtex2} {
+
+    };
 };
 
 struct edge {
-    std::array<VertexId, 2> vertices{0,0};
-    edge() = default;
-    edge(const VertexId vtex1, const VertexId vtex2) :
-    vertices{vtex1, vtex2} {};
+    std::array<VertexId, 4> vertices{0,0,0,0};
+    edge(const VertexId vtex0, const VertexId vtex1, const VertexId vtex2, const VertexId vtex3,
+        const Vec3& vtex0_pos, const Vec3& vtex1_pos, const Vec3& vtex2_pos, const Vec3& vtex3_pos) :
+    vertices{vtex0, vtex1, vtex2, vtex3} {
+
+    };
 
 };
 

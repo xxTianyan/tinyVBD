@@ -76,7 +76,6 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
             in >> num_elements;
 
             // 粗略 reserve（真实数量未知，先按总数 reserve，避免频繁扩容）
-            cpu_mesh->m_edges.reserve(num_elements);
             cpu_mesh->m_tris.reserve(num_elements);
             cpu_mesh->m_tets.reserve(num_elements);
 
@@ -94,19 +93,16 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
                 }
 
                 // 根据 elementType 读取节点
-                // Gmsh v2: 1=edge(2), 2=tri(3), 4=tet(4)
-                if (elm_type == 1) {
-                    VertexId v0, v1;
-                    read_vertex_id_0based(v0);
-                    read_vertex_id_0based(v1);
-                    cpu_mesh->m_edges.emplace_back(v0, v1);
-                }
-                else if (elm_type == 2) {
+                // Gmsh v2: 2=tri(3), 4=tet(4)
+                if (elm_type == 2) {
                     VertexId v0, v1, v2;
                     read_vertex_id_0based(v0);
                     read_vertex_id_0based(v1);
                     read_vertex_id_0based(v2);
-                    cpu_mesh->m_tris.emplace_back(v0, v1, v2);
+                    const auto& v0_pos = cpu_mesh->pos[v0];
+                    const auto& v1_pos = cpu_mesh->pos[v1];
+                    const auto& v2_pos = cpu_mesh->pos[v2];
+                    cpu_mesh->m_tris.emplace_back(v0, v1, v2, v0_pos, v1_pos, v2_pos);
                     have_tris = true;
                 }
                 else if (elm_type == 4) {
@@ -115,7 +111,11 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
                     read_vertex_id_0based(v1);
                     read_vertex_id_0based(v2);
                     read_vertex_id_0based(v3);
-                    cpu_mesh->m_tets.emplace_back(v0, v1, v2, v3);
+                    const auto& v0_pos = cpu_mesh->pos[v0];
+                    const auto& v1_pos = cpu_mesh->pos[v1];
+                    const auto& v2_pos = cpu_mesh->pos[v2];
+                    const auto& v3_pos = cpu_mesh->pos[v3];
+                    cpu_mesh->m_tets.emplace_back(v0, v1, v2, v3, v0_pos, v1_pos, v2_pos, v3_pos);
                     have_tets = true;
                 }
                 else {
@@ -132,7 +132,6 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
     }
 
     // shrink to show accurate number of elements
-    cpu_mesh->m_edges.shrink_to_fit();
     cpu_mesh->m_tris.shrink_to_fit();
     cpu_mesh->m_tets.shrink_to_fit();
 
@@ -210,101 +209,136 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets) {
 }
 
 
-/*
- * TODO: this functions is extremely incorrect.
- * Currently use m_tris index as surface_tri is a good way.
- */
-
 IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
-    if (tris.empty()) return {};
+    IndexBuffer out;
+    if (tris.empty()) return out;
 
     const auto num_tris = static_cast<uint32_t>(tris.size());
 
-    // --- 1. 构建边邻接表 ---
     struct HalfEdge {
-        VertexId v0, v1; // 原始方向
+        VertexId v0, v1;       // 有向边 v0->v1（来自三角形绕序）
         uint32_t tri_idx;
-        VertexId edge_key[2]; // 排序后的 ID，用于匹配共享边
 
-        bool operator<(const HalfEdge& o) const {
-            if (edge_key[0] != o.edge_key[0]) return edge_key[0] < o.edge_key[0];
-            return edge_key[1] < o.edge_key[1];
+        VertexId k0, k1;       // 无向边 key：min/max，用来匹配共享边
+
+        bool operator<(const HalfEdge& o) const
+        {
+            if (k0 != o.k0) return k0 < o.k0;
+            return k1 < o.k1;
         }
     };
 
-    std::vector<HalfEdge> all_edges;
-    all_edges.reserve(num_tris * 3);
-    for (uint32_t i = 0; i < num_tris; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            VertexId u = tris[i].vertices[j];
-            VertexId v = tris[i].vertices[(j + 1) % 3];
-            const VertexId k0 = std::min(u, v);
-            const VertexId k1 = std::max(u, v);
-            all_edges.push_back({u, v, i, {k0, k1}});
+    // 1) 收集所有 half-edges
+    std::vector<HalfEdge> edges;
+    edges.reserve(static_cast<size_t>(num_tris) * 3);
+
+    for (uint32_t t = 0; t < num_tris; ++t) {
+        const auto& v = tris[t].vertices;
+        for (int e = 0; e < 3; ++e) {
+            VertexId a = v[e];
+            VertexId b = v[(e + 1) % 3];
+            VertexId k0 = std::min(a, b);
+            VertexId k1 = std::max(a, b);
+            edges.push_back(HalfEdge{a, b, t, k0, k1});
         }
     }
-    std::sort(all_edges.begin(), all_edges.end());
+
+    std::sort(edges.begin(), edges.end());
 
     struct Neighbor {
         uint32_t tri_idx;
-        bool same_direction; // 两个三角形在该边上的采样方向是否一致
+        bool same_dir; // 两个三角形在共享边上的有向边方向是否相同
     };
+
     std::vector<std::vector<Neighbor>> adj(num_tris);
 
-    for (size_t i = 0; i < all_edges.size(); ) {
+    // 2) 按无向边分组，建立邻接与方向约束
+    bool has_nonmanifold = false;
+    for (size_t i = 0; i < edges.size(); ) {
         size_t j = i + 1;
-        while (j < all_edges.size() &&
-               all_edges[i].edge_key[0] == all_edges[j].edge_key[0] &&
-               all_edges[i].edge_key[1] == all_edges[j].edge_key[1]) {
+        while (j < edges.size() && edges[j].k0 == edges[i].k0 && edges[j].k1 == edges[i].k1) ++j;
 
-            // 发现共享边：连接两个三角形
-            const uint32_t t1 = all_edges[i].tri_idx;
-            const uint32_t t2 = all_edges[j].tri_idx;
-            // 如果两个三角形在共享边上方向相同，说明其中一个需要翻转
-            const bool same_dir = (all_edges[i].v0 == all_edges[j].v0);
+        const size_t group_size = j - i;
 
-            adj[t1].push_back({t2, same_dir});
-            adj[t2].push_back({t1, same_dir});
-            j++;
+        // group_size == 1: 边界边（只有一个三角形拥有该边），无邻接，OK
+        // group_size == 2: 流形共享边，理想情况
+        // group_size  > 2: 非流形边，可能不可定向/数据异常，需要标记并尽量加约束
+        if (group_size >= 2) {
+            if (group_size > 2) has_nonmanifold = true;
+
+            // 组内两两建立约束（k 通常很小，O(k^2)可接受）
+            for (size_t a = i; a < j; ++a) {
+                for (size_t b = a + 1; b < j; ++b)
+                {
+                    const auto& e0 = edges[a];
+                    const auto& e1 = edges[b];
+                    const uint32_t t0 = e0.tri_idx;
+                    const uint32_t t1 = e1.tri_idx;
+
+                    // 同一条无向边下，e0 与 e1 要么同向(a->b & a->b)，要么反向(a->b & b->a)
+                    const bool same_dir = (e0.v0 == e1.v0 && e0.v1 == e1.v1);
+
+                    adj[t0].push_back(Neighbor{t1, same_dir});
+                    adj[t1].push_back(Neighbor{t0, same_dir});
+                }
+            }
         }
+
         i = j;
     }
 
-    // --- 2. BFS 统一绕序 ---
-    std::vector<int8_t> flip(num_tris, 0); // 0: 原样, 1: 翻转
-    std::vector visited(num_tris, false);
+    // 3) BFS/二染色：flip[t] = 0/1
+    // 使用 -1 表示未赋值；遇到矛盾时记录但不崩溃
+    std::vector<int8_t> flip(num_tris, int8_t(-1));
     std::queue<uint32_t> q;
 
-    for (uint32_t i = 0; i < num_tris; ++i) {
-        if (visited[i]) continue;
-        visited[i] = true;
-        q.push(i);
+    bool has_conflict = false;
+
+    for (uint32_t seed = 0; seed < num_tris; ++seed) {
+        if (flip[seed] != -1) continue;
+
+        flip[seed] = 0; // 该连通分量的“基准方向”任意选一个
+        q.push(seed);
 
         while (!q.empty()) {
             const uint32_t u = q.front();
             q.pop();
 
-            for (const auto&[tri_idx, same_direction] : adj[u]) {
-                if (!visited[tri_idx]) {
-                    visited[tri_idx] = true;
-                    // 如果 A 和 B 共享边方向相同，且 A 没翻转，则 B 必须翻转
-                    // 逻辑：flip[B] = flip[A] XOR same_direction
-                    flip[tri_idx] = flip[u] ^ (same_direction ? 1 : 0);
-                    q.push(tri_idx);
+            for (const auto& nb : adj[u]) {
+                const uint32_t v = nb.tri_idx;
+
+                // 约束：若共享边同向，则两三角形必须一翻一不翻；若反向，则翻转状态相同
+                // 即 flip[v] = flip[u] XOR same_dir
+                const auto required = static_cast<int8_t>(flip[u] ^ (nb.same_dir ? 1 : 0));
+
+                if (flip[v] == -1) {
+                    flip[v] = required;
+                    q.push(v);
+                }
+                else if (flip[v] != required) {
+                    // 数据存在矛盾：不可定向或网格/拓扑有问题
+                    // 这里不强行修改已定值，避免振荡；仅记录冲突
+                    has_conflict = true;
                 }
             }
         }
     }
 
-    // 构建初步 IndexBuffer
-    IndexBuffer out;
-    out.reserve(num_tris * 3);
-    for (uint32_t i = 0; i < num_tris; ++i) {
-        const auto& v = tris[i].vertices;
-        if (flip[i] == 0) {
-            out.push_back(v[0]); out.push_back(v[1]); out.push_back(v[2]);
-        } else {
-            out.push_back(v[0]); out.push_back(v[2]); out.push_back(v[1]);
+    // 4) 输出 index buffer（根据 flip 统一绕序）
+    out.reserve(static_cast<size_t>(num_tris) * 3);
+
+    for (uint32_t t = 0; t < num_tris; ++t) {
+        const auto& v = tris[t].vertices;
+        if (flip[t] == 1) {
+            // 翻转：交换 (1,2)
+            out.push_back(v[0]);
+            out.push_back(v[2]);
+            out.push_back(v[1]);
+        }
+        else {
+            out.push_back(v[0]);
+            out.push_back(v[1]);
+            out.push_back(v[2]);
         }
     }
 
