@@ -29,7 +29,7 @@ cmake_install.cmake
 Thumbs.db
 
 # 忽略 extern 中的构建输出（但保留源码）
-extern/**/build/
-extern/**/bin/
-extern/**/obj/
-extern/**/CMakeFiles/
+3rdParty/**/build/
+3rdParty/**/bin/
+3rdParty/**/obj/
+3rdParty/**/CMakeFiles/

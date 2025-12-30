@@ -9,7 +9,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-set(EXTERN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/extern")
+set(EXTERN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdParty")
 
 message(STATUS "EXTERN_DIR = ${EXTERN_DIR}")
 
@@ -78,6 +78,8 @@ target_include_directories(tinyVBD
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mesh
         ${CMAKE_CURRENT_SOURCE_DIR}/include/sample
         ${CMAKE_CURRENT_SOURCE_DIR}/include/common
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/vbd
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/raylib_plugin
 )
 
 target_link_libraries(tinyVBD PRIVATE Eigen3::Eigen rlImGui imgui raylib)
