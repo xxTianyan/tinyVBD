@@ -37,7 +37,7 @@ static Model upload_model_from_cpu_mesh(mesh_on_cpu* M) {
     gmsh.vertexCount   = static_cast<int>(M->size());
     gmsh.triangleCount = static_cast<int>(M->m_surface_tris.size() / 3);
 
-    const std::vector<float> vertices = assemble_vertices(M);
+    const std::vector<float> vertices = AssembleVertices(M);
     // copy vertices
     gmsh.vertices = static_cast<float *>(MemAlloc(vertices.size() * sizeof(float)));
     std::memcpy(gmsh.vertices, vertices.data(), vertices.size() * sizeof(float));
@@ -75,7 +75,7 @@ static void UpdateModel(const std::vector<Model> &models, const std::vector<Mesh
     std::vector<float> normals;
     for (size_t i = 0; i < models.size(); ++i) {
         const Mesh& old_mesh = models[i].meshes[0];
-        vertices = assemble_vertices(Meshes[i].get());
+        vertices = AssembleVertices(Meshes[i].get());
         normals = ComputeNormal(Meshes[i].get());
         const size_t dataSize = vertices.size() * sizeof(float);
         if (dataSize > static_cast<size_t>(std::numeric_limits<int>::max())) {

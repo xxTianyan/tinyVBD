@@ -5,7 +5,6 @@
 #ifndef VBDDYNAMICS_H
 #define VBDDYNAMICS_H
 
-#include "Mesh.h"
 #include "Types.h"
 #include "World.h"
 
@@ -15,9 +14,10 @@ public:
     explicit VBDSolver(const int num_iters) : num_iters(num_iters) {}
     ~VBDSolver() = default;
 
-    static void forward_step(SimView& view, const float dt);
+    static void forward_step(SimView& view, float dt);
 
-    static void solve(SimView& view, const float dt);
+    static void solve(SimView& view, float dt);
+
 private:
     int num_iters;
 };

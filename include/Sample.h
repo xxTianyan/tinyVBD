@@ -29,7 +29,7 @@ public:
     std::vector<Model> m_models;
     std::unique_ptr<ShaderManager> m_shader_manager;
 
-    bool isPaused = false;
+    bool isPaused = true;
     Model m_floor{};
 };
 

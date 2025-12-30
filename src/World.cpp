@@ -11,7 +11,7 @@ World::World(Vec3  gravity) : gravity(std::move(gravity)) {}
 void World::Add(MeshPtr m) {
     m->base_offset = m_total_vertices;
     m_total_vertices += m->size();
-    BuildAdjacency(*m);
+    InitMesh(*m);
     meshes.push_back(std::move(m));
 }
 

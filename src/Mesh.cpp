@@ -211,8 +211,8 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets) {
 
 
 /*
- * TODO: his functions is extremely incorrect.
- * Maybe use m_tris index as surface_tri is a good way.
+ * TODO: this functions is extremely incorrect.
+ * Currently use m_tris index as surface_tri is a good way.
  */
 
 IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
@@ -360,7 +360,7 @@ std::vector<float> ComputeNormal(mesh_on_cpu* cpu_mesh) {
 
 
 // assemble Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
-std::vector<float> assemble_vertices(const mesh_on_cpu* cpu_mesh) {
+std::vector<float> AssembleVertices(const mesh_on_cpu* cpu_mesh) {
     std::vector<float> vertices;
     const size_t num_nodes = cpu_mesh->size();
     vertices.resize(num_nodes * 3);
@@ -481,9 +481,15 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
     }
 }
 
+void DistributeMass(mesh_on_cpu& mesh) {
+    auto& inv_mass = mesh.inv_mass;
+    std::fill(inv_mass.begin(), inv_mass.end(), 1u);
+}
 
-
-
+void InitMesh(mesh_on_cpu& mesh) {
+    BuildAdjacency(mesh);
+    DistributeMass(mesh);
+}
 
 
 

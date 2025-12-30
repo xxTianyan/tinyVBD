@@ -54,7 +54,7 @@ struct mesh_on_cpu {
     std::vector<VertexId> m_surface_tris;
     size_t base_offset = 0;
 
-    // 重构后的 resize：从 18 行缩减到 6 行，极难出错
+    // resize
     void resize(const size_t n_nodes) {
         pos.resize(n_nodes);
         prev_pos.resize(n_nodes);
@@ -76,6 +76,10 @@ struct mesh_on_cpu {
 
 void BuildAdjacency(mesh_on_cpu& mesh);
 
+void DistributeMass(mesh_on_cpu& mesh);
+
+void InitMesh(mesh_on_cpu& mesh);
+
 void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh);
 
 std::vector<float> ComputeNormal(mesh_on_cpu* cpu_mesh);
@@ -84,6 +88,6 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets);
 
 IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris);
 
-std::vector<float> assemble_vertices(const mesh_on_cpu* cpu_mesh);
+std::vector<float> AssembleVertices(const mesh_on_cpu* cpu_mesh);
 
 #endif //MESH_H

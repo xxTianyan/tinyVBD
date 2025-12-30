@@ -39,7 +39,29 @@ struct ForceElementAdjacencyInfo {
     AdjacencyCSR vertex_tets;
 };
 
-
+// adj test
+/*const auto& mesh = falling_cloth.m_world->meshes[0];
+const auto& tris = mesh->m_tris;
+const auto& adj_info = mesh->adjacencyInfo;
+const VertexId v = 177;
+for (const auto& t: tris) {
+    auto v1 = ToRayVec(mesh->pos[t.vertices[0]]);
+    auto v2 = ToRayVec(mesh->pos[t.vertices[1]]);
+    auto v3 = ToRayVec(mesh->pos[t.vertices[2]]);
+    DrawLine3D(v1, v2, MAROON);
+    DrawLine3D(v2, v3, MAROON);
+    DrawLine3D(v3, v1, MAROON);
+}
+DrawSphere(ToRayVec(mesh->pos[v]), 0.01, BLUE);
+for (uint32_t f = adj_info.vertex_faces.begin(v); f < adj_info.vertex_faces.end(v); ++f) {
+    auto pack_id = adj_info.vertex_faces.incidents[f];
+    auto face_id = AdjacencyCSR::unpack_id(pack_id);
+    auto the_tri = mesh->m_tris[face_id];
+    auto v1 = ToRayVec(mesh->pos[the_tri.vertices[0]]);
+    auto v2 = ToRayVec(mesh->pos[the_tri.vertices[1]]);
+    auto v3 = ToRayVec(mesh->pos[the_tri.vertices[2]]);
+    DrawTriangle3D(v3, v2, v1, RAYWHITE);
+}*/
 
 
 #endif //TINYVBD_ADJACENCYCSR_HPP
