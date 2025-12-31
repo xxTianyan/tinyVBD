@@ -89,6 +89,9 @@ void HangingCloth::CreateWorld() {
     if (!m_world) throw std::runtime_error("m_world is empty pointer");
     m_world->Add(std::move(m));
     m_models = upload_all_models(*m_world);
+    // add material
+    const auto& material_id = m_world->AddStVKMaterial(default_cloth());
+
 }
 
 void HangingCloth::BindShaders() const {

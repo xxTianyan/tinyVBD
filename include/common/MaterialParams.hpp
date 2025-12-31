@@ -7,10 +7,24 @@
 
 #include "Types.h"
 
+enum MaterialType{
+    StVK,
+    NeoHookean,
+};
+
+struct MaterialID {
+    MaterialType type;
+    uint16_t id;
+};
+
 struct StVkMaterial {
-    float lambda; // first lame parameter
-    float mu;  // second lame parameter
-    float thickness;
+    float E{};  // young's module
+    float nu{};  // poisson's ratio
+    float thickness = 1.0f;
+};
+
+inline StVkMaterial default_cloth() {
+    return {1e6f, 0.3f};
 };
 
 

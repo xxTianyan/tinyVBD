@@ -6,6 +6,7 @@
 #define WORLD_H
 
 #include <span>
+#include "MaterialParams.hpp"
 #include "Mesh.h"
 
 struct SimView {
@@ -23,7 +24,8 @@ struct SimView {
 };
 
 class World {
-
+    // ! material and mesh must be one to one corresponded, which means
+    //  m_materials.size() == mesh.size()
 public:
     explicit World(Vec3  gravity);
     ~World()= default;
@@ -42,6 +44,8 @@ public:
 
     void ChangeGravity(const Vec3& new_g){gravity = new_g;};
 
+    MaterialID AddStVKMaterial(const StVkMaterial& m);
+
     std::vector<MeshPtr>  meshes;
 
     static bool RayNormal;
@@ -51,6 +55,11 @@ private:
     Vec3 gravity;
     size_t m_total_vertices{};
     size_t m_num_meshes{};
+
+    // mesh -> material mapping (same length as meshes)
+    std::vector<MaterialID> m_materials;
+
+    std::vector<StVkMaterial> stvk_pool;
 
 
 };

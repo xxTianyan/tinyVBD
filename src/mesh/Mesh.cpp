@@ -53,7 +53,7 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
         // -------- Nodes (MSH v2 ASCII) --------
         if (line == "$Nodes") {
             in >> num_nodes;
-            if (num_nodes > INVALID_VERTEX_ID) {
+            if (num_nodes >= INVALID_VERTEX_ID) {
                 throw std::runtime_error("Too many nodes for a single mesh.");
             }
 

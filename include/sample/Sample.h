@@ -6,6 +6,8 @@
 #define TINYVBD_SAMPLE_H
 
 #include <raylib.h>
+
+#include "MaterialParams.hpp"
 #include "World.h"
 #include "ShaderManager.h"
 #include "VBDDynamics.h"

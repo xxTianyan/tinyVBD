@@ -50,6 +50,14 @@ void World::InitStep() {
     ApplyGravity();
 }
 
+MaterialID World::AddStVKMaterial(const StVkMaterial& m) {
+    const auto idx = static_cast<uint16_t>(stvk_pool.size());
+    stvk_pool.push_back(m);
+    m_materials.emplace_back(StVK, idx);
+    return MaterialID{StVK, idx};
+}
+
+
 
 
 
