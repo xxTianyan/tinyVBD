@@ -35,7 +35,7 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
     bool have_tris  = false;
     bool have_tets  = false;
 
-    auto read_vertex_id_0based = [&](VertexId& out) {
+    auto read_vertex_id_0based = [&](VertexID& out) {
         unsigned long v_l = 0;
         in >> v_l;
 
@@ -45,7 +45,7 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
             throw std::runtime_error("Invalid vertex id (out of range) in msh element");
         }
 
-        out = static_cast<VertexId>(v_l - 1); // 1-based -> 0-based
+        out = static_cast<VertexID>(v_l - 1); // 1-based -> 0-based
     };
 
     while (std::getline(in, line)) {
@@ -95,7 +95,7 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
                 // 根据 elementType 读取节点
                 // Gmsh v2: 2=tri(3), 4=tet(4)
                 if (elm_type == 2) {
-                    VertexId v0, v1, v2;
+                    VertexID v0, v1, v2;
                     read_vertex_id_0based(v0);
                     read_vertex_id_0based(v1);
                     read_vertex_id_0based(v2);
@@ -106,7 +106,7 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
                     have_tris = true;
                 }
                 else if (elm_type == 4) {
-                    VertexId v0, v1, v2, v3;
+                    VertexID v0, v1, v2, v3;
                     read_vertex_id_0based(v0);
                     read_vertex_id_0based(v1);
                     read_vertex_id_0based(v2);
@@ -146,7 +146,7 @@ void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh) {
 }
 
 struct FaceKey {
-    VertexId a,b,c; // sorted ascending
+    VertexID a,b,c; // sorted ascending
     bool operator==(const FaceKey& o) const { return a==o.a && b==o.b && c==o.c; }
 };
 
@@ -163,7 +163,7 @@ struct FaceKeyHash {
 IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets) {
     IndexBuffer out;
 
-    auto make_face = [](VertexId i0, VertexId i1, VertexId i2) {
+    auto make_face = [](VertexID i0, VertexID i1, VertexID i2) {
         if (i0>i1) std::swap(i0,i1);
         if (i1>i2) std::swap(i1,i2);
         if (i0>i1) std::swap(i0,i1);
@@ -173,7 +173,7 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets) {
     std::unordered_map<FaceKey, uint8_t, FaceKeyHash> cnt;
     cnt.reserve(tets.size()*4*2);
 
-    auto add = [&](const VertexId a, const VertexId b, const VertexId c){
+    auto add = [&](const VertexID a, const VertexID b, const VertexID c){
         FaceKey k = make_face(a,b,c);
         if (const auto it = cnt.find(k); it == cnt.end()) cnt.emplace(k, 1);
         else ++it->second;
@@ -189,7 +189,7 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets) {
 
     out.reserve(cnt.size());
 
-    auto emit_if_boundary = [&](const VertexId a, const VertexId b, const VertexId c){
+    auto emit_if_boundary = [&](const VertexID a, const VertexID b, const VertexID c){
         if (cnt[make_face(a,b,c)] == 1) {
             out.push_back(a);
             out.push_back(b);
@@ -216,10 +216,10 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
     const auto num_tris = static_cast<uint32_t>(tris.size());
 
     struct HalfEdge {
-        VertexId v0, v1;       // 有向边 v0->v1（来自三角形绕序）
+        VertexID v0, v1;       // 有向边 v0->v1（来自三角形绕序）
         uint32_t tri_idx;
 
-        VertexId k0, k1;       // 无向边 key：min/max，用来匹配共享边
+        VertexID k0, k1;       // 无向边 key：min/max，用来匹配共享边
 
         bool operator<(const HalfEdge& o) const
         {
@@ -235,10 +235,10 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
     for (uint32_t t = 0; t < num_tris; ++t) {
         const auto& v = tris[t].vertices;
         for (int e = 0; e < 3; ++e) {
-            VertexId a = v[e];
-            VertexId b = v[(e + 1) % 3];
-            VertexId k0 = std::min(a, b);
-            VertexId k1 = std::max(a, b);
+            VertexID a = v[e];
+            VertexID b = v[(e + 1) % 3];
+            VertexID k0 = std::min(a, b);
+            VertexID k1 = std::max(a, b);
             edges.push_back(HalfEdge{a, b, t, k0, k1});
         }
     }

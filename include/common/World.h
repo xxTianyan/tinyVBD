@@ -20,23 +20,25 @@ struct SimView {
     const std::span<edge> edges;
     const std::span<triangle> tris;
     const std::span<tetrahedron> tets;
+    const MMaterial* material_params;
     const ForceElementAdjacencyInfo* adj = nullptr;
 };
 
 class World {
     // ! material and mesh must be one to one corresponded, which means
     //  m_materials.size() == mesh.size()
+    // but index maybe different
 public:
     explicit World(Vec3  gravity);
     ~World()= default;
 
-    void Add(MeshPtr m);
+    MeshID Add(MeshPtr m);
 
     void Remove();
 
     void Clear();
 
-    static SimView MakeSimView(mesh_on_cpu& m);
+    SimView MakeSimView(size_t mesh_id);
 
     void InitStep();
 
@@ -44,8 +46,11 @@ public:
 
     void ChangeGravity(const Vec3& new_g){gravity = new_g;};
 
-    MaterialID AddStVKMaterial(const StVkMaterial& m);
+    MaterialID AddMaterial(MMaterial _params);
 
+    void BindMeshMaterial(MeshID mesh, MaterialID mat);
+
+    // MeshID is mesh index
     std::vector<MeshPtr>  meshes;
 
     static bool RayNormal;
@@ -56,11 +61,11 @@ private:
     size_t m_total_vertices{};
     size_t m_num_meshes{};
 
-    // mesh -> material mapping (same length as meshes)
-    std::vector<MaterialID> m_materials;
-
-    std::vector<StVkMaterial> stvk_pool;
-
+     // One material can bound to different meshes, but when this material is changed, all meshes bound with
+     // this material will be influenced.
+    std::vector<MMaterial> m_materials;
+    // record mesh's material id, for meshes[mesh_id], its material is m_material[m_mesh_to_material[mesh_id]]
+    std::vector<MaterialID> m_mesh_to_material;
 
 };
 

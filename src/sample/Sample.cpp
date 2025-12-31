@@ -30,8 +30,8 @@ void Sample::CleanUp() {
 void Sample::Step(const float dt) {
     m_world->InitStep();
     auto& meshes = m_world->meshes;
-    for (auto& m:meshes) {
-        SimView view = World::MakeSimView(*m);
+    for (size_t mesh_id = 0; mesh_id < meshes.size(); mesh_id++) {
+        SimView view = m_world->MakeSimView(mesh_id);
         VBDSolver::solve(view, dt);
     }
 }
@@ -87,11 +87,11 @@ void HangingCloth::CreateWorld() {
     auto m = std::make_unique<mesh_on_cpu>();
     MeshBuilder::BuildCloth(m.get(), 1.0f, 2.0f, 10, 20, Vec3{0.0f, 30.0f, 0.0f}, ClothOrientation::Horizontal);
     if (!m_world) throw std::runtime_error("m_world is empty pointer");
-    m_world->Add(std::move(m));
+    const auto mesh_id = m_world->Add(std::move(m));
     m_models = upload_all_models(*m_world);
-    // add material
-    const auto& material_id = m_world->AddStVKMaterial(default_cloth());
-
+    // create and bind material
+    const auto material_id = m_world->AddMaterial(default_cloth());
+    m_world->BindMeshMaterial(mesh_id, material_id);
 }
 
 void HangingCloth::BindShaders() const {

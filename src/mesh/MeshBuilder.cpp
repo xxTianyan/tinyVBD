@@ -18,6 +18,9 @@ void MeshBuilder::PrepareMesh(mesh_on_cpu* mesh, const size_t num_nodes) {
     mesh->m_tets.reserve(num_nodes * 2);
 }
 
+/*
+ * TODO: Add assert for number of node: should less than INVALID_VERTEX_ID
+ */
 void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
                              const float width, const float height,
                              const int resX, const int resY,
@@ -61,10 +64,10 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
 
     for (int j = 0; j < resY; ++j) {
         for (int i = 0; i < resX; ++i) {
-            const auto v0 = static_cast<VertexId>( j      * (resX + 1) + i );
-            const auto v1 = static_cast<VertexId>( v0 + 1 );
-            const auto v2 = static_cast<VertexId>( (j + 1) * (resX + 1) + i );
-            const auto v3 = static_cast<VertexId>( v2 + 1 );
+            const auto v0 = static_cast<VertexID>( j      * (resX + 1) + i );
+            const auto v1 = static_cast<VertexID>( v0 + 1 );
+            const auto v2 = static_cast<VertexID>( (j + 1) * (resX + 1) + i );
+            const auto v3 = static_cast<VertexID>( v2 + 1 );
 
             // 第一片： (v0, v1, v2)
             mesh->m_tris.emplace_back(

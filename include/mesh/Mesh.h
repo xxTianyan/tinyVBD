@@ -12,8 +12,8 @@
 #include "AdjacencyCSR.hpp"
 
 struct tetrahedron {
-    std::array<VertexId, 4> vertices{0,0,0,0};
-    tetrahedron(const VertexId vtex0, const VertexId vtex1, const VertexId vtex2, const VertexId vtex3,
+    std::array<VertexID, 4> vertices{0,0,0,0};
+    tetrahedron(const VertexID vtex0, const VertexID vtex1, const VertexID vtex2, const VertexID vtex3,
         const Vec3& vtex0_pos, const Vec3& vtex1_pos, const Vec3& vtex2_pos, const Vec3& vtex3_pos) :
     vertices{vtex0, vtex1, vtex2, vtex3} {
 
@@ -22,11 +22,11 @@ struct tetrahedron {
 };
 
 struct triangle {
-    std::array<VertexId, 3> vertices{0,0,0};
+    std::array<VertexID, 3> vertices{0,0,0};
     float rest_area;
     Mat2 Dm_inv;
 
-    triangle(const VertexId vtex0, const VertexId vtex1, const VertexId vtex2, const Vec3& vtex0_pos, const Vec3& vtex1_pos, const Vec3& vtex2_pos) :
+    triangle(const VertexID vtex0, const VertexID vtex1, const VertexID vtex2, const Vec3& vtex0_pos, const Vec3& vtex1_pos, const Vec3& vtex2_pos) :
     vertices{vtex0, vtex1, vtex2} {
 
         /*
@@ -92,8 +92,8 @@ struct triangle {
 };
 
 struct edge {
-    std::array<VertexId, 4> vertices{0,0,0,0};
-    edge(const VertexId vtex0, const VertexId vtex1, const VertexId vtex2, const VertexId vtex3,
+    std::array<VertexID, 4> vertices{0,0,0,0};
+    edge(const VertexID vtex0, const VertexID vtex1, const VertexID vtex2, const VertexID vtex3,
         const Vec3& vtex0_pos, const Vec3& vtex1_pos, const Vec3& vtex2_pos, const Vec3& vtex3_pos) :
     vertices{vtex0, vtex1, vtex2, vtex3} {
 
@@ -119,7 +119,7 @@ struct mesh_on_cpu {
     ForceElementAdjacencyInfo adjacencyInfo;
 
     // 渲染信息
-    std::vector<VertexId> m_surface_tris;
+    std::vector<VertexID> m_surface_tris;
     size_t base_offset = 0;
 
     // resize
