@@ -117,7 +117,3 @@ void HangingCloth::BindShaders() const {
     SetShaderValue(cloth_shader, wrap,    &clothWrap,      SHADER_UNIFORM_FLOAT);
 }
 
-void HangingCloth::Update() {
-
-
-}

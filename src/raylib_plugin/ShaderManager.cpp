@@ -1,4 +1,4 @@
-#include "raylib_plugin/ShaderManager.h"
+#include "ShaderManager.h"
 
 #include <iostream>
 #include <stdexcept>

@@ -26,9 +26,6 @@ struct SimView {
 };
 
 class World {
-    // ! material and mesh must be one to one corresponded, which means
-    //  m_materials.size() == mesh.size()
-    // but index maybe different
 public:
     explicit World(Vec3  gravity);
     ~World()= default;

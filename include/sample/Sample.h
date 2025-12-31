@@ -6,8 +6,6 @@
 #define TINYVBD_SAMPLE_H
 
 #include <raylib.h>
-
-#include "MaterialParams.hpp"
 #include "World.h"
 #include "ShaderManager.h"
 #include "VBDDynamics.h"
@@ -18,7 +16,6 @@ public:
     virtual ~Sample() = default;
 
     virtual void CreateWorld() {};
-    virtual void Update() {};
     virtual void CreateFloor();
     virtual void Step(float dt);
     virtual void CleanUp();
@@ -39,7 +36,6 @@ class HangingCloth final : public Sample {
     public:
     HangingCloth() = default;
     void CreateWorld() override;
-    void Update() override;
     void BindShaders() const;
 };
 
