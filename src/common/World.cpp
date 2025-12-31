@@ -38,8 +38,8 @@ SimView World::MakeSimView(const size_t mesh_id) {
         .edges = m.m_edges,
         .tris = m.m_tris,
         .tets = m.m_tets,
-        .material_params = &m_materials[m_mesh_to_material[mesh_id]],
-        .adj = &m.adjacencyInfo
+        .material_params = m_materials[m_mesh_to_material[mesh_id]],
+        .adj = m.adjacencyInfo
     };
 }
 

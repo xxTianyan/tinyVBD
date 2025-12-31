@@ -20,8 +20,8 @@ struct SimView {
     const std::span<edge> edges;
     const std::span<triangle> tris;
     const std::span<tetrahedron> tets;
-    const MMaterial* material_params;
-    const ForceElementAdjacencyInfo* adj = nullptr;
+    const MMaterial& material_params;
+    const ForceElementAdjacencyInfo& adj;
 };
 
 class World {

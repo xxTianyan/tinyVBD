@@ -20,10 +20,11 @@ public:
 
 private:
     int num_iters;
+
 };
 
 struct Node {
-    VertexId idx = INVALID_VERTEX_ID;
+    VertexID idx = INVALID_VERTEX_ID;
 };
 
 
