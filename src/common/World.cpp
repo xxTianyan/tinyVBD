@@ -24,6 +24,14 @@ void World::Remove() {
     ;
 }
 
+void World::ApplyFixConsition(MeshID _mid, const std::function<bool(const Vec3&)> &predicate) {
+    const auto& m = meshes[_mid];
+    for (size_t i = 0; i < m->size(); ++i) {
+        if (const auto& pos = m->pos[i]; predicate(pos))
+            m->fixed[i] = 1;
+    }
+}
+
 SimView World::MakeSimView(const size_t mesh_id) {
     if (mesh_id >= meshes.size()) throw std::out_of_range("Mesh ID is out of range");
     auto& m = *meshes[mesh_id];
@@ -35,6 +43,7 @@ SimView World::MakeSimView(const size_t mesh_id) {
         .accel = m.accel,
         .normal = m.n,
         .inv_mass = m.inv_mass,
+        .fixed = m.fixed,
         .edges = m.m_edges,
         .tris = m.m_tris,
         .tets = m.m_tets,
@@ -44,15 +53,9 @@ SimView World::MakeSimView(const size_t mesh_id) {
     };
 }
 
-void World::ApplyGravity() {
-    for (auto& m : meshes) {
-        auto& accel = m->accel;
-        std::ranges::fill(accel.begin(), accel.end(), gravity);
-    }
-}
-
 void World::InitStep() {
-    // ApplyGravity();
+    for (auto& m : meshes)
+        std::fill(m->accel.begin(), m->accel.end(),Vec3::Zero());
 }
 
 MaterialID World::AddMaterial(MMaterial _params) {

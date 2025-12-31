@@ -94,7 +94,7 @@ int main(){
         }
         rlEnableBackfaceCulling();
         // draw coordinates
-        // DrawAxisGizmo(0.8f);
+        DrawAxisGizmo(0.8f);
 
         EndMode3D();
 

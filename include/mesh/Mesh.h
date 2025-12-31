@@ -34,7 +34,7 @@ struct triangle {
          */
 
         // build local 2d material basis from rest position
-        const Vec3 e01 = vtex0_pos - vtex0_pos;
+        const Vec3 e01 = vtex1_pos - vtex0_pos;
         const float L = e01.norm();
         constexpr float eps = 1e-8f;
 
@@ -71,14 +71,14 @@ struct triangle {
         //       [0, v]]
         // det(Dm) = L*v
         const float det = L * v;
-        if (std::abs(det) < eps) {
+        if (det < eps) {
             rest_area = 0.0f;
             Dm_inv.setZero();
             return;
         }
 
         // --- rest area ---
-        rest_area = 0.5f * std::abs(det);
+        rest_area = 0.5f * det;
 
 
         // --- explicit inverse of upper-triangular Dm ---
@@ -110,6 +110,8 @@ struct mesh_on_cpu {
     std::vector<Vec3> n;          // 法线
     std::vector<float> inv_mass;          // 质量
 
+    std::vector<uint8_t> fixed;  // 是否固定
+
     [[nodiscard]] inline size_t size() const { return pos.size(); }
 
     // 拓扑信息
@@ -131,6 +133,7 @@ struct mesh_on_cpu {
         accel.resize(n_nodes);
         n.resize(n_nodes);
         inv_mass.resize(n_nodes);
+        fixed.resize(n_nodes);
     }
 
     // 清空数据

@@ -517,7 +517,7 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
 
 void DistributeMass(mesh_on_cpu& mesh) {
     auto& inv_mass = mesh.inv_mass;
-    std::fill(inv_mass.begin(), inv_mass.end(), 1u);
+    std::fill(inv_mass.begin(), inv_mass.end(), 1.0f);
 }
 
 void InitMesh(mesh_on_cpu& mesh) {

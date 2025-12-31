@@ -18,6 +18,8 @@ public:
 
     static void solve(SimView& view, float dt);
 
+    static void update_velocity(SimView& view, float dt);
+
 private:
     int num_iters;
 

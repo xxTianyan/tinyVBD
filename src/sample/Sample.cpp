@@ -32,7 +32,12 @@ void Sample::Step(const float dt) {
     auto& meshes = m_world->meshes;
     for (size_t mesh_id = 0; mesh_id < meshes.size(); mesh_id++) {
         SimView view = m_world->MakeSimView(mesh_id);
-        VBDSolver::solve(view, dt);
+        // make inertia step
+        VBDSolver::forward_step(view, dt);
+        // iter newton step
+        for (size_t iter = 0; iter < 20; iter++)
+            VBDSolver::solve(view, dt);
+        VBDSolver::update_velocity(view, dt);
     }
 }
 
@@ -85,13 +90,22 @@ void Sample::CreateFloor() {
 void HangingCloth::CreateWorld() {
     m_world->ChangeGravity(Vec3{0.0f, -9.81f, 0.0f});
     auto m = std::make_unique<mesh_on_cpu>();
-    MeshBuilder::BuildCloth(m.get(), 1.0f, 2.0f, 10, 20, Vec3{0.0f, 30.0f, 0.0f}, ClothOrientation::Horizontal);
+    MeshBuilder::BuildCloth(m.get(), 2.0f, 2.0f, 10, 20, Vec3{0.0f, 3.0f, 0.0f}, ClothOrientation::Horizontal);
     if (!m_world) throw std::runtime_error("m_world is empty pointer");
     const auto mesh_id = m_world->Add(std::move(m));
     m_models = upload_all_models(*m_world);
+
     // create and bind material
     const auto material_id = m_world->AddMaterial(default_cloth());
     m_world->BindMeshMaterial(mesh_id, material_id);
+
+    // fix boundary
+    auto fix_left_z = [](const Vec3& pos) {
+        if (std::abs(pos.z() - 1.0f) < 1e-5 ) return true;
+        return false;
+    };
+
+    m_world->ApplyFixConsition(mesh_id, fix_left_z);
 }
 
 void HangingCloth::BindShaders() const {

@@ -17,6 +17,7 @@ struct SimView {
     std::span<Vec3> accel;
     std::span<Vec3> normal;
     std::span<float> inv_mass;
+    const std::span<uint8_t> fixed;
     const std::span<edge> edges;
     const std::span<triangle> tris;
     const std::span<tetrahedron> tets;
@@ -36,17 +37,17 @@ public:
 
     void Clear();
 
-    SimView MakeSimView(size_t mesh_id);
-
     void InitStep();
-
-    void ApplyGravity();
 
     void ChangeGravity(const Vec3& new_g){gravity = new_g;};
 
-    MaterialID AddMaterial(MMaterial _params);
-
     void BindMeshMaterial(MeshID mesh, MaterialID mat);
+
+    void ApplyFixConsition(MeshID mesh, const std::function<bool(const Vec3&)> &predicate);
+
+    SimView MakeSimView(size_t mesh_id);
+
+    MaterialID AddMaterial(MMaterial _params);
 
     // MeshID is mesh index
     std::vector<MeshPtr>  meshes;
