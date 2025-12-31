@@ -38,6 +38,7 @@ SimView World::MakeSimView(const size_t mesh_id) {
         .edges = m.m_edges,
         .tris = m.m_tris,
         .tets = m.m_tets,
+        .gravity = gravity,  // gravity is owned by world
         .material_params = m_materials[m_mesh_to_material[mesh_id]],
         .adj = m.adjacencyInfo
     };
@@ -51,7 +52,7 @@ void World::ApplyGravity() {
 }
 
 void World::InitStep() {
-    ApplyGravity();
+    // ApplyGravity();
 }
 
 MaterialID World::AddMaterial(MMaterial _params) {

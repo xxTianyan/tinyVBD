@@ -138,7 +138,7 @@ void VBDSolver::forward_step(SimView &view, const float dt) {
     const size_t num_nodes = view.pos.size();
     for (size_t i = 0; i < num_nodes; ++i) {
         view.prev_pos[i] = view.pos[i];  // record previous pos
-        view.inertia_pos[i] = view.pos[i] + dt * view.vel[i] + dt * dt * view.accel[i];
+        view.inertia_pos[i] = view.pos[i] + dt * view.vel[i] + dt * dt * (view.accel[i] + view.gravity);
     }
 }
 
