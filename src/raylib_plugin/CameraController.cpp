@@ -44,7 +44,7 @@ OrbitCamera CreateOrbitCamera(Vector3 position, Vector3 target)
     return orbitCam;
 }
 
-void UpdateOrbitCameraInput(OrbitCamera &orbitCam, Vector2 mouseDelta, float wheelMove,
+void UpdateOrbitCameraMouse(OrbitCamera &orbitCam, Vector2 mouseDelta, float wheelMove,
                             bool rightButtonDown, bool middleButtonDown)
 {
     if (rightButtonDown)
@@ -80,11 +80,14 @@ void UpdateOrbitCameraKeyboard(OrbitCamera &orbitCam, float deltaTime, float mov
 
     const Vector3 viewDir = Vector3Normalize(Vector3Subtract(orbitCam.camera.target, orbitCam.camera.position));
     const Vector3 right = Vector3Normalize(Vector3CrossProduct(viewDir, orbitCam.camera.up));
+    constexpr Vector3 up{0,1,0};
 
     if (IsKeyDown(KEY_W)) movement = Vector3Add(movement, viewDir);
     if (IsKeyDown(KEY_S)) movement = Vector3Add(movement, Vector3Negate(viewDir));
     if (IsKeyDown(KEY_D)) movement = Vector3Add(movement, right);
     if (IsKeyDown(KEY_A)) movement = Vector3Add(movement, Vector3Negate(right));
+    if (IsKeyDown(KEY_SPACE)) movement = Vector3Add(movement, up);
+    if (IsKeyDown(KEY_LEFT_CONTROL)) movement = Vector3Add(movement, Vector3Negate(up));
 
     if (Vector3Length(movement) > 0.0f)
     {

@@ -52,12 +52,12 @@ int main(){
         if (!ImGui::GetIO().WantCaptureMouse) {
             auto [x, y] = GetMouseDelta();
             const float wheel = GetMouseWheelMove();
-            UpdateOrbitCameraInput(orbitCam, Vector2{(float)x, (float)y}, wheel,
+            UpdateOrbitCameraMouse(orbitCam, Vector2{(float)x, (float)y}, wheel,
                                    IsMouseButtonDown(MOUSE_RIGHT_BUTTON), IsMouseButtonDown(MOUSE_MIDDLE_BUTTON));
         }
 
         if (!ImGui::GetIO().WantCaptureKeyboard) {
-            UpdateOrbitCameraKeyboard(orbitCam, dt, 2.5f);
+            UpdateOrbitCameraKeyboard(orbitCam, dt, 4.5f);
         }
 
         if (IsKeyPressed(KEY_Z)) {
@@ -65,7 +65,7 @@ int main(){
         }
         RefreshCameraTransform(orbitCam);
 
-        if (IsKeyPressed(KEY_SPACE)) isPaused = !isPaused;
+        if (IsKeyPressed(KEY_ENTER)) isPaused = !isPaused;
 
         // update shader
         const auto& viewPos = orbitCam.camera.position;
