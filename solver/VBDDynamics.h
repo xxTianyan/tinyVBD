@@ -5,8 +5,8 @@
 #ifndef VBDDYNAMICS_H
 #define VBDDYNAMICS_H
 
-#include <../common/Types.h>
-#include "../common/Scene.h"
+#include <Types.h>
+#include "Scene.h"
 
 class VBDSolver {
 

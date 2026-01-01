@@ -6,12 +6,12 @@
 #define TINYVBD_BASIC_CLOTH_EXAMPLE_H
 #include "Sample.h"
 
-class HangingCloth final : public Sample {
+/*class HangingCloth final : public my_Sample {
 public:
     HangingCloth() = default;
     void CreateWorld() override;
     void BindShaders() const;
-};
+};*/
 
 
 

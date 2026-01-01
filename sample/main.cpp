@@ -27,16 +27,7 @@ int main(){
     // Monitor
     PerformanceMonitor perfMonitor;
 
-    // set sample
-    HangingCloth falling_cloth;
-    falling_cloth.CreateWorld();
-    falling_cloth.CreateFloor();
-    falling_cloth.BindShaders();
 
-    // get reference of necessary component
-    auto& models = falling_cloth.m_models;
-    const auto& shader_manager = falling_cloth.m_shader_manager;
-    bool& isPaused = falling_cloth.isPaused;
 
     // camera
     OrbitCamera orbitCam = CreateOrbitCamera(Vector3{ 1.5f, 0.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f });
@@ -61,23 +52,16 @@ int main(){
             UpdateOrbitCameraKeyboard(orbitCam, dt, 4.5f);
         }
 
-        if (IsKeyPressed(KEY_Z)) {
-            ReframeOrbitToModels(orbitCam, models, 1.2f);
-        }
+
         RefreshCameraTransform(orbitCam);
 
-        if (IsKeyPressed(KEY_ENTER)) isPaused = !isPaused;
+
 
         // update shader
         const auto& viewPos = orbitCam.camera.position;
-        shader_manager->UpdateViewPos("cloth", viewPos);
-        shader_manager->UpdateViewPos("floor", viewPos);
 
-        // step simulation and update model
-        if (!isPaused) {
-            falling_cloth.Step(dt);
-            UpdateModel(models, falling_cloth.m_world->meshes);
-        }
+
+
 
         // rendering
         BeginDrawing();
@@ -90,13 +74,13 @@ int main(){
 
         BeginMode3D(orbitCam.camera);
         // draw floor
-        DrawModel(falling_cloth.m_floor, Vector3Zero(), 1.0f, WHITE);
+
         // draw cloth
         rlDisableBackfaceCulling();
-        for (const auto& m : models) {
+        /*for (const auto& m : models) {
             DrawModel(m, Vector3Zero(), 1.0f, DARKBLUE);
             // DrawModelWires(m, Vector3Zero(), 1.0f, DARKBLUE);
-        }
+        }*/
         rlEnableBackfaceCulling();
         // draw coordinates
         DrawAxisGizmo(0.8f);
@@ -109,7 +93,7 @@ int main(){
 
         EndDrawing();
     }
-    falling_cloth.CleanUp();
+
     rlImGuiShutdown();
     CloseWindow();
 

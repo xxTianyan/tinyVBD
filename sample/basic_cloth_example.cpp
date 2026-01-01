@@ -6,7 +6,7 @@
 #include "MeshBuilder.h"
 #include "RenderHelper.hpp"
 
-void HangingCloth::CreateWorld() {
+/*void HangingCloth::CreateWorld() {
     m_world->ChangeGravity(Vec3{0.0f, -9.81f, 0.0f});
     auto m = std::make_unique<mesh_on_cpu>();
     MeshBuilder::BuildCloth(m.get(), 2.0f, 2.0f, 10, 20, Vec3{0.0f, 3.0f, 0.0f}, ClothOrientation::Horizontal);
@@ -48,4 +48,4 @@ void HangingCloth::BindShaders() const {
     SetShaderValue(cloth_shader, rough,   &clothRoughness, SHADER_UNIFORM_FLOAT);
     SetShaderValue(cloth_shader, specStr, &clothSpec,      SHADER_UNIFORM_FLOAT);
     SetShaderValue(cloth_shader, wrap,    &clothWrap,      SHADER_UNIFORM_FLOAT);
-}
+}*/

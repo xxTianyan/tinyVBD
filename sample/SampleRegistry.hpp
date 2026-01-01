@@ -10,11 +10,11 @@
 #include <unordered_map>
 #include <vector>
 #include <stdexcept>
-#include "Sample.h"
-
+#include "ISample.h"
 
 enum SampleId : int {
-    basic_cloth_sample = 0,
+    empty_scene = 0,
+    basic_cloth_sample = 1,
 };
 
 struct SampleInfo {
@@ -24,14 +24,14 @@ struct SampleInfo {
 
 class SampleRegistry {
 public:
-    using Factory = std::function<std::unique_ptr<ISample>()>;
+    using Factory = std::function<SamplePtr()>;
 
     void Register(const SampleId id, const char* display_name, Factory f) {
         infos_.push_back({id, display_name});
         factories_[id] = std::move(f);
     }
 
-    std::unique_ptr<ISample> Create(const SampleId id) const {
+    SamplePtr Create(const SampleId id) const {
         const auto it = factories_.find(id);
         if (it == factories_.end()) throw std::runtime_error("Sample factory not found");
         return (it->second)();

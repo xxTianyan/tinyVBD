@@ -55,8 +55,8 @@ void Sample::DrawUI([[maybe_unused]]AppContext &ctx) {
 }
 
 void Sample::CleanUp() {
-    m_solver.reset();
-    m_world.reset();
+    solver.reset();
+    scene.reset();
 }
 
 bool Sample::IsModelValid_(const Model &m) {

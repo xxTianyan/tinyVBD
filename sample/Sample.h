@@ -10,32 +10,7 @@
 #include "ShaderManager.h"
 #include "VBDDynamics.h"
 #include "Application.h"
-
-
-// sample industry
-class ISample {
-public:
-    virtual ~ISample() = default;
-
-    // each sample should have a name for ui
-    virtual const char* Name() const = 0;
-
-    // call back for starting the sample
-    virtual void OnEnter(AppContext& ctx) = 0;
-
-    // call back for ending the sample
-    virtual void OnExit(AppContext& ctx) = 0;
-
-    // simulation step
-    virtual void Update(AppContext& ctx) = 0;
-
-    // raylib rendering staff
-    virtual void Render(AppContext& ctx) = 0;
-
-    // unique ui panel
-    virtual void DrawUI(AppContext& ctx) = 0;
-};
-
+#include "ISample.h"
 
 
 class Sample : public ISample {
