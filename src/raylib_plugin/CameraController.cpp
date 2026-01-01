@@ -74,6 +74,26 @@ void UpdateOrbitCameraInput(OrbitCamera &orbitCam, Vector2 mouseDelta, float whe
     }
 }
 
+void UpdateOrbitCameraKeyboard(OrbitCamera &orbitCam, float deltaTime, float moveSpeed)
+{
+    Vector3 movement = Vector3Zero();
+
+    const Vector3 viewDir = Vector3Normalize(Vector3Subtract(orbitCam.camera.target, orbitCam.camera.position));
+    const Vector3 right = Vector3Normalize(Vector3CrossProduct(viewDir, orbitCam.camera.up));
+
+    if (IsKeyDown(KEY_W)) movement = Vector3Add(movement, viewDir);
+    if (IsKeyDown(KEY_S)) movement = Vector3Add(movement, Vector3Negate(viewDir));
+    if (IsKeyDown(KEY_D)) movement = Vector3Add(movement, right);
+    if (IsKeyDown(KEY_A)) movement = Vector3Add(movement, Vector3Negate(right));
+
+    if (Vector3Length(movement) > 0.0f)
+    {
+        const float distance = moveSpeed * deltaTime;
+        const Vector3 delta = Vector3Scale(Vector3Normalize(movement), distance);
+        orbitCam.camera.target = Vector3Add(orbitCam.camera.target, delta);
+    }
+}
+
 void RefreshCameraTransform(OrbitCamera &orbitCam)
 {
     orbitCam.camera.position = Vector3Add(orbitCam.camera.target,

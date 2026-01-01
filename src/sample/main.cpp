@@ -56,6 +56,10 @@ int main(){
                                    IsMouseButtonDown(MOUSE_RIGHT_BUTTON), IsMouseButtonDown(MOUSE_MIDDLE_BUTTON));
         }
 
+        if (!ImGui::GetIO().WantCaptureKeyboard) {
+            UpdateOrbitCameraKeyboard(orbitCam, dt, 2.5f);
+        }
+
         if (IsKeyPressed(KEY_Z)) {
             ReframeOrbitToModels(orbitCam, models, 1.2f);
         }
