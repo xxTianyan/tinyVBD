@@ -40,13 +40,13 @@ int main(){
     // camera
     OrbitCamera orbitCam = CreateOrbitCamera(Vector3{ 1.5f, 0.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f });
 
-    SetTargetFPS(60);                   // run at 60 frames-per-second
+    SetTargetFPS(120);                   // run at 60 frames-per-second
 
 
     // main loop
     while (!WindowShouldClose())        // Detect window close button or ESC key
     {
-        const float dt = GetFrameTime() == 0? 1.0f/60 : GetFrameTime();
+        const float dt = GetFrameTime() == 0? 1.0f/120 : GetFrameTime();
         perfMonitor.Update(dt);
         // not move camera when mouse is on imgui window
         if (!ImGui::GetIO().WantCaptureMouse) {
