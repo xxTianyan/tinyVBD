@@ -4,6 +4,7 @@
 #include <rlImGui.h>
 #include <imgui.h>
 
+#include "basic_cloth_example.h"
 #include "RenderHelper.hpp"
 #include "Mesh.h"
 #include "CameraController.h"

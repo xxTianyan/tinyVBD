@@ -68,7 +68,8 @@ add_executable(tinyVBD sample/main.cpp
         mesh/MeshBuilder.cpp
         raylib_plugin/CameraController.cpp
         raylib_plugin/ShaderManager.cpp
-        sample/Sample.cpp)
+        sample/Sample.cpp
+        sample/basic_cloth_example.cpp)
 
 target_include_directories(tinyVBD
         PRIVATE

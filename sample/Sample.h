@@ -32,12 +32,5 @@ public:
     Model m_floor{};
 };
 
-class HangingCloth final : public Sample {
-    public:
-    HangingCloth() = default;
-    void CreateWorld() override;
-    void BindShaders() const;
-};
-
 
 #endif //TINYVBD_SAMPLE_H
