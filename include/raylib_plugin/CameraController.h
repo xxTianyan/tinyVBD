@@ -22,6 +22,7 @@ struct OrbitCamera {
 OrbitCamera CreateOrbitCamera(Vector3 position, Vector3 target);
 void UpdateOrbitCameraInput(OrbitCamera &orbitCam, Vector2 mouseDelta, float wheelMove,
                             bool rightButtonDown, bool middleButtonDown);
+void UpdateOrbitCameraKeyboard(OrbitCamera &orbitCam, float deltaTime, float moveSpeed);
 void ReframeOrbitToModels(OrbitCamera &orbitCam, const std::vector<Model> &models, float margin);
 void RefreshCameraTransform(OrbitCamera &orbitCam);
 
