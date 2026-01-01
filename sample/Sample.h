@@ -9,28 +9,88 @@
 #include "Scene.h"
 #include "ShaderManager.h"
 #include "VBDDynamics.h"
+#include "Application.h"
 
-class Sample {
+
+// sample industry
+class ISample {
 public:
-    Sample();
-    virtual ~Sample() = default;
+    virtual ~ISample() = default;
 
-    virtual void CreateWorld() {};
-    virtual void CreateFloor();
-    virtual void Step(float dt);
+    // each sample should have a name for ui
+    virtual const char* Name() const = 0;
+
+    // call back for starting the sample
+    virtual void OnEnter(AppContext& ctx) = 0;
+
+    // call back for ending the sample
+    virtual void OnExit(AppContext& ctx) = 0;
+
+    // simulation step
+    virtual void Update(AppContext& ctx) = 0;
+
+    // raylib rendering staff
+    virtual void Render(AppContext& ctx) = 0;
+
+    // unique ui panel
+    virtual void DrawUI(AppContext& ctx) = 0;
+};
+
+
+
+class Sample : public ISample {
+public:
+    Sample() = default;
+    ~Sample() override = default;
+
+    // provide sample name
+    const char* Name() const override = 0;
+
+    void OnEnter(AppContext& ctx) override;
+
+    void OnExit(AppContext& ctx) override;
+
+    void Update(AppContext& ctx) override;
+
+    void Render(AppContext& ctx) override;
+
+    void DrawUI(AppContext& ctx) override;
+
+    virtual void CreateFloor(AppContext& ctx);
+
+    // api for samples to use
+    virtual void CreateWorld([[maybe_unused]]AppContext& ctx) {};
+
+    virtual void Step([[maybe_unused]]float dt) {}
+
+    // clean cpu resource
     virtual void CleanUp();
 
+protected:
+
+    // upload mesh to get raylib model, tip: upload_all_models()
+    virtual void BuildRenderResources() {}
+
+    // clean gpu resource
+    virtual void DestroyRenderResources();
+
+public:
     // for simulation
-    std::unique_ptr<Scene> m_world;
-    std::unique_ptr<VBDSolver> m_solver;
+    std::unique_ptr<Scene> scene;
+    std::unique_ptr<VBDSolver> solver;
 
     // for rendering
-    std::vector<Model> m_models;
-    std::unique_ptr<ShaderManager> m_shader_manager;
+    std::vector<Model> models;
+    Model floor{};
 
-    bool isPaused = true;
-    Model m_floor{};
+private:
+    static bool IsModelValid_(const Model& m);
+
+    static void UnloadModelSafe_(Model& m);
+
 };
+
+
 
 
 #endif //TINYVBD_SAMPLE_H
