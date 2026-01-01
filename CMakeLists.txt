@@ -80,6 +80,7 @@ target_include_directories(tinyVBD
         ${CMAKE_CURRENT_SOURCE_DIR}/include/common
         ${CMAKE_CURRENT_SOURCE_DIR}/src/vbd
         ${CMAKE_CURRENT_SOURCE_DIR}/src/raylib_plugin
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/common
 )
 
 target_link_libraries(tinyVBD PRIVATE Eigen3::Eigen rlImGui imgui raylib)
