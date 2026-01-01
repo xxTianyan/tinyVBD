@@ -13,7 +13,7 @@
 #include <imgui.h>
 
 #include "Mesh.h"
-#include "World.h"
+#include "Scene.h"
 
 static void DrawAxisGizmo(float length = 0.5f) {
     constexpr Vector3 origin = { 0.0f, 0.0f, 0.0f };
@@ -45,7 +45,7 @@ static Model upload_model_from_cpu_mesh(mesh_on_cpu* M) {
     gmsh.indices = static_cast<unsigned short *>(MemAlloc(M->m_surface_tris.size() * sizeof(unsigned short)));
     std::memcpy(gmsh.indices, M->m_surface_tris.data(), M->m_surface_tris.size() * sizeof(unsigned short));
 
-    if (World::RayNormal) {
+    if (Scene::RayNormal) {
         const std::vector<float> normals  = ComputeNormal(M);
         gmsh.normals = static_cast<float *>(MemAlloc(normals.size() * sizeof(float)));
         std::memcpy(gmsh.normals, normals.data(), normals.size() * sizeof(float));
@@ -59,7 +59,7 @@ static Model upload_model_from_cpu_mesh(mesh_on_cpu* M) {
 }
 
 // put every mesh to a model vector
-static std::vector<Model> upload_all_models(const World& world) {
+static std::vector<Model> upload_all_models(const Scene& world) {
     std::vector<Model> models;
     models.reserve(world.meshes.size());
     for (auto& up : world.meshes) {

@@ -6,7 +6,7 @@
 #define TINYVBD_SAMPLE_H
 
 #include <raylib.h>
-#include "World.h"
+#include "Scene.h"
 #include "ShaderManager.h"
 #include "VBDDynamics.h"
 
@@ -21,7 +21,7 @@ public:
     virtual void CleanUp();
 
     // for simulation
-    std::unique_ptr<World> m_world;
+    std::unique_ptr<Scene> m_world;
     std::unique_ptr<VBDSolver> m_solver;
 
     // for rendering

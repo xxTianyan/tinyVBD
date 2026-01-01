@@ -6,7 +6,7 @@
 #define VBDDYNAMICS_H
 
 #include <../common/Types.h>
-#include "../common/World.h"
+#include "../common/Scene.h"
 
 class VBDSolver {
 

@@ -7,7 +7,7 @@
 #include "RenderHelper.hpp"
 
 Sample::Sample() {
-    m_world = std::make_unique<World>(Vec3{0.0f, -9.81f, 0.0f});
+    m_world = std::make_unique<Scene>(Vec3{0.0f, -9.81f, 0.0f});
     m_shader_manager = std::make_unique<ShaderManager>();
     m_solver = std::make_unique<VBDSolver>(10);
 }

@@ -26,10 +26,10 @@ struct SimView {
     const ForceElementAdjacencyInfo& adj;
 };
 
-class World {
+class Scene {
 public:
-    explicit World(Vec3  gravity);
-    ~World()= default;
+    explicit Scene(Vec3  gravity);
+    ~Scene()= default;
 
     MeshID Add(MeshPtr m);
 

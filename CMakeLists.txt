@@ -62,7 +62,7 @@ target_link_libraries(rlImGui PUBLIC raylib imgui)
 # ---------- My executable ----------
 add_executable(tinyVBD sample/main.cpp
         mesh/Mesh.cpp
-        common/World.cpp
+        common/Scene.cpp
         collision/BroadPhase.cpp
         solver/VBDDynamics.cpp
         mesh/MeshBuilder.cpp
