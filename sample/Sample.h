@@ -34,34 +34,35 @@ public:
 
     virtual void CreateFloor(AppContext& ctx);
 
-    // api for samples to use
+    // api functions that need to be over-ride when inherited
     virtual void CreateWorld([[maybe_unused]]AppContext& ctx) {};
-
-    virtual void Step([[maybe_unused]]float dt) {}
+    virtual void Step([[maybe_unused]]const float dt) {}
+    virtual void BindShaders([[maybe_unused]]AppContext& ctx) {};
 
     // clean cpu resource
     virtual void CleanUp();
 
-protected:
+    static bool IsModelValid_(const Model& m);
 
+protected:
+    // api functions that need to be over-ride when inherited
     // upload mesh to get raylib model, tip: upload_all_models()
     virtual void BuildRenderResources() {}
 
     // clean gpu resource
     virtual void DestroyRenderResources();
 
+
 public:
-    // TODO: set a good way to init, maybe in detailed exmaples?
-    // for simulation
-    std::unique_ptr<Scene> scene;
-    std::unique_ptr<VBDSolver> solver;
+    // for simulation， remember to initialize
+    std::unique_ptr<Scene> scene_;
+    std::unique_ptr<VBDSolver> solver_;
 
     // for rendering
-    std::vector<Model> models;
-    Model floor{};
+    std::vector<Model> models_;
+    Model floor_{};
 
 private:
-    static bool IsModelValid_(const Model& m);
 
     static void UnloadModelSafe_(Model& m);
 

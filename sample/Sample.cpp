@@ -15,6 +15,9 @@ void Sample::OnEnter(AppContext &ctx) {
     // upload mesh to gpu
     BuildRenderResources();
 
+    // bind shaders
+    BindShaders(ctx);
+
 }
 
 void Sample::OnExit([[maybe_unused]]AppContext &ctx) {
@@ -27,19 +30,24 @@ void Sample::OnExit([[maybe_unused]]AppContext &ctx) {
 
 void Sample::Update([[maybe_unused]]AppContext &ctx) {
     if (ctx.paused) return;
-    Step(ctx.dt);
+    if (ctx.dt == 0)
+        Step(1.0f / ctx.target_fps);
+    else
+        Step(ctx.dt);
+
+    UpdateModel(models_, scene_->meshes);
 }
 
 void Sample::Render([[maybe_unused]]AppContext &ctx) {
     BeginMode3D(ctx.orbitCam->camera);
 
     // floor
-    if (IsModelValid_(floor)) {
-        DrawModel(floor, Vector3{0,0,0}, 1.0f, WHITE);
+    if (IsModelValid_(floor_)) {
+        DrawModel(floor_, Vector3{0,0,0}, 1.0f, WHITE);
     }
 
     // scene models
-    for (auto& m : models) {
+    for (auto& m : models_) {
         if (!IsModelValid_(m)) continue;
         DrawModel(m, Vector3{0,0,0}, 1.0f, WHITE);
     }
@@ -53,8 +61,8 @@ void Sample::DrawUI([[maybe_unused]]AppContext &ctx) {
 }
 
 void Sample::CleanUp() {
-    solver.reset();
-    scene.reset();
+    solver_.reset();
+    scene_.reset();
 }
 
 bool Sample::IsModelValid_(const Model &m) {
@@ -70,12 +78,12 @@ void Sample::UnloadModelSafe_(Model &m) {
     m = Model{}; // make model invalid
 }
 
-void Sample::DestroyRenderResources() {
-    for (auto& m : models)
+void Sample:: DestroyRenderResources() {
+    for (auto& m : models_)
         UnloadModelSafe_(m);
-    models.clear();
+    models_.clear();
 
-    UnloadModelSafe_(floor);
+    UnloadModelSafe_(floor_);
 }
 
 void Sample::CreateFloor([[maybe_unused]]AppContext& ctx) {
@@ -88,8 +96,8 @@ void Sample::CreateFloor([[maybe_unused]]AppContext& ctx) {
     ShaderManager::BindMatrices(floor_shader);
     ShaderManager::SetCommonShaderParams(floor_shader);
     const Mesh floor_mesh = GenMeshPlane(500.05f, 500.0f, 1, 1);
-    floor = LoadModelFromMesh(floor_mesh);
-    floor.materials[0].shader = floor_shader;
+    floor_ = LoadModelFromMesh(floor_mesh);
+    floor_.materials[0].shader = floor_shader;
 
     // locate uniform parameters
     const int tileScale = ShaderManager::CheckSetShaderLocation(floor_shader, "tileScale");

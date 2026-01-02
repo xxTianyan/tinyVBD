@@ -8,15 +8,13 @@ bool Scene::RayNormal = true;
 
 Scene::Scene(Vec3  gravity) : gravity(std::move(gravity)) {}
 
-/*
- * TODO: Add a None MaterialID in m_mesh_to_material vector when a mesh is added,
- * make sure that MeshID and MaterialID is one to one correspond.
- */
+// make sure that MeshID and MaterialID is one to one correspond.
 MeshID Scene::Add(MeshPtr m) {
     m->base_offset = m_total_vertices;
     m_total_vertices += m->size();
     InitMesh(*m);
     meshes.push_back(std::move(m));
+    m_mesh_to_material.push_back(INVALID_VERTEX_ID);
     return static_cast<MeshID>(meshes.size()-1);
 }
 
@@ -37,8 +35,12 @@ void Scene::ApplyFixConsition(MeshID _mid, const std::function<bool(const Vec3&)
 }
 
 SimView Scene::MakeSimView(const size_t mesh_id) {
+    // check mesh id valid
     if (mesh_id >= meshes.size()) throw std::out_of_range("Mesh ID is out of range");
     auto& m = *meshes[mesh_id];
+
+    // check physical material id valid
+    if (m_mesh_to_material[mesh_id] > m_materials.size()) throw std::out_of_range("Physical Material is invalid");
     return SimView{
         .pos = m.pos,
         .prev_pos = m.prev_pos,
@@ -75,7 +77,7 @@ MaterialID Scene::AddMaterial(MMaterial _params) {
 void Scene::BindMeshMaterial(const MeshID mesh, const MaterialID mat) {
     if (mesh >= meshes.size()) throw std::out_of_range("Mesh ID is out of range");
     if (mat >= m_materials.size()) throw std::out_of_range("Material ID is out of range");
-    m_mesh_to_material.push_back(mat);
+    m_mesh_to_material[mesh]=mat;
 }
 
 

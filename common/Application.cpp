@@ -17,6 +17,7 @@ Application::Application(Desc desc) :
     // bind cxt
     ctx_.shader_manager = &shader_manager_;
     ctx_.orbitCam = &orbitCam_;
+    ctx_.target_fps = desc_.target_fps;
 }
 
 Application::~Application() {
@@ -87,6 +88,12 @@ void Application::PollHotkeys_() {
     if (IsKeyPressed(KEY_TWO))  RequestSwitchSample_(SampleId::TetStVK);*/
 }
 
+
+/*
+ *TODO: Fix Bug
+ * If you switching another sample when current sample is running,
+ * the whole program breaks down.
+ */
 void Application::DrawAppUI_() {
 
     ImGui::Begin("Application");
@@ -190,7 +197,7 @@ void Application::Run(const SampleId start_sample) {
         // key event
         PollHotkeys_();
         if (!ImGui::GetIO().WantCaptureKeyboard) {
-            UpdateOrbitCameraKeyboard(orbitCam_, dt, 4.5f);
+            UpdateOrbitCameraKeyboard(orbitCam_, dt, 10.0f);
         }
 
         // mouse event

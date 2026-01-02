@@ -61,7 +61,7 @@ private:
     size_t m_num_meshes{};
 
      // One material can bound to different meshes, but when this material is changed, all meshes bound with
-     // this material will be influenced.
+     // this material will be all influenced.
     std::vector<MMaterial> m_materials;
     // record mesh's material id, for meshes[mesh_id], its material is m_material[m_mesh_to_material[mesh_id]]
     std::vector<MaterialID> m_mesh_to_material;
