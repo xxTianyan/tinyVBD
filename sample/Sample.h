@@ -2,8 +2,8 @@
 // Created by xumiz on 2025/12/24.
 //
 
-#ifndef TINYVBD_SAMPLE_H
-#define TINYVBD_SAMPLE_H
+#ifndef SAMPLE_H
+#define SAMPLE_H
 
 #include <raylib.h>
 #include "Scene.h"
@@ -19,7 +19,7 @@ public:
     ~Sample() override = default;
 
     // provide sample name
-    [[nodiscard]] const char* Name() const override = 0;
+    [[nodiscard]] const char* Name() const override { return "Empty Scene";};
 
     void OnEnter(AppContext& ctx) override;
 
@@ -68,4 +68,4 @@ private:
 
 
 
-#endif //TINYVBD_SAMPLE_H
+#endif //SAMPLE_H

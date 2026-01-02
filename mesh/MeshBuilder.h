@@ -2,8 +2,8 @@
 // Created by tianyan on 12/23/25.
 //
 
-#ifndef TINYVBD_MESHBUILDER_H
-#define TINYVBD_MESHBUILDER_H
+#ifndef MESHBUILDER_H
+#define MESHBUILDER_H
 
 #include "Mesh.h"
 
@@ -31,4 +31,4 @@ private:
 
 
 
-#endif //TINYVBD_MESHBUILDER_H
+#endif //MESHBUILDER_H

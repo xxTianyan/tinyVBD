@@ -2,8 +2,8 @@
 // Created by xumiz on 2026/1/1.
 //
 
-#ifndef TINYVBD_SAMPLEREGISTRY_HPP
-#define TINYVBD_SAMPLEREGISTRY_HPP
+#ifndef SAMPLEREGISTRY_H
+#define SAMPLEREGISTRY_H
 
 #include <functional>
 #include <memory>
@@ -11,11 +11,11 @@
 #include <vector>
 #include <stdexcept>
 #include "ISample.h"
-#include "Types.h"
+
 
 enum SampleId : int {
-    empty_scene = 0,
-    basic_cloth_sample = 1,
+    DUMMY_SAMPLE,
+    BASIC_CLOTH_EXAMPLE,
 };
 
 struct SampleInfo {
@@ -46,4 +46,15 @@ private:
 };
 
 
-#endif //TINYVBD_SAMPLEREGISTRY_HPP
+void RegisterAllSamples(SampleRegistry& reg);
+
+/*static SamplePtr BuildDummySample() {
+    return std::make_unique<Sample>();
+}
+
+static void RegistryAllSamples(SampleRegistry& registry) {
+    registry.Register(SampleId::DUMMY_SAMPLE, "Dummy Sample", &BuildDummySample);
+}*/
+
+
+#endif //SAMPLEREGISTRY_H

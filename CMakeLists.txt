@@ -70,7 +70,8 @@ add_executable(tinyVBD sample/main.cpp
         raylib_plugin/ShaderManager.cpp
         sample/Sample.cpp
         sample/basic_cloth_example.cpp
-        common/Application.cpp)
+        common/Application.cpp
+        sample/SampleRegistry.cpp)
 
 target_include_directories(tinyVBD
         PRIVATE

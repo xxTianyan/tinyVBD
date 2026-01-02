@@ -2,13 +2,13 @@
 // Created by xumiz on 2026/1/1.
 //
 
-#ifndef TINYVBD_APPLICATION_H
-#define TINYVBD_APPLICATION_H
+#ifndef APPLICATION_H
+#define APPLICATION_H
 
 
 #include <memory>
 #include "CameraController.h"
-#include "SampleRegistry.hpp"
+#include "SampleRegistry.h"
 #include "ShaderManager.h"
 
 struct AppContext {
@@ -51,7 +51,7 @@ private:
 
     struct PendingAction {
         PendingActionType type = PendingActionType::None;
-        SampleId target = SampleId::empty_scene; // for switch
+        SampleId target = SampleId::DUMMY_SAMPLE; // for switch
     };
 
 private:
@@ -78,7 +78,7 @@ private:
     // running state
     AppContext ctx_{};
 
-    SampleId current_id_ = SampleId::empty_scene;
+    SampleId current_id_ = SampleId::DUMMY_SAMPLE;
     std::unique_ptr<ISample> current_;
 
     PendingAction pending_{};
@@ -87,4 +87,4 @@ private:
 
 
 
-#endif //TINYVBD_APPLICATION_H
+#endif //APPLICATION_H

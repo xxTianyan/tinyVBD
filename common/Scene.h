@@ -2,8 +2,8 @@
 // Created by 徐天焱 on 2025/11/11.
 //
 
-#ifndef WORLD_H
-#define WORLD_H
+#ifndef SCENE_H
+#define SCENE_H
 
 #include <span>
 #include "MaterialParams.hpp"
@@ -68,4 +68,4 @@ private:
 
 };
 
-#endif //WORLD_H
+#endif //SCENE_H

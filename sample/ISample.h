@@ -2,8 +2,8 @@
 // Created by xumiz on 2026/1/1.
 //
 
-#ifndef TINYVBD_ISAMPLE_HPP
-#define TINYVBD_ISAMPLE_HPP
+#ifndef ISAMPLE_H
+#define ISAMPLE_H
 
 struct AppContext;
 
@@ -30,6 +30,6 @@ public:
     virtual void DrawUI(AppContext& ctx) = 0;
 };
 
+using SamplePtr = std::unique_ptr<ISample>;
 
-
-#endif //TINYVBD_ISAMPLE_HPP
+#endif //ISAMPLE_HPP

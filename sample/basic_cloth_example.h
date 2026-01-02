@@ -2,8 +2,8 @@
 // Created by xumiz on 2026/1/1.
 //
 
-#ifndef TINYVBD_BASIC_CLOTH_EXAMPLE_H
-#define TINYVBD_BASIC_CLOTH_EXAMPLE_H
+#ifndef BASIC_CLOTH_EXAMPLE_H
+#define BASIC_CLOTH_EXAMPLE_H
 #include "Sample.h"
 
 /*class HangingCloth final : public my_Sample {
@@ -15,4 +15,4 @@ public:
 
 
 
-#endif //TINYVBD_BASIC_CLOTH_EXAMPLE_H
+#endif //BASIC_CLOTH_EXAMPLE_H

@@ -163,52 +163,7 @@ void my_Sample::Step(const float dt) {
             VBDSolver::solve(view, dt);
         VBDSolver::update_velocity(view, dt);
     }
-}
-
-void my_Sample::CreateFloor() {
-    m_shader_manager->LoadShaderProgram("floor", "../resources/shaders/floor.vs", "../resources/shaders/floor.fs");
-    const auto floor_shader = m_shader_manager->Get("floor")->shader;
-    ShaderManager::BindMatrices(floor_shader);
-    ShaderManager::SetCommonShaderParams(floor_shader);
-    const Mesh floor_mesh = GenMeshPlane(500.05f, 500.0f, 1, 1);
-    m_floor = LoadModelFromMesh(floor_mesh);
-    m_floor.materials[0].shader = floor_shader;
-
-    // locate uniform parameters
-    const int tileScale = ShaderManager::CheckSetShaderLocation(floor_shader, "tileScale");
-    const int lineWidth = ShaderManager::CheckSetShaderLocation(floor_shader, "lineWidth");
-    const int baseAColor = ShaderManager::CheckSetShaderLocation(floor_shader, "baseAColor");
-    const int baseBColor = ShaderManager::CheckSetShaderLocation(floor_shader, "baseBColor");
-    const int lineColor = ShaderManager::CheckSetShaderLocation(floor_shader, "lineColor");
-    const int roughness = ShaderManager::CheckSetShaderLocation(floor_shader, "roughness");
-    const int bumpStrength = ShaderManager::CheckSetShaderLocation(floor_shader, "bumpStrength");
-    const int fogDensity = ShaderManager::CheckSetShaderLocation(floor_shader, "fogDensity");
-    const int fogColor = ShaderManager::CheckSetShaderLocation(floor_shader, "fogColor");
-
-
-    // Floor appearance
-    constexpr Vector3 floorFogColor  = { 0.10f, 0.13f, 0.17f }; // 用于 fogColor（线性，偏蓝灰）
-    constexpr Vector3 floorBaseACol  = { 0.08f, 0.085f, 0.09f }; // 底色A：深
-    constexpr Vector3 floorBaseBCol  = { 0.13f, 0.135f, 0.14f }; // 底色B：浅（噪声混合）
-    constexpr Vector3 floorLineColor   = { 0.20f, 0.205f, 0.215f}; // 网格线颜色（别太亮）
-
-    constexpr float floorRough  = 0.55f;                // 越大越哑光，反光越弱
-    constexpr float floorBumpStr     = 0.22f;                // 微起伏：增强高级感（太大像橡皮泥）
-    constexpr float floorFogDensity  = 0.015f;               // 雾：让地板“无穷远”+聚光更明显
-    constexpr float floorTileScale   = 2.0f;                 // 网格密度：越大格子越小
-    constexpr float floorLineWidth   = 0.035f;               // 网格线宽：越大线越明显
-
-    SetShaderValue(floor_shader, tileScale, &floorTileScale, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(floor_shader, lineWidth, &floorLineWidth, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(floor_shader, baseAColor, &floorBaseACol, SHADER_UNIFORM_VEC3);
-    SetShaderValue(floor_shader, baseBColor, &floorBaseBCol, SHADER_UNIFORM_VEC3);
-    SetShaderValue(floor_shader, lineColor, &floorLineColor, SHADER_UNIFORM_VEC3);
-
-    SetShaderValue(floor_shader, roughness, &floorRough, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(floor_shader, bumpStrength, &floorBumpStr, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(floor_shader, fogDensity, &floorFogDensity, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(floor_shader, fogColor, &floorFogColor, SHADER_UNIFORM_VEC3);
-
 }*/
+
 
 
