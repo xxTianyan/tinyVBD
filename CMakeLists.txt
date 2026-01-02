@@ -64,7 +64,7 @@ add_executable(tinyVBD sample/main.cpp
         mesh/Mesh.cpp
         common/Scene.cpp
         collision/BroadPhase.cpp
-        solver/VBDDynamics.cpp
+        solver/VBD/VBDDynamics.cpp
         mesh/MeshBuilder.cpp
         raylib_plugin/CameraController.cpp
         raylib_plugin/ShaderManager.cpp
@@ -80,7 +80,7 @@ target_include_directories(tinyVBD
         ${CMAKE_CURRENT_SOURCE_DIR}/mesh
         ${CMAKE_CURRENT_SOURCE_DIR}/raylib_plugin
         ${CMAKE_CURRENT_SOURCE_DIR}/sample
-        ${CMAKE_CURRENT_SOURCE_DIR}/solver
+        ${CMAKE_CURRENT_SOURCE_DIR}/solver/VBD
 )
 
 target_link_libraries(tinyVBD PRIVATE Eigen3::Eigen rlImGui imgui raylib)
