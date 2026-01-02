@@ -31,7 +31,7 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
 }
 
 void Sample::Render([[maybe_unused]]AppContext &ctx) {
-    BeginMode3D(ctx.orbitCam.camera);
+    BeginMode3D(ctx.orbitCam->camera);
 
     // floor
     if (IsModelValid_(floor)) {

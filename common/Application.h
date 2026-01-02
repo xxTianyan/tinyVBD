@@ -8,6 +8,7 @@
 
 #include <memory>
 #include "CameraController.h"
+#include "RenderHelper.hpp"
 #include "SampleRegistry.h"
 #include "ShaderManager.h"
 
@@ -15,7 +16,7 @@ struct AppContext {
     float dt = 0.0f;
     bool paused = false;
 
-    OrbitCamera orbitCam{};
+    OrbitCamera* orbitCam = nullptr;
 
     ShaderManager* shader_manager = nullptr;
 };
@@ -77,6 +78,8 @@ private:
 
     // running state
     AppContext ctx_{};
+    PerformanceMonitor perfMonitor_;
+    OrbitCamera orbitCam_;
 
     SampleId current_id_ = SampleId::DUMMY_SAMPLE;
     std::unique_ptr<ISample> current_;

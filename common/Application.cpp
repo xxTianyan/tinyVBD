@@ -10,10 +10,13 @@
 #include "CameraController.h"
 
 
-Application::Application(Desc desc) : desc_(desc) {
+Application::Application(Desc desc) :
+        desc_(desc),
+        orbitCam_(CreateOrbitCamera(Vector3{ 1.5f, 0.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f })) {
+
     // bind cxt
     ctx_.shader_manager = &shader_manager_;
-    ctx_.orbitCam  = CreateOrbitCamera(Vector3{ 1.5f, 0.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f });
+    ctx_.orbitCam = &orbitCam_;
 }
 
 Application::~Application() {
@@ -26,6 +29,7 @@ Application::~Application() {
 void Application::InitWindowAndUI_() const {
     // Window flags
     if (desc_.resizable) SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetConfigFlags(FLAG_MSAA_4X_HINT); // anti alias
     InitWindow(desc_.width, desc_.height, desc_.title);
     SetTargetFPS(desc_.target_fps);
 
@@ -64,7 +68,8 @@ void Application::RequestReloadSample_() {
 }
 
 void Application::PollHotkeys_() {
-    /*// Reset
+
+    /* Reset
     if (IsKeyPressed(KEY_R)) {
         RequestReloadSample_();
     }
@@ -127,10 +132,13 @@ void Application::DrawAppUI_() {
 
     ImGui::End();
 
-    // Sample 自己的 UI
+    // Sample own UI
     if (current_) {
         current_->DrawUI(ctx_);
     }
+
+    // draw performance monitor
+    perfMonitor_.Draw();
 }
 
 void Application::ExecutePending_() {
@@ -170,9 +178,28 @@ void Application::Run(const SampleId start_sample) {
     EnterSample_(start_sample);
 
     while (!WindowShouldClose()) {
-        ctx_.dt = GetFrameTime();
 
+        const float dt = GetFrameTime();
+        ctx_.dt = dt;
+
+        // common updates
+        perfMonitor_.Update(dt);
+        RefreshCameraTransform(orbitCam_);
+
+
+        // key event
         PollHotkeys_();
+        if (!ImGui::GetIO().WantCaptureKeyboard) {
+            UpdateOrbitCameraKeyboard(orbitCam_, dt, 4.5f);
+        }
+
+        // mouse event
+        if (!ImGui::GetIO().WantCaptureMouse) {
+            auto [x, y] = GetMouseDelta();
+            const float wheel = GetMouseWheelMove();
+            UpdateOrbitCameraMouse(orbitCam_, Vector2{(float)x, (float)y}, wheel,
+                                   IsMouseButtonDown(MOUSE_RIGHT_BUTTON), IsMouseButtonDown(MOUSE_MIDDLE_BUTTON));
+        }
 
         // Update
         if (current_ && !ctx_.paused) {
@@ -182,6 +209,11 @@ void Application::Run(const SampleId start_sample) {
         // Render
         BeginDrawing();
         ClearBackground(RAYWHITE);
+        DrawRectangleGradientV(
+            0, 0, GetScreenWidth(), GetScreenHeight(),
+            Color{ 45, 93, 125, 255 },   // top
+            Color{ 10, 12, 16, 255 }    // bottom
+            );
 
         if (current_) {
             current_->Render(ctx_);
@@ -194,10 +226,11 @@ void Application::Run(const SampleId start_sample) {
 
         EndDrawing();
 
-        // delay excuting
+        // delay executing
         ExecutePending_();
     }
 
+    // careful with these two cleaning functions
     ExitCurrentSample_();
     ShutdownWindowAndUI_();
 }

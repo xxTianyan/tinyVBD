@@ -51,6 +51,7 @@ protected:
     virtual void DestroyRenderResources();
 
 public:
+    // TODO: set a good way to init, maybe in detailed exmaples?
     // for simulation
     std::unique_ptr<Scene> scene;
     std::unique_ptr<VBDSolver> solver;
