@@ -3,10 +3,8 @@
 //
 
 #include "Sample.h"
-#include "MeshBuilder.h"
-#include "RenderHelper.hpp"
-
-
+#include "Application.h"
+#include "VBDDynamics.h"
 void Sample::OnEnter(AppContext &ctx) {
     // set up scene
     CreateWorld(ctx);

@@ -102,25 +102,25 @@ struct edge {
 };
 
 struct mesh_on_cpu {
-    std::vector<Vec3> pos;          // 当前位置 (current frame pos)
-    std::vector<Vec3> prev_pos;     // 预测位置 (last frame pos)
-    std::vector<Vec3> inertia_pos;  // 惯性预测 (inertia prediction)
-    std::vector<Vec3> vel;          // 速度
-    std::vector<Vec3> accel;          // 加速度
-    std::vector<Vec3> n;          // 法线
-    std::vector<float> inv_mass;          // 质量
+    std::vector<Vec3> pos;          // current frame pos
+    std::vector<Vec3> prev_pos;     // last frame pos
+    std::vector<Vec3> inertia_pos;  // inertia prediction
+    std::vector<Vec3> vel;          // velocity
+    std::vector<Vec3> accel;          // acceleration
+    std::vector<Vec3> n;          // normal
+    std::vector<float> inv_mass;          // inverse mass
 
-    std::vector<uint8_t> fixed;  // 是否固定
+    std::vector<uint8_t> fixed;  // if fixed
 
     [[nodiscard]] inline size_t size() const { return pos.size(); }
 
-    // 拓扑信息
+    // topology information
     std::vector<tetrahedron> m_tets;
     std::vector<triangle> m_tris;
     std::vector<edge> m_edges;
-    ForceElementAdjacencyInfo adjacencyInfo;
+    ForceElementAdjacencyInfo adjacencyInfo;  // maybe it's better to make it a unique_ptr
 
-    // 渲染信息
+    // rendering information
     std::vector<VertexID> m_surface_tris;
     size_t base_offset = 0;
 
@@ -136,7 +136,7 @@ struct mesh_on_cpu {
         fixed.resize(n_nodes);
     }
 
-    // 清空数据
+    // clear topology
     void clear_topology() {
         m_edges.clear();
         m_tris.clear();

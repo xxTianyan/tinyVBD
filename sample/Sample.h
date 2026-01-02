@@ -5,13 +5,14 @@
 #ifndef SAMPLE_H
 #define SAMPLE_H
 
+#include <memory>
 #include <raylib.h>
-#include "Scene.h"
-#include "ShaderManager.h"
-#include "VBDDynamics.h"
-#include "Application.h"
+#include <vector>
 #include "ISample.h"
 
+class Scene;
+class VBDSolver;
+struct AppContext;
 
 class Sample : public ISample {
 public:

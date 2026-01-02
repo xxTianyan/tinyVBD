@@ -4,7 +4,7 @@
 
 #include "Sample.h"
 #include "SampleRegistry.h"
-
+#include "VBDDynamics.h"
 
 void RegisterAllSamples(SampleRegistry& reg) {
 

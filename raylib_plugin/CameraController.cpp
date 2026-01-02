@@ -1,6 +1,5 @@
 #include "CameraController.h"
-
-#include <cmath>
+#include <raymath.h>
 
 namespace
 {

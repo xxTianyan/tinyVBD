@@ -427,10 +427,9 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
         incidents.clear();
 
         if (elems.empty())
-            // offsets 全 0，incident 空
             return;
 
-        // 本实现使用 pack(ei,k)，k 占低2位 => k 必须 < 4
+        // we use low 2 bit to mask vertex order, thus the number of vertex must less than 4
         if (verts_per_elem > 4u) {
             throw std::runtime_error("verts_per_elem > 4 is not supported by AdjacencyCSR::pack");
         }

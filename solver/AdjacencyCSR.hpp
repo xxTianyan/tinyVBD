@@ -6,6 +6,7 @@
 #define TINYVBD_ADJACENCYCSR_HPP
 
 #include <vector>
+#include <cstdint>
 
 struct AdjacencyCSR {
     // offsets.size() = num_nodes + 1

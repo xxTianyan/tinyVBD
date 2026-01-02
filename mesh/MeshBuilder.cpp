@@ -3,6 +3,7 @@
 //
 
 #include "MeshBuilder.h"
+#include "Mesh.h"
 
 #ifdef _WIN64
 float M_PI = 3.14159265358979323846;
@@ -11,8 +12,8 @@ float M_PI = 3.14159265358979323846;
 
 void MeshBuilder::PrepareMesh(mesh_on_cpu* mesh, const size_t num_nodes) {
     if (!mesh) return;
-    mesh->clear_topology(); // 清空旧的索引数据
-    mesh->resize(num_nodes); // 调整 SoA 数组大小
+    mesh->clear_topology(); // clear old data
+    mesh->resize(num_nodes); // resize SoA
     mesh->m_tris.reserve(num_nodes * 2);
     mesh->m_edges.reserve(num_nodes* 2);
     mesh->m_tets.reserve(num_nodes * 2);
@@ -32,7 +33,7 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
     const float dx = width  / static_cast<float>(resX);
     const float dy = height / static_cast<float>(resY);
 
-    // 定义局部坐标系的基向量
+    // local coordinates and basis vector
     Vec3 u_dir, v_dir;
     if (orientation == ClothOrientation::Vertical) {
         u_dir = Vec3(1.0f, 0.0f, 0.0f);
@@ -44,7 +45,7 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
 
     const Vec3 start_pos = center - u_dir * (width * 0.5f) - v_dir * (height * 0.5f);
 
-    // 1) 生成顶点
+    // 1) vertex
     for (int j = 0; j <= resY; ++j) {
         for (int i = 0; i <= resX; ++i) {
             const int idx = j * (resX + 1) + i;
@@ -58,8 +59,7 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
         }
     }
 
-    // 2) 生成三角形（索引 + 坐标）
-    mesh->m_tris.clear();
+    // 2) triangles
     mesh->m_tris.reserve(static_cast<size_t>(resX) * static_cast<size_t>(resY) * 2);
 
     for (int j = 0; j < resY; ++j) {

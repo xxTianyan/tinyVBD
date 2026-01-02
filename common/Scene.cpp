@@ -8,6 +8,10 @@ bool Scene::RayNormal = true;
 
 Scene::Scene(Vec3  gravity) : gravity(std::move(gravity)) {}
 
+/*
+ * TODO: Add a None MaterialID in m_mesh_to_material vector when a mesh is added,
+ * make sure that MeshID and MaterialID is one to one correspond.
+ */
 MeshID Scene::Add(MeshPtr m) {
     m->base_offset = m_total_vertices;
     m_total_vertices += m->size();
@@ -54,6 +58,7 @@ SimView Scene::MakeSimView(const size_t mesh_id) {
 }
 
 void Scene::InitStep() {
+    // prepare external accel
     for (auto& m : meshes)
         std::fill(m->accel.begin(), m->accel.end(),Vec3::Zero());
 }

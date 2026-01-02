@@ -2,7 +2,6 @@
 #define CAMERA_CONTROLLER_H
 
 #include <raylib.h>
-#include <raymath.h>
 #include <vector>
 
 struct OrbitCtrl {

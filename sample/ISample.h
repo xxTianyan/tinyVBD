@@ -32,4 +32,4 @@ public:
 
 using SamplePtr = std::unique_ptr<ISample>;
 
-#endif //ISAMPLE_HPP
+#endif //ISAMPLE_H
