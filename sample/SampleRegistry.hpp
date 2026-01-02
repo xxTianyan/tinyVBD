@@ -11,6 +11,7 @@
 #include <vector>
 #include <stdexcept>
 #include "ISample.h"
+#include "Types.h"
 
 enum SampleId : int {
     empty_scene = 0,

@@ -19,7 +19,7 @@ public:
     ~Sample() override = default;
 
     // provide sample name
-    const char* Name() const override = 0;
+    [[nodiscard]] const char* Name() const override = 0;
 
     void OnEnter(AppContext& ctx) override;
 

@@ -4,9 +4,7 @@
 #include <rlImGui.h>
 #include <imgui.h>
 
-#include "basic_cloth_example.h"
 #include "RenderHelper.hpp"
-#include "Mesh.h"
 #include "CameraController.h"
 #include "Sample.h"
 
@@ -26,8 +24,6 @@ int main(){
     rlImGuiSetup(true);
     // Monitor
     PerformanceMonitor perfMonitor;
-
-
 
     // camera
     OrbitCamera orbitCam = CreateOrbitCamera(Vector3{ 1.5f, 0.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f });

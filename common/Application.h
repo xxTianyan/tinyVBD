@@ -9,7 +9,7 @@
 #include <memory>
 #include "CameraController.h"
 #include "SampleRegistry.hpp"
-
+#include "ShaderManager.h"
 
 struct AppContext {
     float dt = 0.0f;
@@ -55,8 +55,8 @@ private:
     };
 
 private:
-    void InitWindowAndUI_();
-    void ShutdownWindowAndUI_();
+    void InitWindowAndUI_() const;
+    static void ShutdownWindowAndUI_();
 
     void EnterSample_(SampleId id);
     void ExitCurrentSample_();
