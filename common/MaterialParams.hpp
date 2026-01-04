@@ -13,8 +13,9 @@ struct MMaterial {
     [[nodiscard]] float nu()     const noexcept { return nu_; }
     [[nodiscard]] float lambda() const noexcept { return lambda_; }
     [[nodiscard]] float mu()     const noexcept { return mu_; }
+    [[nodiscard]] float bend_stiff() const noexcept {return bend_stiff_; }
 
-    MMaterial(float E, float nu) : E_{E}, nu_{nu} { update_lambda_mu(); }
+    MMaterial(const float E, const float nu, const float bend_stiff = 1.0f) : E_{E}, nu_{nu}, bend_stiff_(bend_stiff) { update_lambda_mu(); }
 
     void SetE(float E)  { E_ = E;  update_lambda_mu(); }
     void SetNu(float nu){ nu_ = nu; update_lambda_mu(); }
@@ -24,6 +25,7 @@ private:
     float nu_{};       // Poisson's ratio
     float lambda_{};   // first Lamé parameter
     float mu_{};       // second Lamé parameter
+    float bend_stiff_{};  // element bending stiffness;
 
     void update_lambda_mu() {
         if (!(E_ > 0.0f)) {
@@ -44,7 +46,7 @@ private:
 
 
 inline MMaterial default_cloth() {
-    return {1e4f, 0.1f};
+    return {1e4f, 0.1f, 0.5f};
 };
 
 

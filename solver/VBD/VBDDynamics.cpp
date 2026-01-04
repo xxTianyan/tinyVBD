@@ -5,30 +5,7 @@
 #include "VBDDynamics.h"
 #include <iostream>
 
-static Vec3 SolveSPDOrRegularize(Mat3 H, const Vec3& f, const double eps = 1e-9) {
-    using Scalar = Mat3::Scalar;
-    H = Scalar(0.5) * (H + H.transpose());
-
-    Eigen::LLT<Mat3> llt;
-
-    // 以惯性项尺度做正则：w = m/dt^2（见第2节）
-    Scalar tau = Scalar(1e-6) * H.diagonal().cwiseAbs().maxCoeff();
-    if (!(tau > Scalar(0))) tau = Scalar(1e-6);
-
-    for (int k = 0; k < 10; ++k) {
-        Mat3 Hreg = H;
-        Hreg.diagonal().array() += tau;
-
-        llt.compute(Hreg);
-        if (llt.info() == Eigen::Success)
-            return llt.solve(f);
-
-        tau *= Scalar(10);
-    }
-
-    // 实在不行：返回 0（宁可不动也别注入能量）
-    return Vec3::Zero();
-}
+#include "Math.hpp"
 
 static void accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> pos,
                                                    const MMaterial& mat,
@@ -126,10 +103,102 @@ static void accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> p
     H += delta_hessian * face.rest_area;
 }
 
-static void evaluate_dihedral_angle_based_bending_force_hessian() {
+static void accumulate_dihedral_angle_based_bending_force_hessian(const std::span<const Vec3> pos,
+                                                                const MMaterial& mat,
+                                                                const edge& e,
+                                                                const uint32_t vtex_order,
+                                                                Vec3& force,
+                                                                Mat3& H) {
     // advised by function with the same name in newton physics.
+    constexpr float eps = 1e-6f;
 
+    const auto& x0 = pos[e.vertices[0]];
+    const auto& x1 = pos[e.vertices[1]];
+    const auto& x2 = pos[e.vertices[2]];
+    const auto& x3 = pos[e.vertices[3]];
 
+    // Compute edge vectors
+    const Vec3 x02 = x2 - x0;
+    const Vec3 x03 = x3 - x0;
+    const Vec3 x12 = x2 - x1;
+    const Vec3 x13 = x3 - x1;
+    const Vec3 edge_line = x3 - x2;
+
+    // Compute normals
+    const Vec3 n1 = x02.cross(x03);
+    const Vec3 n2 = x13.cross(x12);
+
+    const float n1_norm = n1.norm();
+    const float n2_norm = n2.norm();
+    const float e_norm = edge_line.norm();
+
+    if (n1_norm < eps || n2_norm < eps) return;
+
+    const Vec3 n1_hat = n1 / n1_norm;
+    const Vec3 n2_hat = n2 / n2_norm;
+    const Vec3 e_hat = edge_line / e_norm;
+
+    const auto sin_theta = (n1_hat.cross(n2_hat)).dot(e_hat);
+    const auto cos_theta = n1_hat.dot(n2_hat);
+
+    const auto theta = std::atan2(sin_theta, cos_theta);
+    const auto k = mat.bend_stiff() * e.rest_length;
+    const auto dE_dtheta = k * (theta - e.rest_theta);
+
+    // Pre-compute skew matrices (shared across all angle derivative computations)
+    Mat3 skew_e = TY::Skew(edge_line);
+    Mat3 skew_x02 = TY::Skew(x02);
+    Mat3 skew_x03 = TY::Skew(x03);
+    Mat3 skew_x12 = TY::Skew(x12);
+    Mat3 skew_x13 = TY::Skew(x13);
+    Mat3 skew_n1 = TY::Skew(n1_hat);
+    Mat3 skew_n2 = TY::Skew(n2_hat);
+
+    // Compute the derivatives of unit normals with respect to each vertex; required for computing angle derivatives
+    const auto dn1hat_dx0 = TY::ComputeNormalizedVectorDerivative(n1_norm, n1_hat, skew_e);
+    const Mat3 dn2hat_dx0 = Mat3::Zero();
+
+    const Mat3 dn1hat_dx1 = Mat3::Zero();
+    const Mat3 dn2hat_dx1 = TY::ComputeNormalizedVectorDerivative(n2_norm, n2_hat, -skew_e);
+
+    const Mat3 dn1hat_dx2 = TY::ComputeNormalizedVectorDerivative(n1_norm, n1_hat, -skew_x03);
+    const Mat3 dn2hat_dx2 = TY::ComputeNormalizedVectorDerivative(n2_norm, n2_hat, skew_x13);
+
+    const Mat3 dn1hat_dx3 = TY::ComputeNormalizedVectorDerivative(n1_norm, n1_hat, skew_x02);
+    const Mat3 dn2hat_dx3 = TY::ComputeNormalizedVectorDerivative(n2_norm, n2_hat, -skew_x12);
+
+    // Compute all angle derivatives (required for damping)
+    const Vec3 dtheta_dx0 = TY::ComputeAngleDerivative(
+    n1_hat, n2_hat, e_hat, dn1hat_dx0, dn2hat_dx0, sin_theta, cos_theta, skew_n1, skew_n2
+    );
+
+    const Vec3 dtheta_dx1 = TY::ComputeAngleDerivative(
+    n1_hat, n2_hat, e_hat, dn1hat_dx1, dn2hat_dx1, sin_theta, cos_theta, skew_n1, skew_n2
+    );
+
+    const Vec3 dtheta_dx2 = TY::ComputeAngleDerivative(
+    n1_hat, n2_hat, e_hat, dn1hat_dx2, dn2hat_dx2, sin_theta, cos_theta, skew_n1, skew_n2
+    );
+
+    const Vec3 dtheta_dx3 = TY::ComputeAngleDerivative(
+    n1_hat, n2_hat, e_hat, dn1hat_dx3, dn2hat_dx3, sin_theta, cos_theta, skew_n1, skew_n2
+    );
+
+    // Use float masks for branch-free selection
+    const auto mask0 = static_cast<float>(vtex_order == 0);
+    const auto mask1 = static_cast<float>(vtex_order == 1);
+    const auto mask2 = static_cast<float>(vtex_order == 2);
+    const auto mask3 = static_cast<float>(vtex_order == 3);
+
+    // Select the derivative for the current vertex without branching
+    const Vec3 dtheta_dx = dtheta_dx0 * mask0 + dtheta_dx1 * mask1 + dtheta_dx2 * mask2 + dtheta_dx3 * mask3;
+
+    // Compute elastic force and hessian
+    const Vec3 bending_force = -dE_dtheta * dtheta_dx;
+    const Mat3 bending_hessian = k * dtheta_dx * dtheta_dx.transpose();
+
+    force += bending_force;
+    H += bending_hessian;
 }
 
 
@@ -150,7 +219,6 @@ void VBDSolver::solve(SimView& view, const float dt) {
         if (view.fixed[vtex_id]) continue;  // fixed flag up
 
         auto& pos = view.pos[vtex_id];
-        auto& vel = view.vel[vtex_id];
         const auto& inv_mass = view.inv_mass[vtex_id];
 
         if (inv_mass <= 0.0f) continue;
@@ -159,6 +227,7 @@ void VBDSolver::solve(SimView& view, const float dt) {
         const auto& prev_pos = view.prev_pos[vtex_id];
         // const auto& edge_adjacency = view.adj.vertex_edges;
         const auto& face_adjacency = view.adj.vertex_faces;
+        const auto& edge_adjacency = view.adj.vertex_edges;
         const auto& mat = view.material_params;
 
         // init force and hessian
@@ -176,12 +245,18 @@ void VBDSolver::solve(SimView& view, const float dt) {
             const auto _order = AdjacencyCSR::unpack_order(pack);
             const auto& _face = view.tris[face_id];
             accumulate_stvk_triangle_force_hessian(view.pos, mat, _face, _order, force, hessian);
-
         }
         // accumulate bending element force and hessian
+        for (uint32_t e = edge_adjacency.begin(vtex_id); e < edge_adjacency.end(vtex_id); ++e) {
+            const auto pack = edge_adjacency.incidents[e];
+            const auto edge_id = AdjacencyCSR::unpack_id(pack);
+            const auto _order = AdjacencyCSR::unpack_order(pack);
+            const auto& _edge = view.edges[edge_id];
+            accumulate_dihedral_angle_based_bending_force_hessian(view.pos, mat, _edge, _order, force, hessian);
+        }
 
         // solve linear system and update result
-        const auto delta_x = SolveSPDOrRegularize(hessian, force);
+        const auto delta_x = TY::SolveSPDOrRegularize(hessian, force);
         pos += delta_x;
     }
 }

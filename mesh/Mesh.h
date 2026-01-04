@@ -96,11 +96,9 @@ struct edge {
     std::array<VertexID, 4> vertices{0,0,0,0};
     float rest_theta;
     float rest_length;
-    float stiffness;
     edge(const VertexID vtex_opp0, const VertexID vtex_opp1, const VertexID vtex_e0, const VertexID vtex_e1,
-        const Vec3& vtex_opp0_pos, const Vec3& vtex_opp1_pos, const Vec3& vtex_e0_pos, const Vec3& vtex_e1_pos, const float stiff = 1.0f) :
-    vertices{vtex_opp0, vtex_opp1, vtex_e0, vtex_e1},
-    stiffness(stiff) {
+        const Vec3& vtex_opp0_pos, const Vec3& vtex_opp1_pos, const Vec3& vtex_e0_pos, const Vec3& vtex_e1_pos) :
+    vertices{vtex_opp0, vtex_opp1, vtex_e0, vtex_e1} {
         rest_length = (vtex_e1_pos - vtex_e0_pos).norm();
         rest_theta = ComputeRestDihedralAngle(vtex_opp0_pos, vtex_opp1_pos, vtex_e0_pos, vtex_e1_pos);
     };
@@ -108,7 +106,7 @@ struct edge {
     // the same definition with newton warp atan2(sin, cos)
     static float ComputeRestDihedralAngle(const Vec3& x0, const Vec3& x1, const Vec3& x2, const Vec3& x3) {
 
-        constexpr float eps = 1e-8f;
+        constexpr float eps = 1e-6f;
         const Vec3 e = x3 - x2;
         const float e_norm = e.norm();
         if (e_norm < eps) return 0.0f;
