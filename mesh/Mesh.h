@@ -92,13 +92,49 @@ struct triangle {
 };
 
 struct edge {
+    // convention [opp0, opp1, edge_start, edge_end]
     std::array<VertexID, 4> vertices{0,0,0,0};
-    edge(const VertexID vtex0, const VertexID vtex1, const VertexID vtex2, const VertexID vtex3,
-        const Vec3& vtex0_pos, const Vec3& vtex1_pos, const Vec3& vtex2_pos, const Vec3& vtex3_pos) :
-    vertices{vtex0, vtex1, vtex2, vtex3} {
-
+    float rest_theta;
+    float rest_length;
+    float stiffness;
+    edge(const VertexID vtex_opp0, const VertexID vtex_opp1, const VertexID vtex_e0, const VertexID vtex_e1,
+        const Vec3& vtex_opp0_pos, const Vec3& vtex_opp1_pos, const Vec3& vtex_e0_pos, const Vec3& vtex_e1_pos, const float stiff = 1.0f) :
+    vertices{vtex_opp0, vtex_opp1, vtex_e0, vtex_e1},
+    stiffness(stiff) {
+        rest_length = (vtex_e1_pos - vtex_e0_pos).norm();
+        rest_theta = ComputeRestDihedralAngle(vtex_opp0_pos, vtex_opp1_pos, vtex_e0_pos, vtex_e1_pos);
     };
 
+    // the same definition with newton warp atan2(sin, cos)
+    static float ComputeRestDihedralAngle(const Vec3& x0, const Vec3& x1, const Vec3& x2, const Vec3& x3) {
+
+        constexpr float eps = 1e-8f;
+        const Vec3 e = x3 - x2;
+        const float e_norm = e.norm();
+        if (e_norm < eps) return 0.0f;
+
+        const Vec3 x02 = x2 - x0;
+        const Vec3 x03 = x3 - x0;
+        const Vec3 x12 = x2 - x1;
+        const Vec3 x13 = x3 - x1;
+
+        const Vec3 n1 = x02.cross(x03);
+        const Vec3 n2 = x13.cross(x12);
+
+        const float n1_norm = n1.norm();
+        const float n2_norm = n2.norm();
+
+        if (n1_norm < eps || n2_norm < eps) return 0.0f;
+
+        const Vec3 n1_hat = n1 / n1_norm;
+        const Vec3 n2_hat = n2 / n2_norm;
+        const Vec3 e_hat = e / e_norm;
+
+        const float sin_theta = (n1_hat.cross(n2_hat)).dot(e_hat);
+        const float cos_theta = n1_hat.dot(n2_hat);
+
+        return std::atan2(sin_theta, cos_theta);
+    };
 };
 
 struct mesh_on_cpu {

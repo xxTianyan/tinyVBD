@@ -88,12 +88,6 @@ void Application::PollHotkeys_() {
     if (IsKeyPressed(KEY_TWO))  RequestSwitchSample_(SampleId::TetStVK);*/
 }
 
-
-/*
- *TODO: Fix Bug
- * If you switching another sample when current sample is running,
- * the whole program breaks down.
- */
 void Application::DrawAppUI_() {
 
     ImGui::Begin("Application");

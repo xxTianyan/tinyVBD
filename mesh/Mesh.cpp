@@ -208,7 +208,9 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets) {
     return out;
 }
 
-
+/*
+ * TODO: Need to understand this function written by GPT.
+ */
 IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
     IndexBuffer out;
     if (tris.empty()) return out;

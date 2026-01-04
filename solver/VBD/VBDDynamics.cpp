@@ -126,6 +126,13 @@ static void accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> p
     H += delta_hessian * face.rest_area;
 }
 
+static void evaluate_dihedral_angle_based_bending_force_hessian() {
+    // advised by function with the same name in newton physics.
+
+
+}
+
+
 void VBDSolver::forward_step(SimView &view, const float dt) {
     const size_t num_nodes = view.pos.size();
     for (size_t i = 0; i < num_nodes; ++i) {

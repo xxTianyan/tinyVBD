@@ -27,6 +27,10 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
                              const int resX, const int resY,
                              const Vec3& center,
                              const ClothOrientation orientation) {
+
+    if (resX <= 0 || resY <= 0)
+        throw std::runtime_error("MeshBuilder::BuildCloth: resX <= 0 || resY <= 0");
+
     const size_t num_nodes = static_cast<size_t>(resX + 1) * static_cast<size_t>(resY + 1);
     PrepareMesh(mesh, num_nodes);
 
@@ -59,8 +63,9 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
         }
     }
 
-    // 2) triangles
+    // 2) triangles and edges
     mesh->m_tris.reserve(static_cast<size_t>(resX) * static_cast<size_t>(resY) * 2);
+    mesh->m_edges.reserve(static_cast<size_t>(resX) * static_cast<size_t>(resY) * 2);
 
     for (int j = 0; j < resY; ++j) {
         for (int i = 0; i < resX; ++i) {
@@ -69,17 +74,22 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
             const auto v2 = static_cast<VertexID>( (j + 1) * (resX + 1) + i );
             const auto v3 = static_cast<VertexID>( v2 + 1 );
 
-            // 第一片： (v0, v1, v2)
+            // (v0, v1, v2)
             mesh->m_tris.emplace_back(
                 v0, v1, v2,
                 mesh->pos[v0], mesh->pos[v1], mesh->pos[v2]
             );
 
-            // 第二片： (v1, v3, v2)
+            // (v1, v3, v2)
             mesh->m_tris.emplace_back(
                 v1, v3, v2,
                 mesh->pos[v1], mesh->pos[v3], mesh->pos[v2]
             );
+
+            // (v0, v3, v1, v2)
+            mesh->m_edges.emplace_back(
+                v0, v3, v1, v2,
+                mesh->pos[v0], mesh->pos[v3], mesh->pos[v1], mesh->pos[v2]);
         }
     }
 
