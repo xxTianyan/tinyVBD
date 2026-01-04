@@ -95,6 +95,7 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
 
     mesh->m_tris.shrink_to_fit();
     mesh->m_edges.shrink_to_fit();
+    mesh->m_tets.shrink_to_fit();
     mesh->m_surface_tris = BuildSurfaceTriangles(mesh->m_tris);
 }
 

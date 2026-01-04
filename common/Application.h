@@ -14,7 +14,7 @@
 
 struct AppContext {
     float dt = 0.0f;
-    bool paused = false;
+    bool paused = true;
     int target_fps = 0;
 
     OrbitCamera* orbitCam = nullptr;

@@ -470,7 +470,7 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
     if (!mesh.m_edges.empty()) {
         build_vertex_incident_csr(
             mesh.m_edges,
-            /*verts_per_elem=*/2u,
+            /*verts_per_elem=*/4u,
             [](auto const& edge, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(edge.vertices[k]);
             },
@@ -478,7 +478,7 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
         );
     }
     else {
-        // 没有 edges：保持 CSR 合法
+        // if no edges：keep CSR valid
         assign_offsets(vertex_edges.offsets);
         vertex_edges.incidents.clear();
     }
