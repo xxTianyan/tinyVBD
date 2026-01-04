@@ -30,8 +30,9 @@ void Sample::OnExit([[maybe_unused]]AppContext &ctx) {
 
 void Sample::Update([[maybe_unused]]AppContext &ctx) {
     if (ctx.paused) return;
+    if (scene_ == nullptr) return;
     if (ctx.dt == 0)
-        Step(1.0f / ctx.target_fps);
+        Step(1.0f / static_cast<float>(ctx.target_fps));
     else
         Step(ctx.dt);
 
