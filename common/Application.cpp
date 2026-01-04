@@ -12,7 +12,7 @@
 
 Application::Application(Desc desc) :
         desc_(desc),
-        orbitCam_(CreateOrbitCamera(Vector3{ 1.5f, 0.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f })) {
+        orbitCam_(CreateOrbitCamera(Vector3{ 10.0f, 7.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f })) {
 
     // bind cxt
     ctx_.shader_manager = &shader_manager_;

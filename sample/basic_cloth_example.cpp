@@ -37,6 +37,8 @@ void BasicCloth::Render(AppContext &ctx) {
         DrawModel(floor_, Vector3{0,0,0}, 1.0f, WHITE);
     }
 
+    DrawAxisGizmo();
+
     // scene models
     for (auto& m : models_) {
         if (!IsModelValid_(m)) continue;
