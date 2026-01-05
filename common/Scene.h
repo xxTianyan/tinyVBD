@@ -37,7 +37,7 @@ public:
 
     void Clear();
 
-    void InitStep();
+    void InitStep() const;
 
     void ChangeGravity(const Vec3& new_g){gravity = new_g;};
 

@@ -27,6 +27,7 @@ void Scene::Remove() {
 }
 
 void Scene::ApplyFixConsition(MeshID _mid, const std::function<bool(const Vec3&)> &predicate) {
+    if (_mid < 0 || _mid >= std::ssize(meshes)) throw std::out_of_range("Invalid Mesh ID.");
     const auto& m = meshes[_mid];
     for (size_t i = 0; i < m->size(); ++i) {
         if (const auto& pos = m->pos[i]; predicate(pos))
@@ -59,7 +60,7 @@ SimView Scene::MakeSimView(const size_t mesh_id) {
     };
 }
 
-void Scene::InitStep() {
+void Scene::InitStep() const {
     // prepare external accel
     for (auto& m : meshes)
         std::fill(m->accel.begin(), m->accel.end(),Vec3::Zero());
@@ -71,12 +72,12 @@ MaterialID Scene::AddMaterial(MMaterial _params) {
     if (!(_params.nu() > -0.99f && _params.nu() < 0.49f)) throw std::runtime_error("Poisson's ratio out of range");
     // push to my materials
     m_materials.emplace_back(_params);
-    return static_cast<uint32_t>(m_materials.size()) - 1;
+    return static_cast<MaterialID>(m_materials.size()) - 1;
 }
 
 void Scene::BindMeshMaterial(const MeshID mesh, const MaterialID mat) {
-    if (mesh >= meshes.size()) throw std::out_of_range("Mesh ID is out of range");
-    if (mat >= m_materials.size()) throw std::out_of_range("Material ID is out of range");
+    if (mesh < 0 || mesh >= std::ssize(meshes)) throw std::out_of_range("Invalid Mesh ID.");
+    if (mat < 0 || mesh >= std::ssize(m_materials)) throw std::out_of_range("Invalid Material ID.");
     m_mesh_to_material[mesh]=mat;
 }
 

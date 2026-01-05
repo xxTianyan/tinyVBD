@@ -14,10 +14,10 @@ struct mesh_on_cpu;
 
 using IndexBuffer = std::vector<uint16_t>;
 using VertexID = uint16_t;
-using MeshID = uint32_t;
-using MaterialID = uint32_t;
+using MeshID = int32_t;
+using MaterialID = int32_t;
+using ShapeID =int32_t;
 constexpr VertexID INVALID_VERTEX_ID = 0xFFFF;
-constexpr uint32_t INVALID_INDEX = 0xFFFFFFFF;
 
 using Vec3 = Eigen::Vector3f;
 using Mat3 = Eigen::Matrix3f;
