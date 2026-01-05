@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(tinyVBD)
+project(Taiyi)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -60,7 +60,7 @@ target_include_directories(rlImGui PUBLIC "${RLIMGUI_DIR}" "${IMGUI_DIR}")
 target_link_libraries(rlImGui PUBLIC raylib imgui)
 
 # ---------- My executable ----------
-add_executable(tinyVBD sample/main.cpp
+add_executable(Taiyi sample/main.cpp
         mesh/Mesh.cpp
         common/Scene.cpp
         collision/BroadPhase.cpp
@@ -73,7 +73,7 @@ add_executable(tinyVBD sample/main.cpp
         common/Application.cpp
         sample/SampleRegistry.cpp)
 
-target_include_directories(tinyVBD
+target_include_directories(Taiyi
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/collision
         ${CMAKE_CURRENT_SOURCE_DIR}/common
@@ -83,21 +83,21 @@ target_include_directories(tinyVBD
         ${CMAKE_CURRENT_SOURCE_DIR}/solver/VBD
 )
 
-target_link_libraries(tinyVBD PRIVATE Eigen3::Eigen rlImGui imgui raylib)
+target_link_libraries(Taiyi PRIVATE Eigen3::Eigen rlImGui imgui raylib)
 
 if(APPLE)
-    target_compile_definitions(tinyVBD PRIVATE PLATFORM_MACOS)
+    target_compile_definitions(Taiyi PRIVATE PLATFORM_MACOS)
 elseif(WIN32)
-    target_compile_definitions(tinyVBD PRIVATE PLATFORM_WINDOWS)
+    target_compile_definitions(Taiyi PRIVATE PLATFORM_WINDOWS)
 elseif(UNIX)
-    target_compile_definitions(tinyVBD PRIVATE PLATFORM_LINUX)
+    target_compile_definitions(Taiyi PRIVATE PLATFORM_LINUX)
 endif()
 
 if(MSVC)
-    target_compile_options(tinyVBD PRIVATE /W4 /permissive- /utf-8 /Zc:__cplusplus)
+    target_compile_options(Taiyi PRIVATE /W4 /permissive- /utf-8 /Zc:__cplusplus)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(tinyVBD PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(Taiyi PRIVATE -Wall -Wextra -Wpedantic)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(tinyVBD PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(Taiyi PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 

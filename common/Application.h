@@ -28,7 +28,7 @@ public:
     struct Desc {
         int width  = 1280;
         int height = 720;
-        const char* title = "tinyVBD";
+        const char* title = "ProjectTaiyi";
         int target_fps = 120;
         bool resizable = true;
     };
