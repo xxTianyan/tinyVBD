@@ -2,8 +2,8 @@
 // Created by xumiz on 2026/1/1.
 //
 
-#ifndef BASIC_CLOTH_EXAMPLE_H
-#define BASIC_CLOTH_EXAMPLE_H
+#ifndef TAIYI_BASIC_CLOTH_EXAMPLE_H
+#define TAIYI_BASIC_CLOTH_EXAMPLE_H
 
 #include "Sample.h"
 
@@ -18,4 +18,4 @@ class BasicCloth final : public Sample {
 
 
 
-#endif //BASIC_CLOTH_EXAMPLE_H
+#endif //TAIYI_BASIC_CLOTH_EXAMPLE_H

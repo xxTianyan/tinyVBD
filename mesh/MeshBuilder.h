@@ -2,8 +2,8 @@
 // Created by tianyan on 12/23/25.
 //
 
-#ifndef MESHBUILDER_H
-#define MESHBUILDER_H
+#ifndef TAIYI_MESHBUILDER_H
+#define TAIYI_MESHBUILDER_H
 
 #include "Types.h"
 struct mesh_on_cpu;
@@ -32,4 +32,4 @@ private:
 
 
 
-#endif //MESHBUILDER_H
+#endif //TAIYI_MESHBUILDER_H

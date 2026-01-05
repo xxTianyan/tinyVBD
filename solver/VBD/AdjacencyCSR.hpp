@@ -2,8 +2,8 @@
 // Created by tianyan on 12/29/25.
 //
 
-#ifndef TINYVBD_ADJACENCYCSR_HPP
-#define TINYVBD_ADJACENCYCSR_HPP
+#ifndef TAIYI_ADJACENCYCSR_HPP
+#define TAIYI_ADJACENCYCSR_HPP
 
 #include <vector>
 #include <cstdint>
@@ -65,4 +65,4 @@ for (uint32_t f = adj_info.vertex_faces.begin(v); f < adj_info.vertex_faces.end(
 }*/
 
 
-#endif //TINYVBD_ADJACENCYCSR_HPP
+#endif //TAIYI_ADJACENCYCSR_HPP

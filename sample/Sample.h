@@ -2,8 +2,8 @@
 // Created by xumiz on 2025/12/24.
 //
 
-#ifndef SAMPLE_H
-#define SAMPLE_H
+#ifndef TAIYI_SAMPLE_H
+#define TAIYI_SAMPLE_H
 
 #include <memory>
 #include <raylib.h>
@@ -71,4 +71,4 @@ private:
 
 
 
-#endif //SAMPLE_H
+#endif //TAIYI_SAMPLE_H

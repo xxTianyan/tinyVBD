@@ -2,8 +2,8 @@
 // Created by 徐天焱 on 2025/11/4.
 //
 
-#ifndef MESH_H
-#define MESH_H
+#ifndef TAIYI_MESH_H
+#define TAIYI_MESH_H
 
 #include <vector>
 #include <string>
@@ -195,4 +195,4 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris);
 
 std::vector<float> AssembleVertices(const mesh_on_cpu* cpu_mesh);
 
-#endif //MESH_H
+#endif //TAIYI_MESH_H

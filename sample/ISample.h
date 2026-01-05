@@ -2,8 +2,8 @@
 // Created by xumiz on 2026/1/1.
 //
 
-#ifndef ISAMPLE_H
-#define ISAMPLE_H
+#ifndef TAIYI_ISAMPLE_H
+#define TAIYI_ISAMPLE_H
 
 struct AppContext;
 
@@ -32,4 +32,4 @@ public:
 
 using SamplePtr = std::unique_ptr<ISample>;
 
-#endif //ISAMPLE_H
+#endif //TAIYI_ISAMPLE_H

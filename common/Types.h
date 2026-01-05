@@ -2,8 +2,8 @@
 // Created by 徐天焱 on 2025/11/5.
 //
 
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef TAIYI_TYPES_H
+#define TAIYI_TYPES_H
 
 #include <memory>
 #include <Eigen/Dense>
@@ -28,4 +28,4 @@ using SamplePtr = std::unique_ptr<ISample>;
 
 
 
-#endif //TYPES_H
+#endif //TAIYI_TYPES_H

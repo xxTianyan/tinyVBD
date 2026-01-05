@@ -2,8 +2,8 @@
 // Created by 徐天焱 on 2025/11/5.
 //
 
-#ifndef RENDERHELPER_H
-#define RENDERHELPER_H
+#ifndef TAIYI_RENDERHELPER_H
+#define TAIYI_RENDERHELPER_H
 
 #include <iostream>
 #include <limits>
@@ -219,4 +219,4 @@ private:
     float m_maxFps = 0.0f;
 };
 
-#endif //RENDERHELPER_H
+#endif //TAIYI_RENDERHELPER_H

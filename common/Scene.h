@@ -2,8 +2,8 @@
 // Created by 徐天焱 on 2025/11/11.
 //
 
-#ifndef SCENE_H
-#define SCENE_H
+#ifndef TAIYI_SCENE_H
+#define TAIYI_SCENE_H
 
 #include <span>
 #include "MaterialParams.hpp"
@@ -68,4 +68,4 @@ private:
 
 };
 
-#endif //SCENE_H
+#endif //TAIYI_SCENE_H

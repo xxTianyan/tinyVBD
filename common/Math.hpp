@@ -2,8 +2,8 @@
 // Created by tianyan on 1/4/26.
 //
 
-#ifndef TINYVBD_MATH_HPP
-#define TINYVBD_MATH_HPP
+#ifndef TAIYI_MATH_HPP
+#define TAIYI_MATH_HPP
 #include "Types.h"
 
 namespace TY {
@@ -77,4 +77,4 @@ namespace TY {
 
 
 
-#endif //TINYVBD_MATH_HPP
+#endif //TAIYI_MATH_HPP

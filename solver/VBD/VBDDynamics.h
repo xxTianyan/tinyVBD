@@ -2,8 +2,8 @@
 // Created by 徐天焱 on 2025/11/11.
 //
 
-#ifndef VBDDYNAMICS_H
-#define VBDDYNAMICS_H
+#ifndef TAIYI_VBDDYNAMICS_H
+#define TAIYI_VBDDYNAMICS_H
 
 #include <Types.h>
 #include "Scene.h"
@@ -33,4 +33,4 @@ struct Node {
 
 
 
-#endif //VBDDYNAMICS_H
+#endif //TAIYI_VBDDYNAMICS_H

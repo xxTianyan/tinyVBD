@@ -2,8 +2,8 @@
 // Created by xumiz on 2026/1/1.
 //
 
-#ifndef SAMPLEREGISTRY_H
-#define SAMPLEREGISTRY_H
+#ifndef TAIYI_SAMPLEREGISTRY_H
+#define TAIYI_SAMPLEREGISTRY_H
 
 #include <functional>
 #include <memory>
@@ -57,4 +57,4 @@ static void RegistryAllSamples(SampleRegistry& registry) {
 }*/
 
 
-#endif //SAMPLEREGISTRY_H
+#endif //TAIYI_SAMPLEREGISTRY_H

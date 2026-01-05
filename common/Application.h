@@ -2,8 +2,8 @@
 // Created by xumiz on 2026/1/1.
 //
 
-#ifndef APPLICATION_H
-#define APPLICATION_H
+#ifndef TAIYI_APPLICATION_H
+#define TAIYI_APPLICATION_H
 
 
 #include <memory>
@@ -91,4 +91,4 @@ private:
 
 
 
-#endif //APPLICATION_H
+#endif //TAIYI_APPLICATION_H

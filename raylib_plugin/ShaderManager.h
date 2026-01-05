@@ -1,5 +1,5 @@
-#ifndef SHADER_MANAGER_H
-#define SHADER_MANAGER_H
+#ifndef TAIYI_SHADER_MANAGER_H
+#define TAIYI_SHADER_MANAGER_H
 
 #include <raylib.h>
 #include <string>
@@ -62,4 +62,4 @@ private:
     std::unordered_map<std::string, ManagedShader> m_shaders;
 };
 
-#endif // SHADER_MANAGER_H
+#endif // TAIYI_SHADER_MANAGER_H

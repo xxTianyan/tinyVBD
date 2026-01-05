@@ -1,5 +1,5 @@
-#ifndef CAMERA_CONTROLLER_H
-#define CAMERA_CONTROLLER_H
+#ifndef TAIYI_CAMERA_CONTROLLER_H
+#define TAIYI_CAMERA_CONTROLLER_H
 
 #include <raylib.h>
 #include <vector>
@@ -25,4 +25,4 @@ void UpdateOrbitCameraKeyboard(OrbitCamera &orbitCam, float deltaTime, float mov
 void ReframeOrbitToModels(OrbitCamera &orbitCam, const std::vector<Model> &models, float margin);
 void RefreshCameraTransform(OrbitCamera &orbitCam);
 
-#endif // CAMERA_CONTROLLER_H
+#endif // TAIYI_CAMERA_CONTROLLER_H
