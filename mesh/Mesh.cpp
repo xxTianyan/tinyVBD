@@ -6,6 +6,7 @@
 #include <fstream>
 #include <queue>
 
+/*
 static std::string trim(const std::string& str) {
     const size_t a = str.find_first_not_of("\t\r\n");
     if (a == std::string::npos)
@@ -208,9 +209,6 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets) {
     return out;
 }
 
-/*
- * TODO: Need to understand this function written by GPT.
- */
 IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
     IndexBuffer out;
     if (tris.empty()) return out;
@@ -346,68 +344,8 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
 
     return out;
 }
+*/
 
-std::vector<float> ComputeNormal(mesh_on_cpu* cpu_mesh) {
-    if (!cpu_mesh) return {};
-
-    const size_t nV = cpu_mesh->size();
-    std::vector normals(nV * 3, 0.0f);
-
-    const auto& tris = cpu_mesh->m_surface_tris;
-    // Debug 下建议 assert
-    // assert(tris.size() % 3 == 0);
-
-    const size_t T = tris.size() / 3;
-    for (size_t t = 0; t < T; ++t) {
-        const size_t v1 = tris[t * 3 + 0];
-        const size_t v2 = tris[t * 3 + 1];
-        const size_t v3 = tris[t * 3 + 2];
-
-        if (v1 >= nV || v2 >= nV || v3 >= nV) continue;
-
-        Vec3 e1 = cpu_mesh->pos[v2] - cpu_mesh->pos[v1];
-        Vec3 e2 = cpu_mesh->pos[v3] - cpu_mesh->pos[v1];
-        Vec3 fn = e1.cross(e2);
-
-        // 可选：跳过退化面
-        if (fn.squaredNorm() < 1e-24f) continue;
-
-        auto accum = [&](const size_t vi) {
-            normals[3 * vi + 0] += fn.x();
-            normals[3 * vi + 1] += fn.y();
-            normals[3 * vi + 2] += fn.z();
-        };
-        accum(v1); accum(v2); accum(v3);
-    }
-
-    for (size_t i = 0; i < nV; ++i) {
-        Vec3 v(normals[3*i+0], normals[3*i+1], normals[3*i+2]);
-        if (const float len = v.norm(); len > 1e-12f) v /= len;
-        else v = Vec3(0, 1, 0);
-
-        normals[3*i+0] = v.x();
-        normals[3*i+1] = v.y();
-        normals[3*i+2] = v.z();
-        cpu_mesh->n[i] = v;
-    }
-
-    return normals;
-}
-
-
-// assemble Vertex position (XYZ - 3 components per vertex) (shader-location = 0)
-std::vector<float> AssembleVertices(const mesh_on_cpu* cpu_mesh) {
-    std::vector<float> vertices;
-    const size_t num_nodes = cpu_mesh->size();
-    vertices.resize(num_nodes * 3);
-
-    for (size_t i = 0; i < num_nodes; i++) {
-        vertices[3*i + 0] = cpu_mesh->pos[i].x();
-        vertices[3*i + 1] = cpu_mesh->pos[i].y();
-        vertices[3*i + 2] = cpu_mesh->pos[i].z();
-    }
-    return vertices;
-}
 
 void BuildAdjacency(mesh_on_cpu& mesh) {
 
@@ -460,7 +398,7 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
             for (uint32_t k = 0; k < verts_per_elem; ++k) {
                 const auto v = static_cast<uint32_t>(get_v(e, k));
                 const uint32_t dst = cursor[v]++;  // 写入位置
-                incidents[dst] = AdjacencyCSR::pack(ei, k);                // 存 incident 元素编号
+                incidents[dst] = AdjacencyCSR::pack(ei, k);            // 存 incident 元素编号
             }
         }
     };

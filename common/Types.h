@@ -15,16 +15,25 @@ struct mesh_on_cpu;
 using IndexBuffer = std::vector<uint16_t>;
 using VertexID = uint16_t;
 using MeshID = int32_t;
+using RigidID = int32_t;
+using ShapeID = int32_t;
 using MaterialID = int32_t;
-using ShapeID =int32_t;
 constexpr VertexID INVALID_VERTEX_ID = 0xFFFF;
 
 using Vec3 = Eigen::Vector3f;
 using Mat3 = Eigen::Matrix3f;
 using Mat2 = Eigen::Matrix2f;
 using Mat32 = Eigen::Matrix<float, 3, 2>;
+
 using MeshPtr = std::unique_ptr<mesh_on_cpu>;
 using SamplePtr = std::unique_ptr<ISample>;
+
+static int to_int_checked(const size_t v, const char* what) {
+    if (v > static_cast<size_t>(std::numeric_limits<int>::max())) {
+        throw std::runtime_error(std::string(what) + " too large for int");
+    }
+    return static_cast<int>(v);
+}
 
 
 

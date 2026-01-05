@@ -16,8 +16,7 @@ struct tetrahedron {
     tetrahedron(const VertexID vtex0, const VertexID vtex1, const VertexID vtex2, const VertexID vtex3,
         const Vec3& vtex0_pos, const Vec3& vtex1_pos, const Vec3& vtex2_pos, const Vec3& vtex3_pos) :
     vertices{vtex0, vtex1, vtex2, vtex3} {
-
-
+        ;
     };
 };
 
@@ -135,28 +134,43 @@ struct edge {
     };
 };
 
-struct mesh_on_cpu {
+struct MeshModel {
+    std::vector<tetrahedron> tets;
+    std::vector<triangle> tris;
+    std::vector<edge> edges;
+    ForceElementAdjacencyInfo adjacencyInfo;
+    size_t base_offset = 0;
+
+    std::vector<float> inv_mass;    // inverse mass
+    std::vector<uint8_t> fixed;     // if fixed
+    std::vector<VertexID> surface_tris;
+     size_t num_nodes = 0;      // must be decided when mesh is created
+
+    [[nodiscard]] inline size_t size() const { return num_nodes; }
+
+    // topology has no default constructor and size is uncertain, thus not reserve space here
+    void resize(const size_t n_nodes) {
+        inv_mass.resize(n_nodes);
+        fixed.resize(n_nodes);
+    }
+
+    void clear_topology() {
+        edges.clear();
+        tris.clear();
+        tets.clear();
+        surface_tris.clear();
+    }
+};
+
+struct MeshState {
     std::vector<Vec3> pos;          // current frame pos
     std::vector<Vec3> prev_pos;     // last frame pos
     std::vector<Vec3> inertia_pos;  // inertia prediction
     std::vector<Vec3> vel;          // velocity
     std::vector<Vec3> accel;          // acceleration
-    std::vector<Vec3> n;          // normal
-    std::vector<float> inv_mass;          // inverse mass
-
-    std::vector<uint8_t> fixed;  // if fixed
+    // std::vector<Vec3> n;          // normal
 
     [[nodiscard]] inline size_t size() const { return pos.size(); }
-
-    // topology information
-    std::vector<tetrahedron> m_tets;
-    std::vector<triangle> m_tris;
-    std::vector<edge> m_edges;
-    ForceElementAdjacencyInfo adjacencyInfo;  // maybe it's better to make it a unique_ptr
-
-    // rendering information
-    std::vector<VertexID> m_surface_tris;
-    size_t base_offset = 0;
 
     // resize
     void resize(const size_t n_nodes) {
@@ -165,34 +179,37 @@ struct mesh_on_cpu {
         inertia_pos.resize(n_nodes);
         vel.resize(n_nodes);
         accel.resize(n_nodes);
-        n.resize(n_nodes);
-        inv_mass.resize(n_nodes);
-        fixed.resize(n_nodes);
+        // n.resize(n_nodes);
     }
 
-    // clear topology
-    void clear_topology() {
-        m_edges.clear();
-        m_tris.clear();
-        m_tets.clear();
-        m_surface_tris.clear();
+    void clear() {
+        pos.clear();
+        prev_pos.clear();
+        inertia_pos.clear();
+        vel.clear();
+        accel.clear();
+        // n.clear();
     }
 };
 
+/*
+ * TODO: Put these 3 functions in MeshBuilder class
+ */
 void BuildAdjacency(mesh_on_cpu& mesh);
 
 void DistributeMass(mesh_on_cpu& mesh);
 
 void InitMesh(mesh_on_cpu& mesh);
 
-void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh);
 
-std::vector<float> ComputeNormal(mesh_on_cpu* cpu_mesh);
 
-IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets);
 
-IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris);
+// void ParseMSH(const std::string& path, mesh_on_cpu* cpu_mesh);
 
-std::vector<float> AssembleVertices(const mesh_on_cpu* cpu_mesh);
+// IndexBuffer BuildSurfaceTriangles(const std::vector<tetrahedron>& tets);
+
+// IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris);
+
+
 
 #endif //TAIYI_MESH_H

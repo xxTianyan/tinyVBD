@@ -2,9 +2,9 @@
 // Created by tianyan on 12/22/25.
 //
 
-#include "VBDDynamics.h"
 #include <iostream>
-
+#include "VBDDynamics.h"
+#include "MaterialParams.hpp"
 #include "Math.hpp"
 
 static void accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> pos,
@@ -224,8 +224,7 @@ void VBDSolver::solve(SimView& view, const float dt) {
         if (inv_mass <= 0.0f) continue;
 
         const auto& inertia_pos = view.inertia_pos[vtex_id];
-        const auto& prev_pos = view.prev_pos[vtex_id];
-        // const auto& edge_adjacency = view.adj.vertex_edges;
+        // const auto& prev_pos = view.prev_pos[vtex_id];
         const auto& face_adjacency = view.adj.vertex_faces;
         const auto& edge_adjacency = view.adj.vertex_edges;
         const auto& mat = view.material_params;

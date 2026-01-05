@@ -25,6 +25,12 @@ public:
     // Build a UV sphere
     static void BuildSphere(mesh_on_cpu* mesh, float radius, int sectors, int stacks);
 
+    static void BuildAdjacency(mesh_on_cpu& mesh);
+
+    static void DistributeMass(mesh_on_cpu& mesh);
+
+    static void InitMesh(mesh_on_cpu& mesh);
+
 private:
     // help prepare mesh
     static void PrepareMesh(mesh_on_cpu* mesh, size_t num_nodes);

@@ -3,82 +3,105 @@
 //
 
 #include "Scene.h"
+#include "MaterialParams.hpp"
 
 bool Scene::RayNormal = true;
 
-Scene::Scene(Vec3  gravity) : gravity(std::move(gravity)) {}
-
-// make sure that MeshID and MaterialID is one to one correspond.
-MeshID Scene::Add(MeshPtr m) {
-    m->base_offset = m_total_vertices;
-    m_total_vertices += m->size();
-    InitMesh(*m);
-    meshes.push_back(std::move(m));
-    m_mesh_to_material.push_back(INVALID_VERTEX_ID);
-    return static_cast<MeshID>(meshes.size()-1);
-}
-
-void Scene::Clear() {
-    ;
-}
-
-void Scene::Remove() {
-    ;
-}
-
-void Scene::ApplyFixConsition(MeshID _mid, const std::function<bool(const Vec3&)> &predicate) {
-    if (_mid < 0 || _mid >= std::ssize(meshes)) throw std::out_of_range("Invalid Mesh ID.");
-    const auto& m = meshes[_mid];
-    for (size_t i = 0; i < m->size(); ++i) {
-        if (const auto& pos = m->pos[i]; predicate(pos))
-            m->fixed[i] = 1;
+void SceneState::BeginStep() {
+    // apply external conditions
+    for (auto& ms : meshes) {
+        std::fill(ms.accel.begin(), ms.accel.end(), Vec3::Zero());
     }
 }
 
-SimView Scene::MakeSimView(const size_t mesh_id) {
-    // check mesh id valid
-    if (mesh_id >= meshes.size()) throw std::out_of_range("Mesh ID is out of range");
-    auto& m = *meshes[mesh_id];
-
-    // check physical material id valid
-    if (m_mesh_to_material[mesh_id] > m_materials.size()) throw std::out_of_range("Physical Material is invalid");
-    return SimView{
-        .pos = m.pos,
-        .prev_pos = m.prev_pos,
-        .inertia_pos = m.inertia_pos,
-        .vel = m.vel,
-        .accel = m.accel,
-        .normal = m.n,
-        .inv_mass = m.inv_mass,
-        .fixed = m.fixed,
-        .edges = m.m_edges,
-        .tris = m.m_tris,
-        .tets = m.m_tets,
-        .gravity = gravity,  // gravity is owned by world
-        .material_params = m_materials[m_mesh_to_material[mesh_id]],
-        .adj = m.adjacencyInfo
-    };
+Scene::Scene(const Vec3 &gravity) {
+    model_.gravity = gravity;
 }
 
-void Scene::InitStep() const {
-    // prepare external accel
-    for (auto& m : meshes)
-        std::fill(m->accel.begin(), m->accel.end(),Vec3::Zero());
+MeshID Scene::Add(MeshModel&& mm, MeshState&& ms) {
+    validate_mesh_sizes(mm, ms);
+
+    // base_offset is used for flatting whole mesh vertex
+    mm.base_offset = model_.total_vertices;
+    model_.total_vertices += mm.size();
+
+    const auto id = static_cast<MeshID>(model_.meshes.size());
+    model_.meshes.emplace_back(std::move(mm));
+    state_.meshes.emplace_back(std::move(ms));
+
+    if (model_.materials.empty()) {
+        // must add one mesh material explicitly
+        model_.mesh_to_material.push_back(static_cast<MaterialID>(-1));
+    } else {
+        model_.mesh_to_material.push_back(static_cast<MaterialID>(0));
+    }
+
+    return id;
 }
 
-MaterialID Scene::AddMaterial(MMaterial _params) {
-    // valid prams check
-    if (!(_params.E() > 0.0f)) throw std::runtime_error("Young's module must be > 0");
-    if (!(_params.nu() > -0.99f && _params.nu() < 0.49f)) throw std::runtime_error("Poisson's ratio out of range");
-    // push to my materials
-    m_materials.emplace_back(_params);
-    return static_cast<MaterialID>(m_materials.size()) - 1;
+MaterialID Scene::AddMaterial(const MMaterial& material) {
+    const auto id = static_cast<MaterialID>(model_.materials.size());
+    model_.materials.push_back(material);
+    return id;
 }
 
 void Scene::BindMeshMaterial(const MeshID mesh, const MaterialID mat) {
-    if (mesh < 0 || mesh >= std::ssize(meshes)) throw std::out_of_range("Invalid Mesh ID.");
-    if (mat < 0 || mesh >= std::ssize(m_materials)) throw std::out_of_range("Invalid Material ID.");
-    m_mesh_to_material[mesh]=mat;
+    const auto mi = checked_index(mesh, model_.meshes, "mesh");
+    const auto mid = checked_index(mat, model_.materials, "material");
+    (void)mid;
+    model_.mesh_to_material[mi] = mat;
+}
+
+
+void Scene::ApplyFixConsition(const MeshID mesh, const std::function<bool(const Vec3&)>& pred) {
+    const auto mi = checked_index(mesh, model_.meshes, "mesh");
+
+    auto& mm = model_.meshes[mi];
+    auto& ms = state_.meshes[mi];
+
+    // convention：fixed belongs to Model，pos/vel belong to State
+    const size_t n = ms.pos.size();
+    for (size_t i = 0; i < n; ++i) {
+        if (pred(ms.pos[i])) {
+            mm.fixed[i] = 1;
+            mm.inv_mass[i] = 0.0f;
+
+            // set dynamic value to 0
+            ms.vel[i] = Vec3::Zero();
+            ms.accel[i] = Vec3::Zero();
+            ms.prev_pos[i] = ms.pos[i];
+            ms.inertia_pos[i] = ms.pos[i];
+        }
+    }
+}
+
+void Scene::InitStep() {
+    state_.BeginStep();
+    contacts_.Clear();
+}
+
+SimView Scene::MakeSimView(MeshID id) {
+    auto& mm = model_.meshes.at(id);
+    auto& ms = state_.meshes.at(id);
+
+    auto mid = model_.mesh_to_material.at(id);
+    return SimView{
+        .pos = ms.pos,
+        .prev_pos = ms.prev_pos,
+        .inertia_pos = ms.inertia_pos,
+        .vel = ms.vel,
+        .accel = ms.accel,
+        // .normal = ms.n,
+
+        .inv_mass = mm.inv_mass,
+        .fixed = mm.fixed,
+        .edges = mm.edges,
+        .tris = mm.tris,
+        .tets = mm.tets,
+        .gravity = model_.gravity,
+        .material_params = model_.materials.at(mid),
+        .adj = mm.adjacencyInfo
+    };
 }
 
 
