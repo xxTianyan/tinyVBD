@@ -212,30 +212,26 @@ static void UpdateModel(const std::vector<Model>& gpu_models, const Scene& scene
         vertices.resize(float_count);
         FillVerticesXYZ(state, info.particle, vertices.data());
 
-        const size_t v_bytes = vertices.size() * sizeof(float);
-        if (v_bytes > static_cast<size_t>(std::numeric_limits<int>::max())) {
-            throw std::runtime_error("Vertex buffer too large for int parameter");
+    const size_t v_bytes = vertices.size() * sizeof(float);
+    if (v_bytes > static_cast<size_t>(std::numeric_limits<int>::max())) {
+        throw std::runtime_error("Vertex buffer too large for int parameter");
+    }
+
+    // raylib: meshes[0] 是主 mesh
+    const Mesh& gpu_mesh = gpu_model.meshes[0];
+
+    // --- normals (optional) ---
+    if (Scene::RayNormal) {
+        normals.resize(float_count);
+        FillNormalsXYZ(cpu_model, state, info.tri, info.particle, normals.data());
+
+        const size_t n_bytes = normals.size() * sizeof(float);
+        if (n_bytes > static_cast<size_t>(std::numeric_limits<int>::max())) {
+            throw std::runtime_error("Normal buffer too large for int parameter");
         }
 
-        // raylib: meshes[0] 是主 mesh
-        const Mesh& gpu_mesh = gpu_models[i].meshes[0];
-
-        // slot 0 = vertices
-        UpdateMeshBuffer(gpu_mesh, 0, vertices.data(), static_cast<int>(v_bytes), 0);
-
-        // --- normals (optional) ---
-        if (Scene::RayNormal) {
-            normals.resize(float_count);
-            FillNormalsXYZ(cpu_model, state, info.tri, info.particle, normals.data());
-
-            const size_t n_bytes = normals.size() * sizeof(float);
-            if (n_bytes > static_cast<size_t>(std::numeric_limits<int>::max())) {
-                throw std::runtime_error("Normal buffer too large for int parameter");
-            }
-
-            // slot 2 = normals
-            UpdateMeshBuffer(gpu_mesh, 2, normals.data(), static_cast<int>(n_bytes), 0);
-        }
+        // slot 2 = normals
+        UpdateMeshBuffer(gpu_mesh, 2, normals.data(), static_cast<int>(n_bytes), 0);
     }
 }
 
