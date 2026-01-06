@@ -5,7 +5,6 @@
 #include "basic_cloth_example.h"
 #include "Application.h"
 #include "Builder.h"
-#include "rlgl.h"
 #include "Scene.h"
 #include "VBDSolver.h"
 
@@ -13,6 +12,8 @@ void BasicCloth::CreateWorld([[maybe_unused]]AppContext &ctx) {
     MModel model;
     Builder builder(model);
     builder.add_cloth(2.0f, 2.0f, 10, 20, Vec3{0.0f, 3.0f, 0.0f}, ClothOrientation::Horizontal);
+    Scene scene(std::move(model));
+
     /*scene_ = std::make_unique<Scene>(Vec3{0.0f,-9.81f, 0.0f});
     solver_ = std::make_unique<VBDSolver>(10);
     auto m = std::make_unique<mesh_on_cpu>();

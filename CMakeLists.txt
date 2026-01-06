@@ -62,16 +62,19 @@ target_link_libraries(rlImGui PUBLIC raylib imgui)
 # ---------- My executable ----------
 add_executable(Taiyi sample/main.cpp
         Sim/Model.cpp
-        common/Scene.cpp
-        collision/BroadPhase.cpp
-        solver/VBD/VBDSolver.cpp
+        Sim/Scene.cpp
         Sim/Builder.cpp
         raylib_plugin/CameraController.cpp
         raylib_plugin/ShaderManager.cpp
         sample/Sample.cpp
         sample/basic_cloth_example.cpp
+        sample/SampleRegistry.cpp
         common/Application.cpp
-        sample/SampleRegistry.cpp)
+        collision/BroadPhase.cpp
+        solver/VBD/VBDSolver.cpp
+        raylib_plugin/RenderHelper.cpp)
+
+
 
 target_include_directories(Taiyi
         PRIVATE
@@ -81,7 +84,7 @@ target_include_directories(Taiyi
         ${CMAKE_CURRENT_SOURCE_DIR}/raylib_plugin
         ${CMAKE_CURRENT_SOURCE_DIR}/sample
         ${CMAKE_CURRENT_SOURCE_DIR}/solver/VBD
-)
+        ${CMAKE_CURRENT_SOURCE_DIR}/imgui_plugin)
 
 target_link_libraries(Taiyi PRIVATE Eigen3::Eigen rlImGui imgui raylib)
 

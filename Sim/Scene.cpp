@@ -3,7 +3,6 @@
 //
 
 #include "Scene.h"
-#include "MaterialParams.hpp"
 
 bool Scene::RayNormal = true;
 

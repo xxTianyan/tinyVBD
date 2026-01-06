@@ -8,7 +8,8 @@
 
 #include <memory>
 #include "CameraController.h"
-#include "RenderHelper.hpp"
+#include "PefMonitor.hpp"
+#include "RenderHelper.h"
 #include "SampleRegistry.h"
 #include "ShaderManager.h"
 

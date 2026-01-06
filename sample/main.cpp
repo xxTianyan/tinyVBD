@@ -1,6 +1,6 @@
 #include <raylib.h>
 #include "Application.h"
-#include "RenderHelper.hpp"
+#include "RenderHelper.h"
 
 
 inline Vector3 ToRayVec(Vec3& v_pos) {

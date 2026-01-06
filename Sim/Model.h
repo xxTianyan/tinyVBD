@@ -192,22 +192,23 @@ struct MModel {
     size_t num_particles = 0;      // total number of particles
     [[nodiscard]] inline size_t total_particles() const { return num_particles; }
 
+    uint64_t topology_version = 0;
+
     [[nodiscard]] State MakeState() const {
         State s;
         s.resize(num_particles);
 
-        std::copy(particle_pos0.begin(), particle_pos0.end(), s.particle_pos.begin());
+        std::ranges::copy(particle_pos0, s.particle_pos.begin());
 
         if (particle_vel0.size() == num_particles) {
-            std::copy(particle_vel0.begin(), particle_vel0.end(), s.particle_vel.begin());
+            std::ranges::copy(particle_vel0, s.particle_vel.begin());
         } else {
-            std::fill(s.particle_vel.begin(), s.particle_vel.end(), Vec3::Zero());
+            std::ranges::fill(s.particle_vel, Vec3::Zero());
         }
 
-        std::fill(s.particle_force.begin(), s.particle_force.end(), Vec3::Zero());
+        std::ranges::fill(s.particle_force, Vec3::Zero());
         return s;
     }
-
 
     // rigid body
     // ...

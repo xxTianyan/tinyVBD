@@ -16,7 +16,7 @@ float M_PI = 3.14159265358979323846;
 MeshID Builder::add_cloth(const float width, const float height,
                              const int resX, const int resY,
                              const Vec3& center,
-                             const ClothOrientation orientation) {
+                             const ClothOrientation orientation) const {
 
     if (resX <= 0 || resY <= 0)
         throw std::runtime_error("Builder::add_cloth: resX <= 0 || resY <= 0");
@@ -82,6 +82,8 @@ MeshID Builder::add_cloth(const float width, const float height,
 
     // add mesh info
     AddMeshInfo("cloth", num_nodes, model_.edges.size(), model_.tris.size(), model_.tets.size());
+
+    model_.topology_version++;
 
     return model_.mesh_infos.size() - 1;
 }

@@ -29,7 +29,6 @@ public:
 
     Vec3 gravity_;
 
-    // temporary
     static bool RayNormal;
 };
 
