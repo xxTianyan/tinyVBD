@@ -2,7 +2,7 @@
 // Created by 徐天焱 on 2025/11/6.
 //
 
-#include "Mesh.h"
+#include "Model.h"
 #include <fstream>
 #include <queue>
 

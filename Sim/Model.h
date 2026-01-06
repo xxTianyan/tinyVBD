@@ -134,24 +134,57 @@ struct edge {
     };
 };
 
-struct MeshModel {
+// currently, state and model only store one deformable  mesh
+
+struct State {
+    std::vector<Vec3> particle_pos;          // current frame pos
+    std::vector<Vec3> particle_vel;          // velocity
+    std::vector<Vec3> particle_force;          // force
+
+    void resize(const size_t n_nodes) {
+        particle_pos.resize(n_nodes);
+        particle_vel.resize(n_nodes);
+        particle_force.resize(n_nodes);
+    }
+
+    void clear() {
+        particle_pos.clear();
+        particle_vel.clear();
+        particle_force.clear();
+    }
+
+    void clean_force() {
+        std::fill(particle_force.begin(), particle_force.end(), Vec3{0.f,0.0f,0.0f});
+    }
+};
+
+struct MModel {
     std::vector<tetrahedron> tets;
     std::vector<triangle> tris;
     std::vector<edge> edges;
-    ForceElementAdjacencyInfo adjacencyInfo;
-    size_t base_offset = 0;
+    std::vector<float> particle_inv_mass;    // inverse mass
+    std::vector<uint8_t> if_particle_fixed;     // if fixed
+    std::vector<VertexID> surface_tris;     // surface index buffer (triangles), size must be multiple of 3
+    std::vector<Vec3> pos0; // initial positions
+    std::vector<Vec3> vel0; // initial velocities (optional; default zero)
 
-    std::vector<float> inv_mass;    // inverse mass
-    std::vector<uint8_t> fixed;     // if fixed
-    std::vector<VertexID> surface_tris;
-     size_t num_nodes = 0;      // must be decided when mesh is created
-
+    size_t num_nodes = 0;      // decided when model is finalized
+    size_t base_offset = 0;    // assigned by Scene when packing into global arrays (optional)
     [[nodiscard]] inline size_t size() const { return num_nodes; }
 
     // topology has no default constructor and size is uncertain, thus not reserve space here
-    void resize(const size_t n_nodes) {
-        inv_mass.resize(n_nodes);
-        fixed.resize(n_nodes);
+    void init(const size_t n_nodes) {
+        num_nodes = n_nodes;
+        particle_inv_mass.resize(n_nodes);
+        if_particle_fixed.resize(n_nodes);
+        pos0.resize(n_nodes);
+        vel0.resize(n_nodes);
+
+        // 给出稳妥默认值（builder 可覆盖）
+        std::fill(particle_inv_mass.begin(), particle_inv_mass.end(), 1.0f);
+        std::fill(if_particle_fixed.begin(), if_particle_fixed.end(), uint8_t{0});
+        std::fill(pos0.begin(), pos0.end(), Vec3::Zero());
+        std::fill(vel0.begin(), vel0.end(), Vec3::Zero());
     }
 
     void clear_topology() {
@@ -161,46 +194,6 @@ struct MeshModel {
         surface_tris.clear();
     }
 };
-
-struct MeshState {
-    std::vector<Vec3> pos;          // current frame pos
-    std::vector<Vec3> prev_pos;     // last frame pos
-    std::vector<Vec3> inertia_pos;  // inertia prediction
-    std::vector<Vec3> vel;          // velocity
-    std::vector<Vec3> accel;          // acceleration
-    // std::vector<Vec3> n;          // normal
-
-    [[nodiscard]] inline size_t size() const { return pos.size(); }
-
-    // resize
-    void resize(const size_t n_nodes) {
-        pos.resize(n_nodes);
-        prev_pos.resize(n_nodes);
-        inertia_pos.resize(n_nodes);
-        vel.resize(n_nodes);
-        accel.resize(n_nodes);
-        // n.resize(n_nodes);
-    }
-
-    void clear() {
-        pos.clear();
-        prev_pos.clear();
-        inertia_pos.clear();
-        vel.clear();
-        accel.clear();
-        // n.clear();
-    }
-};
-
-/*
- * TODO: Put these 3 functions in MeshBuilder class
- */
-void BuildAdjacency(mesh_on_cpu& mesh);
-
-void DistributeMass(mesh_on_cpu& mesh);
-
-void InitMesh(mesh_on_cpu& mesh);
-
 
 
 

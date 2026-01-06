@@ -7,7 +7,7 @@
 #include "MaterialParams.hpp"
 #include "Math.hpp"
 
-static void accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> pos,
+void VBDSolver::accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> pos,
                                                    const MMaterial& mat,
                                                    const triangle& face,
                                                    const uint32_t vtex_order,
@@ -103,7 +103,7 @@ static void accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> p
     H += delta_hessian * face.rest_area;
 }
 
-static void accumulate_dihedral_angle_based_bending_force_hessian(const std::span<const Vec3> pos,
+void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian(const std::span<const Vec3> pos,
                                                                 const MMaterial& mat,
                                                                 const edge& e,
                                                                 const uint32_t vtex_order,

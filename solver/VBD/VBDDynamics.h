@@ -8,6 +8,8 @@
 #include <Types.h>
 #include "Scene.h"
 
+
+
 class VBDSolver {
 
 public:
@@ -20,9 +22,17 @@ public:
 
     static void update_velocity(SimView& view, float dt);
 
+    static void accumulate_stvk_triangle_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
+                                        const triangle& face, uint32_t vtex_order, Vec3& force, Mat3& H);
+
+    static void accumulate_dihedral_angle_based_bending_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
+                                        const edge& e, uint32_t vtex_order, Vec3& force, Mat3& H);
+
 private:
     int num_iters;
-
+    std::vector<Vec3> inertia;
+    std::vector<Vec3> prev_pos;
+    std::vector<ForceElementAdjacencyInfo> adjacencyInfo;
 };
 
 struct Node {

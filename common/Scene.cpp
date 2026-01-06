@@ -7,20 +7,11 @@
 
 bool Scene::RayNormal = true;
 
-void SceneState::BeginStep() {
-    // apply external conditions
-    for (auto& ms : meshes) {
-        std::fill(ms.accel.begin(), ms.accel.end(), Vec3::Zero());
-    }
-}
 
-Scene::Scene(const Vec3 &gravity) {
-    model_.gravity = gravity;
-}
 
-MeshID Scene::Add(MeshModel&& mm, MeshState&& ms) {
-    validate_mesh_sizes(mm, ms);
 
+
+MeshID Scene::Add(MModel&& mm, State&& ms) {
     // base_offset is used for flatting whole mesh vertex
     mm.base_offset = model_.total_vertices;
     model_.total_vertices += mm.size();
@@ -39,7 +30,7 @@ MeshID Scene::Add(MeshModel&& mm, MeshState&& ms) {
     return id;
 }
 
-MaterialID Scene::AddMaterial(const MMaterial& material) {
+/*MaterialID Scene::AddMaterial(const MMaterial& material) {
     const auto id = static_cast<MaterialID>(model_.materials.size());
     model_.materials.push_back(material);
     return id;
@@ -50,10 +41,10 @@ void Scene::BindMeshMaterial(const MeshID mesh, const MaterialID mat) {
     const auto mid = checked_index(mat, model_.materials, "material");
     (void)mid;
     model_.mesh_to_material[mi] = mat;
-}
+}*/
 
 
-void Scene::ApplyFixConsition(const MeshID mesh, const std::function<bool(const Vec3&)>& pred) {
+/*void Scene::ApplyFixConsition(const MeshID mesh, const std::function<bool(const Vec3&)>& pred) {
     const auto mi = checked_index(mesh, model_.meshes, "mesh");
 
     auto& mm = model_.meshes[mi];
@@ -68,16 +59,15 @@ void Scene::ApplyFixConsition(const MeshID mesh, const std::function<bool(const 
 
             // set dynamic value to 0
             ms.vel[i] = Vec3::Zero();
-            ms.accel[i] = Vec3::Zero();
+            ms.force[i] = Vec3::Zero();
             ms.prev_pos[i] = ms.pos[i];
             ms.inertia_pos[i] = ms.pos[i];
         }
     }
-}
+}*/
 
 void Scene::InitStep() {
-    state_.BeginStep();
-    contacts_.Clear();
+    ;
 }
 
 SimView Scene::MakeSimView(MeshID id) {
@@ -90,9 +80,7 @@ SimView Scene::MakeSimView(MeshID id) {
         .prev_pos = ms.prev_pos,
         .inertia_pos = ms.inertia_pos,
         .vel = ms.vel,
-        .accel = ms.accel,
-        // .normal = ms.n,
-
+        .accel = ms.force,
         .inv_mass = mm.inv_mass,
         .fixed = mm.fixed,
         .edges = mm.edges,
@@ -100,7 +88,6 @@ SimView Scene::MakeSimView(MeshID id) {
         .tets = mm.tets,
         .gravity = model_.gravity,
         .material_params = model_.materials.at(mid),
-        .adj = mm.adjacencyInfo
     };
 }
 

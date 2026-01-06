@@ -61,11 +61,11 @@ target_link_libraries(rlImGui PUBLIC raylib imgui)
 
 # ---------- My executable ----------
 add_executable(Taiyi sample/main.cpp
-        mesh/Mesh.cpp
+        Sim/Model.cpp
         common/Scene.cpp
         collision/BroadPhase.cpp
         solver/VBD/VBDDynamics.cpp
-        mesh/MeshBuilder.cpp
+        Sim/MeshBuilder.cpp
         raylib_plugin/CameraController.cpp
         raylib_plugin/ShaderManager.cpp
         sample/Sample.cpp
@@ -77,7 +77,7 @@ target_include_directories(Taiyi
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/collision
         ${CMAKE_CURRENT_SOURCE_DIR}/common
-        ${CMAKE_CURRENT_SOURCE_DIR}/mesh
+        ${CMAKE_CURRENT_SOURCE_DIR}/Sim
         ${CMAKE_CURRENT_SOURCE_DIR}/raylib_plugin
         ${CMAKE_CURRENT_SOURCE_DIR}/sample
         ${CMAKE_CURRENT_SOURCE_DIR}/solver/VBD

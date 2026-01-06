@@ -12,7 +12,7 @@
 #include <vector>
 #include <imgui.h>
 
-#include "Mesh.h"
+#include "Model.h"
 #include "Scene.h"
 
 static void DrawAxisGizmo(const float length = 0.5f) {
@@ -31,7 +31,7 @@ static void DrawAxisGizmo(const float length = 0.5f) {
     DrawSphereWires(z, radius, 1, 6, BLUE);
 }
 
-static void FillVerticesXYZ(const MeshState& state, float* dst_xyz) {
+static void FillVerticesXYZ(const State& state, float* dst_xyz) {
     const size_t n = state.pos.size();
     for (size_t i = 0; i < n; ++i) {
         const Vec3& p = state.pos[i];
@@ -42,7 +42,7 @@ static void FillVerticesXYZ(const MeshState& state, float* dst_xyz) {
 }
 
 // compute real-time vertex normal and upload to gpu later
-static void FillNormalsXYZ(const MeshModel& model, const MeshState& state, float* dst_nxyz) {
+static void FillNormalsXYZ(const MModel& model, const State& state, float* dst_nxyz) {
     const size_t n = model.size();
     std::memset(dst_nxyz, 0, n * 3 * sizeof(float));
 
@@ -102,7 +102,7 @@ static void FillNormalsXYZ(const MeshModel& model, const MeshState& state, float
 }
 
 // upload all mesh info into GPU Mesh + Model (dynamic)
-static Model upload_model_from_cpu_mesh(const MeshModel& model, const MeshState& state) {
+static Model upload_model_from_cpu_mesh(const MModel& model, const State& state) {
 
     Mesh gmsh{};
     const size_t num_verts = state.pos.size();
@@ -163,8 +163,8 @@ static std::vector<Model> upload_all_models(const Scene& scene) {
 
 // update gpu mesh according to cpu mesh
 static void UpdateModel(const std::vector<Model>& gpu_models,
-                        const std::vector<MeshModel>& cpu_models,
-                        const std::vector<MeshState>& cpu_states) {
+                        const std::vector<MModel>& cpu_models,
+                        const std::vector<State>& cpu_states) {
     if (gpu_models.size() != cpu_models.size() || gpu_models.size() != cpu_states.size()) {
         throw std::runtime_error("Model size mismatch");
     }
@@ -173,8 +173,8 @@ static void UpdateModel(const std::vector<Model>& gpu_models,
     std::vector<float> normals;
 
     for (size_t i = 0; i < gpu_models.size(); ++i) {
-        const MeshModel& mm = cpu_models[i];
-        const MeshState& ms = cpu_states[i];
+        const MModel& mm = cpu_models[i];
+        const State& ms = cpu_states[i];
 
         const size_t n = mm.size();
         const size_t float_count = n * 3;

@@ -3,27 +3,17 @@
 //
 
 #include "MeshBuilder.h"
-#include "Mesh.h"
+#include "Model.h"
 
 #ifdef _WIN64
 float M_PI = 3.14159265358979323846;
 #endif
 
 
-void MeshBuilder::PrepareMesh(mesh_on_cpu* mesh, const size_t num_nodes) {
-    if (!mesh) return;
-    mesh->clear_topology(); // clear old data
-    mesh->resize(num_nodes); // resize SoA
-    mesh->m_tris.reserve(num_nodes * 2);
-    mesh->m_edges.reserve(num_nodes* 2);
-    mesh->m_tets.reserve(num_nodes * 2);
-}
-
 /*
  * TODO: Add assert for number of node: should less than INVALID_VERTEX_ID
  */
-void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
-                             const float width, const float height,
+void MeshBuilder::BuildCloth(const float width, const float height,
                              const int resX, const int resY,
                              const Vec3& center,
                              const ClothOrientation orientation) {
@@ -32,7 +22,8 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
         throw std::runtime_error("MeshBuilder::BuildCloth: resX <= 0 || resY <= 0");
 
     const size_t num_nodes = static_cast<size_t>(resX + 1) * static_cast<size_t>(resY + 1);
-    PrepareMesh(mesh, num_nodes);
+    MModel mm; State ms;
+    mm.num_nodes = num_nodes;
 
     const float dx = width  / static_cast<float>(resX);
     const float dy = height / static_cast<float>(resY);
@@ -54,18 +45,18 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
         for (int i = 0; i <= resX; ++i) {
             const int idx = j * (resX + 1) + i;
 
-            mesh->pos[idx]   = start_pos
+            ms.pos[idx]   = start_pos
                              + u_dir * (static_cast<float>(i) * dx)
                              + v_dir * (static_cast<float>(j) * dy);
 
-            mesh->vel[idx].setZero();
-            mesh->accel[idx].setZero();
+            ms.vel[idx].setZero();
+            ms.particle_force[idx].setZero();
         }
     }
 
     // 2) triangles and edges
-    mesh->m_tris.reserve(static_cast<size_t>(resX) * static_cast<size_t>(resY) * 2);
-    mesh->m_edges.reserve(static_cast<size_t>(resX) * static_cast<size_t>(resY) * 2);
+    mm.tris.reserve(static_cast<size_t>(resX) * static_cast<size_t>(resY) * 2);
+    mm.edges.reserve(static_cast<size_t>(resX) * static_cast<size_t>(resY) * 2);
 
     for (int j = 0; j < resY; ++j) {
         for (int i = 0; i < resX; ++i) {
@@ -75,9 +66,9 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
             const auto v3 = static_cast<VertexID>( v2 + 1 );
 
             // (v0, v1, v2)
-            mesh->m_tris.emplace_back(
+            mm.tris.emplace_back(
                 v0, v1, v2,
-                mesh->pos[v0], mesh->pos[v1], mesh->pos[v2]
+                ms.pos[v0], ms.pos[v1], ms.pos[v2]
             );
 
             // (v1, v3, v2)
@@ -99,10 +90,12 @@ void MeshBuilder::BuildCloth(mesh_on_cpu* mesh,
     mesh->m_surface_tris = BuildSurfaceTriangles(mesh->m_tris);
 }
 
-void MeshBuilder::BuildBox(mesh_on_cpu* mesh, const float w, const float h, const float d) {
+void MeshBuilder::BuildBox(const float w, const float h, const float d) {
     ;
 }
 
-void MeshBuilder::BuildSphere(mesh_on_cpu* mesh, const float radius, const int sectors, const int stacks) {
+void MeshBuilder::BuildSphere(const float radius, const int sectors, const int stacks) {
     ;
 }
+
+
