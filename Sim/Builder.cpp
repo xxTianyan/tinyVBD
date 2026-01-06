@@ -22,7 +22,7 @@ MeshID Builder::add_cloth(const float width, const float height,
         throw std::runtime_error("Builder::add_cloth: resX <= 0 || resY <= 0");
 
     const size_t num_nodes = static_cast<size_t>(resX + 1) * static_cast<size_t>(resY + 1);
-    ResizeDeformable(num_nodes);
+    PrepareCapacity(num_nodes);
 
     const float dx = width  / static_cast<float>(resX);
     const float dy = height / static_cast<float>(resY);
@@ -53,7 +53,6 @@ MeshID Builder::add_cloth(const float width, const float height,
     }
 
     // 2) triangles and edges
-    ReserveTopology(num_nodes * 2);
 
     for (int j = 0; j < resY; ++j) {
         for (int i = 0; i < resX; ++i) {
@@ -81,14 +80,41 @@ MeshID Builder::add_cloth(const float width, const float height,
         }
     }
 
-    ShrinkTopology();
-
     // add mesh info
+    AddMeshInfo("cloth", num_nodes, model_.edges.size(), model_.tris.size(), model_.tets.size());
 
-
-    return 1;
+    return model_.mesh_infos.size() - 1;
 }
 
 
+void Builder::PrepareCapacity(const size_t num) const {
+    ensure_capacity(model_.particle_pos0, num);
+    ensure_capacity(model_.particle_vel0, num);
+    ensure_capacity(model_.particle_inv_mass, num);
+    ensure_capacity(model_.edges, num*2);
+    ensure_capacity(model_.tris, num*2);
+    ensure_capacity(model_.tets, num*2);
+    model_.num_particles += num;
+
+    // resize std::vector<Vec3>, std::vector<float>
+    model_.particle_pos0.resize(model_.num_particles);
+    model_.particle_vel0.resize(model_.num_particles);
+    model_.particle_inv_mass.resize(model_.num_particles);
+}
+
+void Builder::AddMeshInfo(const char* name, const size_t n_particle, const size_t n_edge,
+            const size_t n_tri, const size_t n_tet) const {
+
+    MeshInfo info{};
+    model_.name_pool_.emplace_back(name);
+    info.name = model_.name_pool_.back().c_str();
+
+    info.particle = range{model_.particle_pos0.size() - n_particle, n_particle};
+    info.edge = range{model_.edges.size() - n_edge, n_edge};
+    info.tri = range{model_.tris.size() - n_tri, n_tri};
+    info.tet = range{model_.tets.size() - n_tet, n_tet};
+
+    model_.mesh_infos.emplace_back(info);
+}
 
 

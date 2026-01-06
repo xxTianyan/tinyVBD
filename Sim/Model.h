@@ -183,12 +183,10 @@ struct MModel {
     std::vector<tetrahedron> tets;
     std::vector<triangle> tris;
     std::vector<edge> edges;
-
     // particle initial date
     std::vector<Vec3> particle_pos0; // initial positions
     std::vector<Vec3> particle_vel0; // initial velocities (optional; default zero)
     std::vector<float> particle_inv_mass;
-    std::vector<uint8_t> if_particle_fixed;
 
     size_t num_particles = 0;      // total number of particles
     [[nodiscard]] inline size_t total_particles() const { return num_particles; }
