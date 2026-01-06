@@ -3,11 +3,11 @@
 //
 
 #include <iostream>
-#include "VBDDynamics.h"
+#include "VBDSolver.h"
 #include "MaterialParams.hpp"
 #include "Math.hpp"
 
-void VBDSolver::accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> pos,
+/*void VBDSolver::accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> pos,
                                                    const MMaterial& mat,
                                                    const triangle& face,
                                                    const uint32_t vtex_order,
@@ -268,7 +268,7 @@ void VBDSolver::update_velocity(SimView& view, const float dt) {
         }
         view.vel[i] = (view.pos[i] - view.prev_pos[i]) / dt;
     }
-}
+}*/
 
 
 

@@ -347,7 +347,7 @@ IndexBuffer BuildSurfaceTriangles(const std::vector<triangle>& tris) {
 */
 
 
-void BuildAdjacency(mesh_on_cpu& mesh) {
+/*void BuildAdjacency(mesh_on_cpu& mesh) {
 
     const size_t num_nodes = mesh.size();
     auto&[vertex_edges, vertex_faces, vertex_tets] = mesh.adjacencyInfo;
@@ -408,7 +408,7 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
     if (!mesh.m_edges.empty()) {
         build_vertex_incident_csr(
             mesh.m_edges,
-            /*verts_per_elem=*/4u,
+            /*verts_per_elem=#1#4u,
             [](auto const& edge, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(edge.vertices[k]);
             },
@@ -425,7 +425,7 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
     if (!mesh.m_tris.empty()) {
         build_vertex_incident_csr(
             mesh.m_tris,
-            /*verts_per_elem=*/3u,
+            /*verts_per_elem=#1#3u,
             [](auto const& tri, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(tri.vertices[k]);
             },
@@ -441,7 +441,7 @@ void BuildAdjacency(mesh_on_cpu& mesh) {
     if (!mesh.m_tets.empty()) {
         build_vertex_incident_csr(
             mesh.m_tets,
-            /*verts_per_elem=*/4u,
+            /*verts_per_elem=#1#4u,
             [](auto const& tet, uint32_t k) -> uint32_t {
                 return static_cast<uint32_t>(tet.vertices[k]);
             },
@@ -462,7 +462,7 @@ void DistributeMass(mesh_on_cpu& mesh) {
 void InitMesh(mesh_on_cpu& mesh) {
     BuildAdjacency(mesh);
     DistributeMass(mesh);
-}
+}*/
 
 
 

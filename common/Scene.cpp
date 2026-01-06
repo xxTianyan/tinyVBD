@@ -8,28 +8,6 @@
 bool Scene::RayNormal = true;
 
 
-
-
-
-MeshID Scene::Add(MModel&& mm, State&& ms) {
-    // base_offset is used for flatting whole mesh vertex
-    mm.base_offset = model_.total_vertices;
-    model_.total_vertices += mm.size();
-
-    const auto id = static_cast<MeshID>(model_.meshes.size());
-    model_.meshes.emplace_back(std::move(mm));
-    state_.meshes.emplace_back(std::move(ms));
-
-    if (model_.materials.empty()) {
-        // must add one mesh material explicitly
-        model_.mesh_to_material.push_back(static_cast<MaterialID>(-1));
-    } else {
-        model_.mesh_to_material.push_back(static_cast<MaterialID>(0));
-    }
-
-    return id;
-}
-
 /*MaterialID Scene::AddMaterial(const MMaterial& material) {
     const auto id = static_cast<MaterialID>(model_.materials.size());
     model_.materials.push_back(material);
@@ -66,11 +44,11 @@ void Scene::BindMeshMaterial(const MeshID mesh, const MaterialID mat) {
     }
 }*/
 
-void Scene::InitStep() {
+/*void Scene::InitStep() {
     ;
-}
+}*/
 
-SimView Scene::MakeSimView(MeshID id) {
+/*SimView Scene::MakeSimView(MeshID id) {
     auto& mm = model_.meshes.at(id);
     auto& ms = state_.meshes.at(id);
 
@@ -89,7 +67,7 @@ SimView Scene::MakeSimView(MeshID id) {
         .gravity = model_.gravity,
         .material_params = model_.materials.at(mid),
     };
-}
+}*/
 
 
 

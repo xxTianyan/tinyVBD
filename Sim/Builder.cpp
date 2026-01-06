@@ -2,7 +2,7 @@
 // Created by tianyan on 12/23/25.
 //
 
-#include "MeshBuilder.h"
+#include "Builder.h"
 #include "Model.h"
 
 #ifdef _WIN64
@@ -13,17 +13,16 @@ float M_PI = 3.14159265358979323846;
 /*
  * TODO: Add assert for number of node: should less than INVALID_VERTEX_ID
  */
-void MeshBuilder::BuildCloth(const float width, const float height,
+MeshID Builder::add_cloth(const float width, const float height,
                              const int resX, const int resY,
                              const Vec3& center,
                              const ClothOrientation orientation) {
 
     if (resX <= 0 || resY <= 0)
-        throw std::runtime_error("MeshBuilder::BuildCloth: resX <= 0 || resY <= 0");
+        throw std::runtime_error("Builder::add_cloth: resX <= 0 || resY <= 0");
 
     const size_t num_nodes = static_cast<size_t>(resX + 1) * static_cast<size_t>(resY + 1);
-    MModel mm; State ms;
-    mm.num_nodes = num_nodes;
+    ResizeDeformable(num_nodes);
 
     const float dx = width  / static_cast<float>(resX);
     const float dy = height / static_cast<float>(resY);
@@ -45,57 +44,51 @@ void MeshBuilder::BuildCloth(const float width, const float height,
         for (int i = 0; i <= resX; ++i) {
             const int idx = j * (resX + 1) + i;
 
-            ms.pos[idx]   = start_pos
+            model_.particle_pos0[idx]   = start_pos
                              + u_dir * (static_cast<float>(i) * dx)
                              + v_dir * (static_cast<float>(j) * dy);
 
-            ms.vel[idx].setZero();
-            ms.particle_force[idx].setZero();
+            model_.particle_vel0[idx].setZero();
         }
     }
 
     // 2) triangles and edges
-    mm.tris.reserve(static_cast<size_t>(resX) * static_cast<size_t>(resY) * 2);
-    mm.edges.reserve(static_cast<size_t>(resX) * static_cast<size_t>(resY) * 2);
+    ReserveTopology(num_nodes * 2);
 
     for (int j = 0; j < resY; ++j) {
         for (int i = 0; i < resX; ++i) {
-            const auto v0 = static_cast<VertexID>( j      * (resX + 1) + i );
+            const auto v0 = static_cast<VertexID>( j * (resX + 1) + i );
             const auto v1 = static_cast<VertexID>( v0 + 1 );
             const auto v2 = static_cast<VertexID>( (j + 1) * (resX + 1) + i );
             const auto v3 = static_cast<VertexID>( v2 + 1 );
 
             // (v0, v1, v2)
-            mm.tris.emplace_back(
+            model_.tris.emplace_back(
                 v0, v1, v2,
-                ms.pos[v0], ms.pos[v1], ms.pos[v2]
+                model_.particle_pos0[v0], model_.particle_pos0[v1], model_.particle_pos0[v2]
             );
 
             // (v1, v3, v2)
-            mesh->m_tris.emplace_back(
+            model_.tris.emplace_back(
                 v1, v3, v2,
-                mesh->pos[v1], mesh->pos[v3], mesh->pos[v2]
+                model_.particle_pos0[v1], model_.particle_pos0[v3], model_.particle_pos0[v2]
             );
 
             // (v0, v3, v1, v2)
-            mesh->m_edges.emplace_back(
+            model_.edges.emplace_back(
                 v0, v3, v1, v2,
-                mesh->pos[v0], mesh->pos[v3], mesh->pos[v1], mesh->pos[v2]);
+                model_.particle_pos0[v0], model_.particle_pos0[v3], model_.particle_pos0[v1], model_.particle_pos0[v2]);
         }
     }
 
-    mesh->m_tris.shrink_to_fit();
-    mesh->m_edges.shrink_to_fit();
-    mesh->m_tets.shrink_to_fit();
-    mesh->m_surface_tris = BuildSurfaceTriangles(mesh->m_tris);
+    ShrinkTopology();
+
+    // add mesh info
+
+
+    return 1;
 }
 
-void MeshBuilder::BuildBox(const float w, const float h, const float d) {
-    ;
-}
 
-void MeshBuilder::BuildSphere(const float radius, const int sectors, const int stacks) {
-    ;
-}
 
 

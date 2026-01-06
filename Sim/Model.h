@@ -134,9 +134,26 @@ struct edge {
     };
 };
 
-// currently, state and model only store one deformable  mesh
+// currently, state and model only store deformable mesh
+
+struct range {
+    size_t begin;
+    size_t count;
+    [[nodiscard]] size_t end() const { return begin + count;};
+};
+
+struct MeshInfo {
+    const char* name;
+    range particle;
+    range edge;
+    range tri;
+    range tet;
+};
+
 
 struct State {
+
+    // deformable mesh
     std::vector<Vec3> particle_pos;          // current frame pos
     std::vector<Vec3> particle_vel;          // velocity
     std::vector<Vec3> particle_force;          // force
@@ -154,45 +171,32 @@ struct State {
     }
 
     void clean_force() {
-        std::fill(particle_force.begin(), particle_force.end(), Vec3{0.f,0.0f,0.0f});
+        std::fill(particle_force.begin(), particle_force.end(), Vec3::Zero());
     }
 };
 
 struct MModel {
+    std::vector<std::string> name_pool_;
+    // deformable body
+    std::vector<MeshInfo> mesh_infos;
+    // topology
     std::vector<tetrahedron> tets;
     std::vector<triangle> tris;
     std::vector<edge> edges;
-    std::vector<float> particle_inv_mass;    // inverse mass
-    std::vector<uint8_t> if_particle_fixed;     // if fixed
-    std::vector<VertexID> surface_tris;     // surface index buffer (triangles), size must be multiple of 3
-    std::vector<Vec3> pos0; // initial positions
-    std::vector<Vec3> vel0; // initial velocities (optional; default zero)
 
-    size_t num_nodes = 0;      // decided when model is finalized
-    size_t base_offset = 0;    // assigned by Scene when packing into global arrays (optional)
-    [[nodiscard]] inline size_t size() const { return num_nodes; }
+    // particle initial date
+    std::vector<Vec3> particle_pos0; // initial positions
+    std::vector<Vec3> particle_vel0; // initial velocities (optional; default zero)
+    std::vector<float> particle_inv_mass;
+    std::vector<uint8_t> if_particle_fixed;
 
-    // topology has no default constructor and size is uncertain, thus not reserve space here
-    void init(const size_t n_nodes) {
-        num_nodes = n_nodes;
-        particle_inv_mass.resize(n_nodes);
-        if_particle_fixed.resize(n_nodes);
-        pos0.resize(n_nodes);
-        vel0.resize(n_nodes);
+    size_t num_particles = 0;      // total number of particles
+    [[nodiscard]] inline size_t total_particles() const { return num_particles; }
 
-        // 给出稳妥默认值（builder 可覆盖）
-        std::fill(particle_inv_mass.begin(), particle_inv_mass.end(), 1.0f);
-        std::fill(if_particle_fixed.begin(), if_particle_fixed.end(), uint8_t{0});
-        std::fill(pos0.begin(), pos0.end(), Vec3::Zero());
-        std::fill(vel0.begin(), vel0.end(), Vec3::Zero());
-    }
 
-    void clear_topology() {
-        edges.clear();
-        tris.clear();
-        tets.clear();
-        surface_tris.clear();
-    }
+    // rigid body
+    // ...
+
 };
 
 

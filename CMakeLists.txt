@@ -64,8 +64,8 @@ add_executable(Taiyi sample/main.cpp
         Sim/Model.cpp
         common/Scene.cpp
         collision/BroadPhase.cpp
-        solver/VBD/VBDDynamics.cpp
-        Sim/MeshBuilder.cpp
+        solver/VBD/VBDSolver.cpp
+        Sim/Builder.cpp
         raylib_plugin/CameraController.cpp
         raylib_plugin/ShaderManager.cpp
         sample/Sample.cpp

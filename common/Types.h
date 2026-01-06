@@ -25,8 +25,7 @@ using Mat2 = Eigen::Matrix2f;
 using Mat32 = Eigen::Matrix<float, 3, 2>;
 
 using SamplePtr = std::unique_ptr<ISample>;
-using Models = std::vector<MModel>;
-using States = std::vector<State>;
+
 
 static int to_int_checked(const size_t v, const char* what) {
     if (v > static_cast<size_t>(std::numeric_limits<int>::max())) {
@@ -34,7 +33,6 @@ static int to_int_checked(const size_t v, const char* what) {
     }
     return static_cast<int>(v);
 }
-
 
 
 #endif //TAIYI_TYPES_H

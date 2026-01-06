@@ -16,11 +16,11 @@ public:
     explicit VBDSolver(const int num_iters) : num_iters(num_iters) {}
     ~VBDSolver() = default;
 
-    static void forward_step(SimView& view, float dt);
+    // static void forward_step(SimView& view, float dt);
 
-    static void solve(SimView& view, float dt);
+    // static void solve(SimView& view, float dt);
 
-    static void update_velocity(SimView& view, float dt);
+    // static void update_velocity(SimView& view, float dt);
 
     static void accumulate_stvk_triangle_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
                                         const triangle& face, uint32_t vtex_order, Vec3& force, Mat3& H);

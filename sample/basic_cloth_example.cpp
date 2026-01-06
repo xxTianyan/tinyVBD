@@ -4,13 +4,16 @@
 
 #include "basic_cloth_example.h"
 #include "Application.h"
-#include "MeshBuilder.h"
+#include "Builder.h"
 #include "rlgl.h"
 #include "Scene.h"
-#include "VBDDynamics.h"
+#include "VBDSolver.h"
 
 void BasicCloth::CreateWorld([[maybe_unused]]AppContext &ctx) {
-    scene_ = std::make_unique<Scene>(Vec3{0.0f,-9.81f, 0.0f});
+    MModel model;
+    Builder builder(model);
+    builder.add_cloth(2.0f, 2.0f, 10, 20, Vec3{0.0f, 3.0f, 0.0f}, ClothOrientation::Horizontal);
+    /*scene_ = std::make_unique<Scene>(Vec3{0.0f,-9.81f, 0.0f});
     solver_ = std::make_unique<VBDSolver>(10);
     auto m = std::make_unique<mesh_on_cpu>();
     MeshBuilder::BuildCloth(m.get(), 2.0f, 2.0f, 10, 20, Vec3{0.0f, 3.0f, 0.0f}, ClothOrientation::Horizontal);
@@ -25,12 +28,12 @@ void BasicCloth::CreateWorld([[maybe_unused]]AppContext &ctx) {
         return false;
     };
 
-    scene_->ApplyFixConsition(mesh_id, fix_left_z);
+    scene_->ApplyFixConsition(mesh_id, fix_left_z);*/
 
 }
 
 void BasicCloth::Render(AppContext &ctx) {
-    BeginMode3D(ctx.orbitCam->camera);
+    /*BeginMode3D(ctx.orbitCam->camera);
 
     // floor
     if (IsModelValid_(floor_)) {
@@ -47,12 +50,12 @@ void BasicCloth::Render(AppContext &ctx) {
         rlEnableBackfaceCulling();
     }
 
-    EndMode3D();
+    EndMode3D();*/
 }
 
 
 void BasicCloth::BindShaders(AppContext &ctx) {
-    ctx.shader_manager->LoadShaderProgram("cloth", "../resources/shaders/cloth.vs", "../resources/shaders/cloth.fs");
+    /*ctx.shader_manager->LoadShaderProgram("cloth", "../resources/shaders/cloth.vs", "../resources/shaders/cloth.fs");
     const auto cloth_shader = ctx.shader_manager->Get("cloth")->shader;
     ShaderManager::BindMatrices(cloth_shader);
     ShaderManager::SetCommonShaderParams(cloth_shader);
@@ -71,16 +74,16 @@ void BasicCloth::BindShaders(AppContext &ctx) {
     constexpr float clothWrap      = 0.25f;  // 漫反射包裹：增大可让暗面不至于太死
     SetShaderValue(cloth_shader, rough,   &clothRoughness, SHADER_UNIFORM_FLOAT);
     SetShaderValue(cloth_shader, specStr, &clothSpec,      SHADER_UNIFORM_FLOAT);
-    SetShaderValue(cloth_shader, wrap,    &clothWrap,      SHADER_UNIFORM_FLOAT);
+    SetShaderValue(cloth_shader, wrap,    &clothWrap,      SHADER_UNIFORM_FLOAT);*/
 
 }
 
 void BasicCloth::BuildRenderResources() {
-    models_ = upload_all_models(*scene_);
+    /*models_ = upload_all_models(*scene_);*/
 }
 
 void BasicCloth::Step(const float dt) {
-    scene_->InitStep();
+    /*scene_->InitStep();
     auto& meshes = scene_->meshes;
     for (size_t mesh_id = 0; mesh_id < meshes.size(); mesh_id++) {
         SimView view = scene_->MakeSimView(mesh_id);
@@ -90,6 +93,6 @@ void BasicCloth::Step(const float dt) {
         for (size_t iter = 0; iter < 20; iter++)
             VBDSolver::solve(view, dt);
         VBDSolver::update_velocity(view, dt);
-    }
+    }*/
 }
 

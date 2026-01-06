@@ -8,65 +8,29 @@
 #include <span>
 
 #include "Contacts.h"
+#include "Builder.h"
 #include "Model.h"
 #include "Types.h"
 struct MMaterial;
 
-struct SimView {
-    std::span<Vec3> pos;
-    std::span<Vec3> prev_pos;
-    std::span<Vec3> inertia_pos;
-    std::span<Vec3> vel;
-    std::span<Vec3> accel;
-    std::span<float> inv_mass;
-    const std::span<uint8_t> fixed;
-    const std::span<edge> edges;
-    const std::span<triangle> tris;
-    const std::span<tetrahedron> tets;
-    const Vec3& gravity;
-    const MMaterial& material_params;
-};
-
-
 // all static values are stored in model struct, all changing values are stored in state struct
-
-struct SceneModel {
-    Vec3 gravity;
-    std::vector<MMaterial> materials;
-    std::vector<MaterialID> mesh_to_material;
-
-    std::vector<MModel> meshes;
-
-    // ShapeStore shapes;
-    size_t total_vertices;
-};
-
-struct SceneState {
-    std::vector<State> meshes;
-
-    void BeginStep();
-};
 
 class Scene {
 public:
-    Scene() = default;
+    explicit Scene(MModel&& model): model_(std::move(model)) {};
 
     void InitStep();
 
-    MeshID Add(MModel&& model);
+    MModel model_;
 
-    SimView MakeSimView(MeshID id);
+    State state_in_;
 
-    //
-    [[nodiscard]] const MeshModels& GetMeshModels() const { return models; }
-    States states_in;
+    State state_out_;
+
+    Vec3 gravity_;
 
     // temporary
     static bool RayNormal;
-
-private:
-    Vec3 gravity;
-    MeshModels models;
 };
 
 // helper functions for constructing scene

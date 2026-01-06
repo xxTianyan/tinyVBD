@@ -3,7 +3,7 @@
 //
 
 #include "SampleRegistry.h"
-#include "VBDDynamics.h"
+#include "VBDSolver.h"
 #include "Sample.h"
 #include "basic_cloth_example.h"
 

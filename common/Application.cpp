@@ -187,7 +187,6 @@ void Application::Run(const SampleId start_sample) {
         perfMonitor_.Update(dt);
         RefreshCameraTransform(orbitCam_);
 
-
         // key event
         PollHotkeys_();
         if (!ImGui::GetIO().WantCaptureKeyboard) {

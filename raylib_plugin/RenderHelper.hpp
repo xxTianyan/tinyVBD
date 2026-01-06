@@ -31,7 +31,7 @@ static void DrawAxisGizmo(const float length = 0.5f) {
     DrawSphereWires(z, radius, 1, 6, BLUE);
 }
 
-static void FillVerticesXYZ(const State& state, float* dst_xyz) {
+/*static void FillVerticesXYZ(const State& state, float* dst_xyz) {
     const size_t n = state.pos.size();
     for (size_t i = 0; i < n; ++i) {
         const Vec3& p = state.pos[i];
@@ -39,10 +39,10 @@ static void FillVerticesXYZ(const State& state, float* dst_xyz) {
         dst_xyz[i * 3 + 1] = p.y();
         dst_xyz[i * 3 + 2] = p.z();
     }
-}
+}*/
 
 // compute real-time vertex normal and upload to gpu later
-static void FillNormalsXYZ(const MModel& model, const State& state, float* dst_nxyz) {
+/*static void FillNormalsXYZ(const MModel& model, const State& state, float* dst_nxyz) {
     const size_t n = model.size();
     std::memset(dst_nxyz, 0, n * 3 * sizeof(float));
 
@@ -99,12 +99,12 @@ static void FillNormalsXYZ(const MModel& model, const State& state, float* dst_n
             dst_nxyz[i * 3 + 2] = 0.0f;
         }
     }
-}
+}*/
 
 // upload all mesh info into GPU Mesh + Model (dynamic)
-static Model upload_model_from_cpu_mesh(const MModel& model, const State& state) {
+//static Model upload_model_from_cpu_mesh(const MModel& model, const State& state) {
 
-    Mesh gmsh{};
+    /*Mesh gmsh{};
     const size_t num_verts = state.pos.size();
     const size_t num_idx   = model.surface_tris.size();
 
@@ -142,27 +142,27 @@ static Model upload_model_from_cpu_mesh(const MModel& model, const State& state)
         FillNormalsXYZ(model, state, gmsh.normals);
     }
 
-    UploadMesh(&gmsh, /*dynamic=*/true);
+    UploadMesh(&gmsh, /*dynamic=#1#true);
 
     // Attention：LoadModelFromMesh will take gmsh memory（raylib convention），
     // do not release gmsh.vertices/indices/normals maunally
     const Model rl_model = LoadModelFromMesh(gmsh);
-    return rl_model;
-}
+    return rl_model;*/
+//}
 
 // put every mesh to a model vector
-static std::vector<Model> upload_all_models(const Scene& scene) {
-    const auto& models = scene.MeshModels();
+// static std::vector<Model> upload_all_models(const Scene& scene) {
+    /*const auto& models = scene.MeshModels();
     const auto& states = scene.MeshStates();
     std::vector<Model> out;
     out.reserve(models.size());
     for (size_t i = 0; i < models.size();++i)
         out.push_back(upload_model_from_cpu_mesh(models[i], states[i]));
-    return out;
-}
+    return out;*/
+// }
 
 // update gpu mesh according to cpu mesh
-static void UpdateModel(const std::vector<Model>& gpu_models,
+/*static void UpdateModel(const std::vector<Model>& gpu_models,
                         const std::vector<MModel>& cpu_models,
                         const std::vector<State>& cpu_states) {
     if (gpu_models.size() != cpu_models.size() || gpu_models.size() != cpu_states.size()) {
@@ -208,7 +208,7 @@ static void UpdateModel(const std::vector<Model>& gpu_models,
             UpdateMeshBuffer(gpu_mesh, 2, normals.data(), static_cast<int>(n_bytes), 0);
         }
     }
-}
+}*/
 
 // imgui part
 
@@ -342,5 +342,6 @@ private:
     float m_minFps = 0.0f;
     float m_maxFps = 0.0f;
 };
+
 
 #endif //TAIYI_RENDERHELPER_H

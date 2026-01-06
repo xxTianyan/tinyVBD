@@ -4,7 +4,7 @@
 
 #include "Sample.h"
 #include "Application.h"
-#include "VBDDynamics.h"
+#include "VBDSolver.h"
 void Sample::OnEnter(AppContext &ctx) {
     // set up scene
     CreateWorld(ctx);
@@ -36,7 +36,7 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
     else
         Step(ctx.dt);
 
-    UpdateModel(models_, scene_->meshes);
+    // UpdateModel(models_, scene_->meshes);
 }
 
 void Sample::Render([[maybe_unused]]AppContext &ctx) {
