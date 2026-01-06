@@ -121,19 +121,8 @@ static void FillNormalsXYZ(const MModel& model,
     }
 }
 
-// upload mesh info into a single GPU Model (dynamic)
-static Model upload_model(const Scene& scene) {
-    const auto& model = scene.model_;
-    const State& state = scene.state_out_.particle_pos.empty() ? scene.state_in_ : scene.state_out_;
-
-    if (model.mesh_infos.empty()) {
-        throw std::runtime_error("upload_model: no mesh info found");
-    }
-    if (model.mesh_infos.size() != 1) {
-        throw std::runtime_error("upload_model: expected exactly one combined mesh");
-    }
-
-    const MeshInfo& info = model.mesh_infos.front();
+// upload all mesh info into GPU Mesh + Model (dynamic)
+static Model upload_model_from_cpu_mesh(const MModel& model, const State& state, const MeshInfo& info) {
 
     Mesh gmsh{};
     const size_t num_verts = info.particle.count;
@@ -164,7 +153,7 @@ static Model upload_model(const Scene& scene) {
         for (int k = 0; k < 3; ++k) {
             const auto global = static_cast<size_t>(tri.vertices[k]);
             if (global < info.particle.begin || global >= info.particle.end()) {
-                throw std::runtime_error("upload_model: triangle vertex out of range");
+                throw std::runtime_error("upload_model_from_cpu_mesh: triangle vertex out of range");
             }
             idx.push_back(static_cast<uint16_t>(global - info.particle.begin));
         }
@@ -189,25 +178,39 @@ static Model upload_model(const Scene& scene) {
     return rl_model;
 }
 
+// put every mesh to a model vector
+static std::vector<Model> upload_all_models(const Scene& scene) {
+    const auto& model = scene.model_;
+    const State& state = scene.state_out_.particle_pos.empty() ? scene.state_in_ : scene.state_out_;
+
+    std::vector<Model> out;
+    out.reserve(model.mesh_infos.size());
+    for (const auto& info : model.mesh_infos) {
+        out.push_back(upload_model_from_cpu_mesh(model, state, info));
+    }
+    return out;
+}
+
 // update gpu mesh according to cpu mesh
-static void UpdateModel(const Model& gpu_model, const Scene& scene) {
+static void UpdateModel(const std::vector<Model>& gpu_models, const Scene& scene) {
     const auto& cpu_model = scene.model_;
     const State& state = scene.state_out_.particle_pos.empty() ? scene.state_in_ : scene.state_out_;
 
-    if (cpu_model.mesh_infos.size() != 1) {
-        throw std::runtime_error("UpdateModel: expected exactly one mesh info");
+    if (gpu_models.size() != cpu_model.mesh_infos.size()) {
+        throw std::runtime_error("Model size mismatch");
     }
 
     std::vector<float> vertices; // 复用缓冲，避免每帧 malloc/free
     std::vector<float> normals;
 
-    const MeshInfo& info = cpu_model.mesh_infos.front();
+    for (size_t i = 0; i < gpu_models.size(); ++i) {
+        const MeshInfo& info = cpu_model.mesh_infos[i];
 
-    const size_t float_count = info.particle.count * 3;
+        const size_t float_count = info.particle.count * 3;
 
-    // --- vertices ---
-    vertices.resize(float_count);
-    FillVerticesXYZ(state, info.particle, vertices.data());
+        // --- vertices ---
+        vertices.resize(float_count);
+        FillVerticesXYZ(state, info.particle, vertices.data());
 
     const size_t v_bytes = vertices.size() * sizeof(float);
     if (v_bytes > static_cast<size_t>(std::numeric_limits<int>::max())) {
@@ -216,9 +219,6 @@ static void UpdateModel(const Model& gpu_model, const Scene& scene) {
 
     // raylib: meshes[0] 是主 mesh
     const Mesh& gpu_mesh = gpu_model.meshes[0];
-
-    // slot 0 = vertices
-    UpdateMeshBuffer(gpu_mesh, 0, vertices.data(), static_cast<int>(v_bytes), 0);
 
     // --- normals (optional) ---
     if (Scene::RayNormal) {
