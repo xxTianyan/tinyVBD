@@ -12,6 +12,9 @@ class BasicCloth final : public Sample {
     void Step(float dt) override;
     void BindShaders(AppContext &ctx) override;
     void Render(AppContext &ctx) override;
+
+private:
+    MeshID m_cloth_id_{};
 };
 
 

@@ -51,6 +51,10 @@ void RenderHelper::UnloadRLModelSafe(Model &rl_model) {
     }
 }
 
+Model& RenderHelper::GetRLModel(const MeshID mesh_id) {
+    return meshes_[mesh_id].model;
+}
+
 void RenderHelper::Rebuild() {
     if (model_ == nullptr) return;
 

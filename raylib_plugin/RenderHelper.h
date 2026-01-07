@@ -31,6 +31,8 @@ public:
     void Shutdown();                 // release all gpu resources
     [[nodiscard]] bool Ready() const { return ready_; }
 
+    Model& GetRLModel(MeshID mesh_id);
+
 private:
     struct RenderMesh {
         MeshInfo info{}; // value copy
