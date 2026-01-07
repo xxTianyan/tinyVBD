@@ -52,11 +52,11 @@ private:
 
     MModel& model_;
 
-    void PrepareCapacity(const size_t num) const;
+    void PrepareCapacity(size_t num) const;
 
 
-    void AddMeshInfo(const char* name, const size_t n_particle, const size_t n_edge,
-                const size_t n_tri, const size_t n_tet) const;
+    void AddMeshInfo(const char* name, size_t n_particle, size_t n_edge,
+                size_t n_tri, size_t n_tet) const;
 
 };
 

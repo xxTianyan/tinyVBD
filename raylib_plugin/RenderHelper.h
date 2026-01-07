@@ -6,7 +6,6 @@
 #define TAIYI_RENDERHELPER_H
 
 
-
 #include <vector>
 #include "raylib.h"
 #include "Model.h" // MModel, State, MeshInfo, range, triangle
@@ -22,25 +21,26 @@ public:
 
     void BindModel(const MModel& model);
 
-    // 每帧：若拓扑版本变化 -> 自动重建；否则仅更新 VBO
+    // rebuild if topology changed
     void Update(const State& state);
 
-    void Draw() const;               // Draw 不需要 state
-    void Shutdown();                 // 释放 GPU 资源
+    static bool IsModelValid(const Model& model);
+    static void UnloadRLModelSafe(Model& rl_model);
+
+    void Draw() const;
+    void Shutdown();                 // release all gpu resources
     [[nodiscard]] bool Ready() const { return ready_; }
 
 private:
     struct RenderMesh {
-        MeshInfo info{}; // 保存 range（值拷贝，避免 mesh_infos vector 重分配导致引用/指针风险）
+        MeshInfo info{}; // value copy
         Model model{};   // raylib owning
         bool valid = false;
     };
 
 private:
     void Rebuild();                  // 用 model_ 重建所有 GPU mesh/model
-    void UpdateDynamic(const State& state);
-
-    void CheckBound() const;
+    void UpdateDynamic(const State& state) const;
 
     static void FillPositionsXYZ(const State& state,
                                  size_t particle_begin,
@@ -59,6 +59,8 @@ private:
                                size_t particle_begin,
                                size_t particle_count,
                                unsigned short* dst_indices);
+
+
 
 private:
     const MModel* model_ = nullptr;

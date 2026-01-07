@@ -17,7 +17,10 @@ struct MMaterial;
 
 class Scene {
 public:
-    explicit Scene(MModel&& model): model_(std::move(model)) {};
+    explicit Scene(MModel&& model): model_(std::move(model)) {
+        state_in_ = model_.MakeState();
+        state_out_ = model_.MakeState();
+    };
 
     void InitStep();
 
@@ -27,9 +30,12 @@ public:
 
     State state_out_;
 
-    Vec3 gravity_;
-
     static bool RayNormal;
+
+    void SetGravity(const Vec3& gravity){ gravity_ = gravity; };
+
+private:
+    Vec3 gravity_;
 };
 
 // helper functions for constructing scene

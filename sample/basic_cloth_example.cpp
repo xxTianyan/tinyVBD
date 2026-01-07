@@ -5,6 +5,7 @@
 #include "basic_cloth_example.h"
 #include "Application.h"
 #include "Builder.h"
+#include "rlgl.h"
 #include "Scene.h"
 #include "VBDSolver.h"
 
@@ -12,7 +13,7 @@ void BasicCloth::CreateWorld([[maybe_unused]]AppContext &ctx) {
     MModel model;
     Builder builder(model);
     builder.add_cloth(2.0f, 2.0f, 10, 20, Vec3{0.0f, 3.0f, 0.0f}, ClothOrientation::Horizontal);
-    Scene scene(std::move(model));
+    scene_ = std::make_unique<Scene>(std::move(model));
 
     /*scene_ = std::make_unique<Scene>(Vec3{0.0f,-9.81f, 0.0f});
     solver_ = std::make_unique<VBDSolver>(10);
@@ -34,24 +35,21 @@ void BasicCloth::CreateWorld([[maybe_unused]]AppContext &ctx) {
 }
 
 void BasicCloth::Render(AppContext &ctx) {
-    /*BeginMode3D(ctx.orbitCam->camera);
+
+    BeginMode3D(ctx.orbitCam->camera);
+
 
     // floor
-    if (IsModelValid_(floor_)) {
+    if (RenderHelper::IsModelValid(floor_)) {
         DrawModel(floor_, Vector3{0,0,0}, 1.0f, WHITE);
     }
 
-    DrawAxisGizmo();
-
     // scene models
-    for (auto& m : models_) {
-        if (!IsModelValid_(m)) continue;
-        rlDisableBackfaceCulling();
-        DrawModel(m, Vector3{0,0,0}, 1.0f, WHITE);
-        rlEnableBackfaceCulling();
-    }
+    rlDisableBackfaceCulling();
+    renderHelper_.Draw();
+    rlEnableBackfaceCulling();
 
-    EndMode3D();*/
+    EndMode3D();
 }
 
 
@@ -79,9 +77,6 @@ void BasicCloth::BindShaders(AppContext &ctx) {
 
 }
 
-void BasicCloth::BuildRenderResources() {
-    /*models_ = upload_all_models(*scene_);*/
-}
 
 void BasicCloth::Step(const float dt) {
     /*scene_->InitStep();

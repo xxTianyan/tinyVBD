@@ -7,18 +7,12 @@
 
 void RenderHelper::BindModel(const MModel& model) {
     model_ = &model;
-    // 这里不重建，避免调用端 Bind 后还没准备 state 就触发构建
-    // 真正构建在 Update() 中按版本判断触发
-}
-
-void RenderHelper::CheckBound() const {
-    if (!model_) throw std::runtime_error("RenderHelper: model not bound. Call BindModel(model) first.");
 }
 
 void RenderHelper::Shutdown() {
     for (auto& rm : meshes_) {
         if (rm.valid) {
-            UnloadModel(rm.model);
+            UnloadRLModelSafe(rm.model);
             rm.valid = false;
         }
     }
@@ -28,52 +22,64 @@ void RenderHelper::Shutdown() {
 }
 
 void RenderHelper::Update(const State& state) {
-    CheckBound();
+    if (model_ == nullptr) return;
 
-    // 1) 基础一致性检查：state 必须覆盖 model.num_particles
+    // 1) consistency check
     if (model_->num_particles != state.particle_pos.size()) {
         throw std::runtime_error("RenderHelper::Update: model.num_particles != state.particle_pos.size()");
     }
 
-    // 2) 拓扑版本变化：重建
+    // 2) rebuild if topology changed
     if (!ready_ || built_topology_version_ != model_->topology_version) {
         Rebuild();
         built_topology_version_ = model_->topology_version;
         ready_ = true;
     }
 
-    // 3) 更新 VBO（positions + normals）
+    // 3) update positions + normals
     UpdateDynamic(state);
 }
 
-void RenderHelper::Rebuild() {
-    CheckBound();
+bool RenderHelper::IsModelValid(const Model &rl_model) {
+    return (rl_model.meshCount > 0 && rl_model.meshes != nullptr);
+}
 
-    // 先释放旧资源（安全）
+void RenderHelper::UnloadRLModelSafe(Model &rl_model) {
+    if (IsModelValid(rl_model)) {
+        UnloadModel(rl_model);
+        rl_model = Model{}; // make raylib model invalid
+    }
+}
+
+void RenderHelper::Rebuild() {
+    if (model_ == nullptr) return;
+
+    // safe release
     Shutdown();
 
     meshes_.reserve(model_->mesh_infos.size());
 
     for (const MeshInfo& info_src : model_->mesh_infos) {
         RenderMesh rm{};
-        rm.info = info_src; // 值拷贝 ranges（避免 mesh_infos realloc 引用失效风险）
+        rm.info = info_src;
 
         const size_t particle_begin = rm.info.particle.begin;
         const size_t particle_count = rm.info.particle.count;
         const size_t tri_count      = rm.info.tri.count;
 
+        // important
         if (particle_count == 0 || tri_count == 0) {
             rm.valid = false;
             meshes_.push_back(rm);
             continue;
         }
 
-        // raylib Mesh indices 是 u16：单 mesh 顶点数限制
+        // raylib Mesh indices is u16：the number of a single mesh must be less than 0xFFFF
         if (particle_count > static_cast<size_t>(std::numeric_limits<unsigned short>::max()) + 1ull) {
             throw std::runtime_error("RenderHelper::Rebuild: particle_count > 65536, raylib u16 indices not supported. Split mesh.");
         }
 
-        // range 合法性
+        // check valid range
         if (particle_begin + particle_count > model_->num_particles) {
             throw std::runtime_error("RenderHelper::Rebuild: particle range out of model.num_particles");
         }
@@ -86,9 +92,9 @@ void RenderHelper::Rebuild() {
         mesh.vertexCount   = static_cast<int>(particle_count);
         mesh.triangleCount = static_cast<int>(tri_count);
 
-        mesh.vertices = (float*)MemAlloc(particle_count * 3 * sizeof(float));
-        mesh.normals  = (float*)MemAlloc(particle_count * 3 * sizeof(float));
-        mesh.indices  = (unsigned short*)MemAlloc(tri_count * 3 * sizeof(unsigned short));
+        mesh.vertices = static_cast<float *>(MemAlloc(particle_count * 3 * sizeof(float)));
+        mesh.normals  = static_cast<float *>(MemAlloc(particle_count * 3 * sizeof(float)));
+        mesh.indices  = static_cast<unsigned short *>(MemAlloc(tri_count * 3 * sizeof(unsigned short)));  // triangle index
 
         if (!mesh.vertices || !mesh.normals || !mesh.indices) {
             throw std::runtime_error("RenderHelper::Rebuild: MemAlloc failed");
@@ -106,16 +112,15 @@ void RenderHelper::Rebuild() {
 
         rm.model = LoadModelFromMesh(mesh);
         rm.model.materials[0].maps[MATERIAL_MAP_DIFFUSE].color = WHITE;
-
-        rm.valid = true;
+        if (IsModelValid(rm.model)) rm.valid = true;
         meshes_.push_back(rm);
     }
 
     ready_ = true;
 }
 
-void RenderHelper::UpdateDynamic(const State& state) {
-    CheckBound();
+void RenderHelper::UpdateDynamic(const State& state) const {
+    if (model_ == nullptr) return;
     if (!ready_) return;
 
     for (auto& rm : meshes_) {
@@ -124,7 +129,7 @@ void RenderHelper::UpdateDynamic(const State& state) {
         const size_t particle_begin = rm.info.particle.begin;
         const size_t particle_count = rm.info.particle.count;
 
-        Mesh& mesh = rm.model.meshes[0];
+        const Mesh& mesh = rm.model.meshes[0];
 
         if (static_cast<size_t>(mesh.vertexCount) != particle_count) {
             throw std::runtime_error("RenderHelper::UpdateDynamic: mesh.vertexCount mismatch (topology out of sync)");
@@ -137,8 +142,8 @@ void RenderHelper::UpdateDynamic(const State& state) {
         ComputeNormalsXYZ(*model_, state, rm.info.tri, particle_begin, particle_count, mesh.normals);
 
         // raylib buffer slots: 0=positions, 2=normals
-        UpdateMeshBuffer(mesh, 0, mesh.vertices, mesh.vertexCount * 3 * (int)sizeof(float), 0);
-        UpdateMeshBuffer(mesh, 2, mesh.normals,  mesh.vertexCount * 3 * (int)sizeof(float), 0);
+        UpdateMeshBuffer(mesh, 0, mesh.vertices, mesh.vertexCount * 3 * static_cast<int>(sizeof(float)), 0);
+        UpdateMeshBuffer(mesh, 2, mesh.normals,  mesh.vertexCount * 3 * static_cast<int>(sizeof(float)), 0);
     }
 }
 
@@ -191,9 +196,9 @@ void RenderHelper::BuildIndicesU16(const MModel& model,
             throw std::runtime_error("BuildIndicesU16: triangle references vertex before particle_begin");
         }
 
-        const size_t i0 = static_cast<size_t>(g0 - particle_begin);
-        const size_t i1 = static_cast<size_t>(g1 - particle_begin);
-        const size_t i2 = static_cast<size_t>(g2 - particle_begin);
+        const auto i0 = static_cast<size_t>(g0 - particle_begin);
+        const auto i1 = static_cast<size_t>(g1 - particle_begin);
+        const auto i2 = static_cast<size_t>(g2 - particle_begin);
 
         if (i0 >= particle_count || i1 >= particle_count || i2 >= particle_count) {
             throw std::runtime_error("BuildIndicesU16: triangle references vertex out of this mesh particle range");
@@ -221,8 +226,6 @@ void RenderHelper::ComputeNormalsXYZ(const MModel& model,
 
     std::memset(dst_nxyz, 0, particle_count * 3 * sizeof(float));
 
-    constexpr float eps = 1e-12f;
-
     for (size_t t = 0; t < tri_range.count; ++t) {
         const triangle& tri = model.tris[tri_range.begin + t];
 
@@ -233,9 +236,9 @@ void RenderHelper::ComputeNormalsXYZ(const MModel& model,
         // 映射到 mesh 局部 index
         if (g0 < particle_begin || g1 < particle_begin || g2 < particle_begin) continue;
 
-        const size_t i0 = static_cast<size_t>(g0 - particle_begin);
-        const size_t i1 = static_cast<size_t>(g1 - particle_begin);
-        const size_t i2 = static_cast<size_t>(g2 - particle_begin);
+        const auto i0 = static_cast<size_t>(g0 - particle_begin);
+        const auto i1 = static_cast<size_t>(g1 - particle_begin);
+        const auto i2 = static_cast<size_t>(g2 - particle_begin);
 
         if (i0 >= particle_count || i1 >= particle_count || i2 >= particle_count) continue;
 
@@ -253,12 +256,12 @@ void RenderHelper::ComputeNormalsXYZ(const MModel& model,
 
     // normalize
     for (size_t i = 0; i < particle_count; ++i) {
+        constexpr float eps = 1e-12f;
         const float x = dst_nxyz[i * 3 + 0];
         const float y = dst_nxyz[i * 3 + 1];
         const float z = dst_nxyz[i * 3 + 2];
-        const float len2 = x * x + y * y + z * z;
 
-        if (len2 > eps) {
+        if (const float len2 = x * x + y * y + z * z; len2 > eps) {
             const float inv = 1.0f / std::sqrt(len2);
             dst_nxyz[i * 3 + 0] = x * inv;
             dst_nxyz[i * 3 + 1] = y * inv;

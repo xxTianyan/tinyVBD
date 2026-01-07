@@ -36,25 +36,21 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
     else
         Step(ctx.dt);
 
-    // UpdateModel(models_, scene_->meshes);
+    renderHelper_.Update(scene_->state_out_);
 }
 
 void Sample::Render([[maybe_unused]]AppContext &ctx) {
     BeginMode3D(ctx.orbitCam->camera);
 
     // floor
-    if (IsModelValid_(floor_)) {
+    if (RenderHelper::IsModelValid(floor_)) {
         DrawModel(floor_, Vector3{0,0,0}, 1.0f, WHITE);
     }
 
     // scene models
-    for (auto& m : models_) {
-        if (!IsModelValid_(m)) continue;
-        DrawModel(m, Vector3{0,0,0}, 1.0f, WHITE);
-    }
+    renderHelper_.Draw();
 
     EndMode3D();
-
 }
 
 void Sample::DrawUI([[maybe_unused]]AppContext &ctx) {
@@ -66,25 +62,14 @@ void Sample::CleanUp() {
     scene_.reset();
 }
 
-bool Sample::IsModelValid_(const Model &m) {
-    if ((m.meshCount > 0) && (m.meshes != nullptr))
-        return true;
-    return false;
-}
-
-void Sample::UnloadModelSafe_(Model &m) {
-    if (IsModelValid_(m))
-        UnloadModel(m);
-
-    m = Model{}; // make model invalid
+void Sample::BuildRenderResources() {
+    renderHelper_.BindModel(scene_->model_);
+    renderHelper_.Update(scene_->state_out_);      // need update once manually in case app is paused and pass sample update in main loop
 }
 
 void Sample:: DestroyRenderResources() {
-    for (auto& m : models_)
-        UnloadModelSafe_(m);
-    models_.clear();
-
-    UnloadModelSafe_(floor_);
+    renderHelper_.Shutdown();
+    RenderHelper::UnloadRLModelSafe(floor_);  // models that have no physical meanings is owned by sample itself
 }
 
 void Sample::CreateFloor([[maybe_unused]]AppContext& ctx) {

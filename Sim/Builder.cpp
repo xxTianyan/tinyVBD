@@ -85,11 +85,14 @@ MeshID Builder::add_cloth(const float width, const float height,
 
     model_.topology_version++;
 
-    return model_.mesh_infos.size() - 1;
+    return static_cast<int>(model_.mesh_infos.size()) - 1;
 }
 
 
 void Builder::PrepareCapacity(const size_t num) const {
+    /*
+     * TODO: Need to set different size of topology vec size in the future.
+     */
     ensure_capacity(model_.particle_pos0, num);
     ensure_capacity(model_.particle_vel0, num);
     ensure_capacity(model_.particle_inv_mass, num);

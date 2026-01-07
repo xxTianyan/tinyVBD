@@ -9,6 +9,7 @@
 #include <raylib.h>
 #include <vector>
 #include "ISample.h"
+#include "RenderHelper.h"
 
 class Scene;
 class VBDSolver;
@@ -42,12 +43,10 @@ public:
     // clean cpu resource
     virtual void CleanUp();
 
-    static bool IsModelValid_(const Model& m);
-
 protected:
     // api functions that need to be over-ride when inherited
     // upload mesh to get raylib model, tip: upload_all_models()
-    virtual void BuildRenderResources() {}
+    virtual void BuildRenderResources();
 
     // clean gpu resource
     virtual void DestroyRenderResources();
@@ -59,12 +58,8 @@ public:
     std::unique_ptr<VBDSolver> solver_;
 
     // for rendering
-    std::vector<Model> models_;
+    RenderHelper renderHelper_;
     Model floor_{};
-
-private:
-
-    static void UnloadModelSafe_(Model& m);
 
 };
 
