@@ -13,10 +13,6 @@ struct MModel;
 class ISample;
 
 using VertexID = uint16_t;
-using MeshID = int32_t;
-using RigidID = int32_t;
-using ShapeID = int32_t;
-using MaterialID = int32_t;
 constexpr VertexID INVALID_VERTEX_ID = 0xFFFF;
 
 using Vec3 = Eigen::Vector3f;

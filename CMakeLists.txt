@@ -83,6 +83,7 @@ target_include_directories(Taiyi
         ${CMAKE_CURRENT_SOURCE_DIR}/Sim
         ${CMAKE_CURRENT_SOURCE_DIR}/raylib_plugin
         ${CMAKE_CURRENT_SOURCE_DIR}/sample
+        ${CMAKE_CURRENT_SOURCE_DIR}/solver
         ${CMAKE_CURRENT_SOURCE_DIR}/solver/VBD
         ${CMAKE_CURRENT_SOURCE_DIR}/imgui_plugin)
 

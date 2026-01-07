@@ -15,28 +15,43 @@ struct MMaterial;
 
 // all static values are stored in model struct, all changing values are stored in state struct
 
+#include <array>
+#include <cstdint>
+#include <utility>  // std::swap
+
 class Scene {
 public:
-    explicit Scene(MModel&& model): model_(std::move(model)) {
-        state_in_ = model_.MakeState();
-        state_out_ = model_.MakeState();
-    };
+    explicit Scene(MModel&& model)
+        : model_(std::move(model)) {
+        // double cache
+        state_buf_[0] = model_.MakeState();
+        state_buf_[1] = model_.MakeState();
+    }
+
+
+    [[nodiscard]] State& state_in() noexcept { return state_buf_[in_idx_]; }
+    [[nodiscard]] State& state_out() noexcept { return state_buf_[out_idx_]; }
+
+
+    // O(1) 交换：等价 state_in, state_out = state_out, state_in
+    void SwapStates() noexcept { std::swap(in_idx_, out_idx_); }
 
     void InitStep();
 
+    void SetGravity(const Vec3& gravity) { gravity_ = gravity; }
+
     MModel model_;
-
-    State state_in_;
-
-    State state_out_;
 
     static bool RayNormal;
 
-    void SetGravity(const Vec3& gravity){ gravity_ = gravity; };
-
 private:
-    Vec3 gravity_;
+    std::array<State, 2> state_buf_{};
+    uint8_t in_idx_  = 0;
+    uint8_t out_idx_ = 1;
+
+    Vec3 gravity_{};
 };
+
 
 // helper functions for constructing scene
 template <class Vec>

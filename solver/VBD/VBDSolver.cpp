@@ -27,10 +27,6 @@ namespace {
             return;
         }
 
-        if (verts_per_elem > 4u) {
-            throw std::runtime_error("verts_per_elem > 4 is not supported by AdjacencyCSR::pack");
-        }
-
         for (uint32_t elem_id = 0; elem_id < static_cast<uint32_t>(elems.size()); ++elem_id) {
             const auto& elem = elems[elem_id];
             for (uint32_t k = 0; k < verts_per_elem; ++k) {
@@ -56,7 +52,7 @@ namespace {
         }
     }
 
-    void BuildAdjacency(const MModel& model, ForceElementAdjacencyInfo& adjacency_info) {
+    /*void BuildAdjacency() {
         const size_t num_nodes = model.total_particles();
         if (!model.edges.empty()) {
             BuildVertexIncidentCSR(
@@ -96,35 +92,35 @@ namespace {
             AssignOffsets(num_nodes, adjacency_info.vertex_tets.offsets);
             adjacency_info.vertex_tets.incidents.clear();
         }
-    }
+    }*/
 }
 
-void VBDSolver::Init(const Scene& scene) {
-    const auto& model = scene.model_;
-    const size_t num_nodes = model.total_particles();
+void VBDSolver::Init() {
+
+    const size_t num_nodes = model_->total_particles();
     inertia_.assign(num_nodes, Vec3::Zero());
     prev_pos_.assign(num_nodes, Vec3::Zero());
 
-    if (model.topology_version != topology_version_
+    if (model_->topology_version != topology_version_
         || adjacency_info_.vertex_faces.offsets.size() != num_nodes + 1) {
-        BuildAdjacency(model, adjacency_info_);
-        topology_version_ = model.topology_version;
+        BuildAdjacencyInfo();
+        topology_version_ = model_->topology_version;
     }
 }
 
-void VBDSolver::Step(Scene& scene, const float dt) {
+void VBDSolver::Step(State& state_in, State& state_out, float dt) {
+
     if (dt <= 0.0f) {
         return;
     }
 
-    Init(scene);
+    Init();
 
-    forward_step(scene, dt);
+    forward_step(state_in, dt);
     for (int iter = 0; iter < num_iters; ++iter) {
-        solve(scene, dt);
+        solve(state_in, state_out, dt);
     }
-    update_velocity(scene, dt);
-    scene.state_in_ = scene.state_out_;
+    update_velocity(state_out, dt);
 }
 
 void VBDSolver::accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> pos,
@@ -160,9 +156,9 @@ void VBDSolver::accumulate_stvk_triangle_force_hessian(const std::span<const Vec
     const auto f1_dot_f1 = f1.dot(f1);
     const auto f0_dot_f1 = f0.dot(f1);
 
-    const auto G00 = 0.5 * (f0_dot_f0 - 1.0);
-    const auto G11 = 0.5 * (f1_dot_f1 - 1.0);
-    const auto G01 = 0.5 * f0_dot_f1;
+    const auto G00 = 0.5f * (f0_dot_f0 - 1.0f);
+    const auto G11 = 0.5f * (f1_dot_f1 - 1.0f);
+    const auto G01 = 0.5f * f0_dot_f1;
 
     // Frobenius norm squared of Green strain: ||G||_F^2 = G00^2 + G11^2 + 2 * G01^2
     float G_frobenius_sq = G00 * G00 + G11 * G11 + 2.0f * G01 * G01;
@@ -321,41 +317,37 @@ void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian(const std:
     H += bending_hessian;
 }
 
-void VBDSolver::forward_step(Scene& scene, const float dt) {
-    const auto& model = scene.model_;
-    const auto& state_in = scene.state_in_;
-    auto& state_out = scene.state_out_;
+void VBDSolver::forward_step(State& state_in, const float dt) {
 
-    const size_t num_nodes = model.total_particles();
-    if (state_out.particle_pos.size() != num_nodes) {
-        state_out.resize(num_nodes);
-    }
-
-    state_out.particle_pos = state_in.particle_pos;
-    state_out.particle_vel = state_in.particle_vel;
-    state_out.particle_force = state_in.particle_force;
+    const size_t num_nodes = model_->total_particles();
 
     for (size_t i = 0; i < num_nodes; ++i) {
         prev_pos_[i] = state_in.particle_pos[i];
-        const float inv_mass = model.particle_inv_mass[i];
-        Vec3 accel = Vec3::Zero();
-        if (inv_mass > 0.0f) {
-            accel = state_in.particle_force[i] * inv_mass;
+
+        const float inv_mass = model_->particle_inv_mass[i];
+        if (inv_mass == 0) {
+            inertia_[i] = state_in.particle_pos[i];
+            continue;
         }
-        inertia_[i] = state_in.particle_pos[i] + dt * state_in.particle_vel[i] + dt * dt * accel;
+
+        const Vec3 vel_new = state_in.particle_vel[i] + (state_in.particle_force[i] * inv_mass * dt);
+        state_in.particle_pos[i] = state_in.particle_pos[i] + vel_new * dt;
+        inertia_[i] = state_in.particle_pos[i];
+
     }
 }
 
-void VBDSolver::solve(Scene& scene, const float dt) {
-    const auto& model = scene.model_;
-    auto& state_out = scene.state_out_;
-    const VertexID num_nodes = static_cast<VertexID>(model.total_particles());
+void VBDSolver::solve(State& state_in, State& state_out, const float dt) {
 
-    for (VertexID vtex_id = 0; vtex_id < num_nodes; ++vtex_id) {
-        auto& pos = state_out.particle_pos[vtex_id];
-        const auto& inv_mass = model.particle_inv_mass[vtex_id];
+    const auto num_nodes = model_->total_particles();
+
+    for (size_t vtex_id = 0; vtex_id < num_nodes; ++vtex_id) {
+        auto& pos = state_in.particle_pos[vtex_id];
+        auto& pos_new = state_out.particle_pos[vtex_id];
+        const auto& inv_mass = model_->particle_inv_mass[vtex_id];
 
         if (inv_mass <= 0.0f) {
+            pos_new = pos;
             continue;
         }
 
@@ -368,38 +360,37 @@ void VBDSolver::solve(Scene& scene, const float dt) {
         force += -(pos - inertia_[vtex_id]) / (inv_mass * dt * dt);
         hessian += Mat3::Identity() / (inv_mass * dt * dt);
 
+
         for (uint32_t f = face_adjacency.begin(vtex_id); f < face_adjacency.end(vtex_id); ++f) {
             const auto pack = face_adjacency.incidents[f];
             const auto face_id = AdjacencyCSR::unpack_id(pack);
             const auto order = AdjacencyCSR::unpack_order(pack);
-            const auto& face = model.tris[face_id];
-            accumulate_stvk_triangle_force_hessian(state_out.particle_pos, material_, face, order, force, hessian);
+            const auto& face = model_->tris[face_id];
+            accumulate_stvk_triangle_force_hessian(state_in.particle_pos, material_, face, order, force, hessian);
         }
 
         for (uint32_t e = edge_adjacency.begin(vtex_id); e < edge_adjacency.end(vtex_id); ++e) {
             const auto pack = edge_adjacency.incidents[e];
             const auto edge_id = AdjacencyCSR::unpack_id(pack);
             const auto order = AdjacencyCSR::unpack_order(pack);
-            const auto& edge = model.edges[edge_id];
-            accumulate_dihedral_angle_based_bending_force_hessian(state_out.particle_pos, material_, edge, order, force, hessian);
+            const auto& edge = model_->edges[edge_id];
+            accumulate_dihedral_angle_based_bending_force_hessian(state_in.particle_pos, material_, edge, order, force, hessian);
         }
 
         const auto delta_x = TY::SolveSPDOrRegularize(hessian, force);
-        pos += delta_x;
+        pos_new = pos + delta_x;
+        pos = pos_new;
+
+        // if parallel with color group, need to copy new pod back to state_in to satisfy GS.
+        // state_in.pos = state_out.pos ...
     }
 }
 
-void VBDSolver::update_velocity(Scene& scene, const float dt) {
-    const auto& model = scene.model_;
-    auto& state_out = scene.state_out_;
-    const size_t num_nodes = model.total_particles();
+void VBDSolver::update_velocity(State& state_out, const float dt) const {
+
+    const auto num_nodes = model_->total_particles();
 
     for (size_t i = 0; i < num_nodes; ++i) {
-        const float inv_mass = model.particle_inv_mass[i];
-        if (inv_mass <= 0.0f) {
-            state_out.particle_vel[i] = Vec3::Zero();
-            continue;
-        }
         state_out.particle_vel[i] = (state_out.particle_pos[i] - prev_pos_[i]) / dt;
     }
 }
