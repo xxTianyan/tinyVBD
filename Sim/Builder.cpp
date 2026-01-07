@@ -13,7 +13,7 @@ float M_PI = 3.14159265358979323846;
 /*
  * TODO: Add assert for number of node: should less than INVALID_VERTEX_ID
  */
-MeshID Builder::add_cloth(const float width, const float height,
+size_t Builder::add_cloth(const float width, const float height,
                              const int resX, const int resY,
                              const Vec3& center,
                              const ClothOrientation orientation,
@@ -88,6 +88,18 @@ MeshID Builder::add_cloth(const float width, const float height,
 
     // add mesh info
     AddMeshInfo(name, particle_count, model_.edges.size(), model_.tris.size(), model_.tets.size());
+
+    // assign mass and fix
+    std::fill(model_.particle_inv_mass.begin(), model_.particle_inv_mass.end(), 1.0f);
+    auto fix_left_z = [](const Vec3& pos) {
+        if (std::abs(pos.z() - 1.0f) < 1e-5 ) return true;
+        return false;
+    };
+    for (size_t i = model_.mesh_infos.back().particle.begin ; i < model_.mesh_infos.back().particle.end(); i++) {
+        if (fix_left_z(model_.particle_pos0[i]))
+            model_.particle_inv_mass[i] = 0.0f;
+    }
+
 
     model_.topology_version++;
 

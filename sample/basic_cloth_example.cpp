@@ -14,24 +14,7 @@ void BasicCloth::CreateWorld([[maybe_unused]]AppContext &ctx) {
     Builder builder(model);
     m_cloth_id_ = builder.add_cloth(2.0f, 2.0f, 10, 20, Vec3{0.0f, 3.0f, 0.0f}, ClothOrientation::Horizontal);
     scene_ = std::make_unique<Scene>(std::move(model));
-
-    /*
-    solver_ = std::make_unique<VBDSolver>(10);
-    auto m = std::make_unique<mesh_on_cpu>();
-    MeshBuilder::BuildCloth(m.get(), 2.0f, 2.0f, 10, 20, Vec3{0.0f, 3.0f, 0.0f}, ClothOrientation::Horizontal);
-    const auto mesh_id = scene_->Add(std::move(m));
-
-    // create and bind material
-    const auto material_id = scene_->AddMaterial(default_cloth());
-    scene_->BindMeshMaterial(mesh_id, material_id);
-
-    auto fix_left_z = [](const Vec3& pos) {
-        if (std::abs(pos.z() - 1.0f) < 1e-5 ) return true;
-        return false;
-    };
-
-    scene_->ApplyFixConsition(mesh_id, fix_left_z);*/
-
+    solver_ = std::make_unique<VBDSolver>(&scene_->model_, 10);
 }
 
 void BasicCloth::Render(AppContext &ctx) {
@@ -77,16 +60,8 @@ void BasicCloth::BindShaders(AppContext &ctx) {
 
 
 void BasicCloth::Step(const float dt) {
-    /*scene_->InitStep();
-    auto& meshes = scene_->meshes;
-    for (size_t mesh_id = 0; mesh_id < meshes.size(); mesh_id++) {
-        SimView view = scene_->MakeSimView(mesh_id);
-        // make inertia step
-        VBDSolver::forward_step(view, dt);
-        // iter newton step
-        for (size_t iter = 0; iter < 20; iter++)
-            VBDSolver::solve(view, dt);
-        VBDSolver::update_velocity(view, dt);
-    }*/
+    scene_->InitStep();
+    solver_->Step(scene_->state_in(), scene_->state_out(), dt);
+    scene_->SwapStates();
 }
 

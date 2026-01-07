@@ -14,7 +14,7 @@ class BasicCloth final : public Sample {
     void Render(AppContext &ctx) override;
 
 private:
-    MeshID m_cloth_id_{};
+    size_t m_cloth_id_{};
 };
 
 

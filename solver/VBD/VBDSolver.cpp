@@ -51,48 +51,6 @@ namespace {
             }
         }
     }
-
-    /*void BuildAdjacency() {
-        const size_t num_nodes = model.total_particles();
-        if (!model.edges.empty()) {
-            BuildVertexIncidentCSR(
-                num_nodes,
-                model.edges,
-                4u,
-                [](const edge& e, uint32_t k) { return static_cast<uint32_t>(e.vertices[k]); },
-                adjacency_info.vertex_edges
-            );
-        } else {
-            AssignOffsets(num_nodes, adjacency_info.vertex_edges.offsets);
-            adjacency_info.vertex_edges.incidents.clear();
-        }
-
-        if (!model.tris.empty()) {
-            BuildVertexIncidentCSR(
-                num_nodes,
-                model.tris,
-                3u,
-                [](const triangle& t, uint32_t k) { return static_cast<uint32_t>(t.vertices[k]); },
-                adjacency_info.vertex_faces
-            );
-        } else {
-            AssignOffsets(num_nodes, adjacency_info.vertex_faces.offsets);
-            adjacency_info.vertex_faces.incidents.clear();
-        }
-
-        if (!model.tets.empty()) {
-            BuildVertexIncidentCSR(
-                num_nodes,
-                model.tets,
-                4u,
-                [](const tetrahedron& t, uint32_t k) { return static_cast<uint32_t>(t.vertices[k]); },
-                adjacency_info.vertex_tets
-            );
-        } else {
-            AssignOffsets(num_nodes, adjacency_info.vertex_tets.offsets);
-            adjacency_info.vertex_tets.incidents.clear();
-        }
-    }*/
 }
 
 void VBDSolver::Init() {
@@ -118,7 +76,7 @@ void VBDSolver::Step(State& state_in, State& state_out, float dt) {
 
     forward_step(state_in, dt);
     for (int iter = 0; iter < num_iters; ++iter) {
-        solve(state_in, state_out, dt);
+        solve_serial(state_in, state_out, dt);
     }
     update_velocity(state_out, dt);
 }
@@ -320,6 +278,7 @@ void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian(const std:
 void VBDSolver::forward_step(State& state_in, const float dt) {
 
     const size_t num_nodes = model_->total_particles();
+    const auto& gravity = model_->gravity_;
 
     for (size_t i = 0; i < num_nodes; ++i) {
         prev_pos_[i] = state_in.particle_pos[i];
@@ -330,14 +289,15 @@ void VBDSolver::forward_step(State& state_in, const float dt) {
             continue;
         }
 
-        const Vec3 vel_new = state_in.particle_vel[i] + (state_in.particle_force[i] * inv_mass * dt);
+        const Vec3 vel_new = state_in.particle_vel[i] + (state_in.particle_force[i] * inv_mass * dt)
+                                    + gravity * dt;
         state_in.particle_pos[i] = state_in.particle_pos[i] + vel_new * dt;
         inertia_[i] = state_in.particle_pos[i];
 
     }
 }
 
-void VBDSolver::solve(State& state_in, State& state_out, const float dt) {
+void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) {
 
     const auto num_nodes = model_->total_particles();
 
@@ -379,10 +339,10 @@ void VBDSolver::solve(State& state_in, State& state_out, const float dt) {
 
         const auto delta_x = TY::SolveSPDOrRegularize(hessian, force);
         pos_new = pos + delta_x;
-        pos = pos_new;
 
-        // if parallel with color group, need to copy new pod back to state_in to satisfy GS.
+        // if parallel with color group, need to copy new pos back to state_in to satisfy GS.
         // state_in.pos = state_out.pos ...
+        pos = pos_new;
     }
 }
 
@@ -394,6 +354,49 @@ void VBDSolver::update_velocity(State& state_out, const float dt) const {
         state_out.particle_vel[i] = (state_out.particle_pos[i] - prev_pos_[i]) / dt;
     }
 }
+
+void VBDSolver::BuildAdjacencyInfo() {
+    const size_t num_nodes = model_->total_particles();
+    if (!model_->edges.empty()) {
+        BuildVertexIncidentCSR(
+            num_nodes,
+            model_->edges,
+            4u,
+            [](const edge& e, uint32_t k) { return static_cast<uint32_t>(e.vertices[k]); },
+            adjacency_info_.vertex_edges
+        );
+    } else {
+        AssignOffsets(num_nodes, adjacency_info_.vertex_edges.offsets);
+        adjacency_info_.vertex_edges.incidents.clear();
+    }
+
+    if (!model_->tris.empty()) {
+        BuildVertexIncidentCSR(
+            num_nodes,
+            model_->tris,
+            3u,
+            [](const triangle& t, uint32_t k) { return static_cast<uint32_t>(t.vertices[k]); },
+            adjacency_info_.vertex_faces
+        );
+    } else {
+        AssignOffsets(num_nodes, adjacency_info_.vertex_faces.offsets);
+        adjacency_info_.vertex_faces.incidents.clear();
+    }
+
+    if (!model_->tets.empty()) {
+        BuildVertexIncidentCSR(
+            num_nodes,
+            model_->tets,
+            4u,
+            [](const tetrahedron& t, uint32_t k) { return static_cast<uint32_t>(t.vertices[k]); },
+            adjacency_info_.vertex_tets
+        );
+    } else {
+        AssignOffsets(num_nodes, adjacency_info_.vertex_tets.offsets);
+        adjacency_info_.vertex_tets.incidents.clear();
+    }
+}
+
 
 
 

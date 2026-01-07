@@ -43,7 +43,7 @@ class Builder {
 public:
     explicit Builder(MModel& model) : model_(model) {};
 
-    [[nodiscard]] MeshID add_cloth(float width, float height, int resX, int resY, const Vec3& center = Vec3(0,0,0),
+    [[nodiscard]] size_t add_cloth(float width, float height, int resX, int resY, const Vec3& center = Vec3(0,0,0),
                         ClothOrientation orientation = ClothOrientation::Vertical, const char* = "cloth") const;
 
     // void add_rigidbody();
@@ -53,7 +53,6 @@ private:
     MModel& model_;
 
     void PrepareCapacity(size_t num) const;
-
 
     void AddMeshInfo(const char* name, size_t n_particle, size_t n_edge,
                 size_t n_tri, size_t n_tet) const;

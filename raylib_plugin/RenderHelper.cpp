@@ -51,7 +51,7 @@ void RenderHelper::UnloadRLModelSafe(Model &rl_model) {
     }
 }
 
-Model& RenderHelper::GetRLModel(const MeshID mesh_id) {
+Model& RenderHelper::GetRLModel(const size_t mesh_id) {
     return meshes_[mesh_id].model;
 }
 

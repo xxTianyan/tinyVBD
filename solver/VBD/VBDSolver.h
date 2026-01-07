@@ -13,7 +13,7 @@
 
 
 
-class VBDSolver : public ISolver {
+class VBDSolver final : public ISolver {
 
 public:
     explicit VBDSolver(const MModel* model, const int num_iters, const MMaterial& material = default_cloth())
@@ -26,7 +26,7 @@ public:
 
     void forward_step(State& state_in, float dt);
 
-    void solve(State& state_in, State& state_out, float dt);
+    void solve_serial(State& state_in, State& state_out, float dt);
 
     void update_velocity(State& stat_out, float dt) const;
 

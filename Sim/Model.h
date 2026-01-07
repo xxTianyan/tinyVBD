@@ -165,15 +165,6 @@ struct State {
         particle_force.resize(n_nodes);
     }
 
-    void clear() {
-        particle_pos.clear();
-        particle_vel.clear();
-        particle_force.clear();
-    }
-
-    void clean_force() {
-        std::fill(particle_force.begin(), particle_force.end(), Vec3::Zero());
-    }
 };
 
 struct MModel {
@@ -212,6 +203,8 @@ struct MModel {
     // rigid body
     // ...
 
+    // global
+    Vec3 gravity_{};
 };
 
 

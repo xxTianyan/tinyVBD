@@ -31,7 +31,7 @@ public:
     void Shutdown();                 // release all gpu resources
     [[nodiscard]] bool Ready() const { return ready_; }
 
-    Model& GetRLModel(MeshID mesh_id);
+    Model& GetRLModel(size_t mesh_id);
 
 private:
     struct RenderMesh {

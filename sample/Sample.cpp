@@ -35,7 +35,7 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
 
     Step(ctx.dt);
 
-    renderHelper_.Update(scene_->state_out_);
+    renderHelper_.Update(scene_->state_out());
 }
 
 void Sample::Render([[maybe_unused]]AppContext &ctx) {
@@ -57,8 +57,8 @@ void Sample::DrawUI([[maybe_unused]]AppContext &ctx) {
 }
 
 void Sample::Reset([[maybe_unused]]AppContext &ctx) {
-    scene_->state_in_ = scene_->model_.MakeState();
-    scene_->state_out_ = scene_->model_.MakeState();
+    scene_->state_in() = scene_->model_.MakeState();
+    scene_->state_out() = scene_->model_.MakeState();
 }
 
 void Sample::CleanUp() {
@@ -68,7 +68,7 @@ void Sample::CleanUp() {
 
 void Sample::BuildRenderResources() {
     renderHelper_.BindModel(scene_->model_);
-    renderHelper_.Update(scene_->state_out_);      // need update once manually in case app is paused and pass sample update in main loop
+    renderHelper_.Update(scene_->state_out());      // need update once manually in case app is paused and pass sample update in main loop
 }
 
 void Sample:: DestroyRenderResources() {
@@ -124,42 +124,6 @@ void Sample::CreateFloor([[maybe_unused]]AppContext& ctx) {
     SetShaderValue(floor_shader, fogDensity, &floorFogDensity, SHADER_UNIFORM_FLOAT);
     SetShaderValue(floor_shader, fogColor, &floorFogColor, SHADER_UNIFORM_VEC3);
 }
-
-
-/*my_Sample::Sample() {
-    m_world = std::make_unique<Scene>(Vec3{0.0f, -9.81f, 0.0f});
-    m_shader_manager = std::make_unique<ShaderManager>();
-    m_solver = std::make_unique<VBDSolver>(10);
-}
-
-void my_Sample::CleanUp() {
-    auto UnloadModelIfLoaded = [](Model& m) {
-        if ((m.meshCount > 0) && (m.meshes != nullptr)) {
-            UnloadModel(m);
-            m = Model{};
-        }
-    };
-    UnloadModelIfLoaded(m_floor);
-    for (auto& m : m_models) {
-        UnloadModelIfLoaded(m);
-    }
-    UnloadModelIfLoaded(m_floor);
-    m_shader_manager->UnloadAll();
-}
-
-void my_Sample::Step(const float dt) {
-    m_world->InitStep();
-    auto& meshes = m_world->meshes;
-    for (size_t mesh_id = 0; mesh_id < meshes.size(); mesh_id++) {
-        SimView view = m_world->MakeSimView(mesh_id);
-        // make inertia step
-        VBDSolver::forward_step(view, dt);
-        // iter newton step
-        for (size_t iter = 0; iter < 20; iter++)
-            VBDSolver::solve(view, dt);
-        VBDSolver::update_velocity(view, dt);
-    }
-}*/
 
 
 
