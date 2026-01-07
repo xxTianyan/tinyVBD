@@ -2,12 +2,132 @@
 // Created by tianyan on 12/22/25.
 //
 
-#include <iostream>
+#include <stdexcept>
 #include "VBDSolver.h"
-#include "MaterialParams.hpp"
 #include "Math.hpp"
 
-/*void VBDSolver::accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> pos,
+namespace {
+    void AssignOffsets(const size_t num_nodes, std::vector<uint32_t>& offsets) {
+        offsets.assign(num_nodes + 1, 0u);
+    }
+
+    template <class Elem, class GetVertex>
+    void BuildVertexIncidentCSR(const size_t num_nodes,
+                                const std::vector<Elem>& elems,
+                                const uint32_t verts_per_elem,
+                                GetVertex get_vertex,
+                                AdjacencyCSR& adj) {
+        auto& offsets = adj.offsets;
+        auto& incidents = adj.incidents;
+
+        offsets.assign(num_nodes + 1, 0u);
+        incidents.clear();
+
+        if (elems.empty()) {
+            return;
+        }
+
+        if (verts_per_elem > 4u) {
+            throw std::runtime_error("verts_per_elem > 4 is not supported by AdjacencyCSR::pack");
+        }
+
+        for (uint32_t elem_id = 0; elem_id < static_cast<uint32_t>(elems.size()); ++elem_id) {
+            const auto& elem = elems[elem_id];
+            for (uint32_t k = 0; k < verts_per_elem; ++k) {
+                const auto v = static_cast<uint32_t>(get_vertex(elem, k));
+                offsets[v + 1] += 1u;
+            }
+        }
+
+        for (size_t i = 1; i < offsets.size(); ++i) {
+            offsets[i] += offsets[i - 1];
+        }
+
+        incidents.resize(offsets.back());
+        std::vector<uint32_t> cursor = offsets;
+
+        for (uint32_t elem_id = 0; elem_id < static_cast<uint32_t>(elems.size()); ++elem_id) {
+            const auto& elem = elems[elem_id];
+            for (uint32_t k = 0; k < verts_per_elem; ++k) {
+                const auto v = static_cast<uint32_t>(get_vertex(elem, k));
+                const uint32_t dst = cursor[v]++;
+                incidents[dst] = AdjacencyCSR::pack(elem_id, k);
+            }
+        }
+    }
+
+    void BuildAdjacency(const MModel& model, ForceElementAdjacencyInfo& adjacency_info) {
+        const size_t num_nodes = model.total_particles();
+        if (!model.edges.empty()) {
+            BuildVertexIncidentCSR(
+                num_nodes,
+                model.edges,
+                4u,
+                [](const edge& e, uint32_t k) { return static_cast<uint32_t>(e.vertices[k]); },
+                adjacency_info.vertex_edges
+            );
+        } else {
+            AssignOffsets(num_nodes, adjacency_info.vertex_edges.offsets);
+            adjacency_info.vertex_edges.incidents.clear();
+        }
+
+        if (!model.tris.empty()) {
+            BuildVertexIncidentCSR(
+                num_nodes,
+                model.tris,
+                3u,
+                [](const triangle& t, uint32_t k) { return static_cast<uint32_t>(t.vertices[k]); },
+                adjacency_info.vertex_faces
+            );
+        } else {
+            AssignOffsets(num_nodes, adjacency_info.vertex_faces.offsets);
+            adjacency_info.vertex_faces.incidents.clear();
+        }
+
+        if (!model.tets.empty()) {
+            BuildVertexIncidentCSR(
+                num_nodes,
+                model.tets,
+                4u,
+                [](const tetrahedron& t, uint32_t k) { return static_cast<uint32_t>(t.vertices[k]); },
+                adjacency_info.vertex_tets
+            );
+        } else {
+            AssignOffsets(num_nodes, adjacency_info.vertex_tets.offsets);
+            adjacency_info.vertex_tets.incidents.clear();
+        }
+    }
+}
+
+void VBDSolver::Init(const Scene& scene) {
+    const auto& model = scene.model_;
+    const size_t num_nodes = model.total_particles();
+    inertia_.assign(num_nodes, Vec3::Zero());
+    prev_pos_.assign(num_nodes, Vec3::Zero());
+
+    if (model.topology_version != topology_version_
+        || adjacency_info_.vertex_faces.offsets.size() != num_nodes + 1) {
+        BuildAdjacency(model, adjacency_info_);
+        topology_version_ = model.topology_version;
+    }
+}
+
+void VBDSolver::Step(Scene& scene, const float dt) {
+    if (dt <= 0.0f) {
+        return;
+    }
+
+    Init(scene);
+
+    forward_step(scene, dt);
+    for (int iter = 0; iter < num_iters; ++iter) {
+        solve(scene, dt);
+    }
+    update_velocity(scene, dt);
+    scene.state_in_ = scene.state_out_;
+}
+
+void VBDSolver::accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> pos,
                                                    const MMaterial& mat,
                                                    const triangle& face,
                                                    const uint32_t vtex_order,
@@ -201,77 +321,88 @@ void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian(const std:
     H += bending_hessian;
 }
 
+void VBDSolver::forward_step(Scene& scene, const float dt) {
+    const auto& model = scene.model_;
+    const auto& state_in = scene.state_in_;
+    auto& state_out = scene.state_out_;
 
-void VBDSolver::forward_step(SimView &view, const float dt) {
-    const size_t num_nodes = view.pos.size();
+    const size_t num_nodes = model.total_particles();
+    if (state_out.particle_pos.size() != num_nodes) {
+        state_out.resize(num_nodes);
+    }
+
+    state_out.particle_pos = state_in.particle_pos;
+    state_out.particle_vel = state_in.particle_vel;
+    state_out.particle_force = state_in.particle_force;
+
     for (size_t i = 0; i < num_nodes; ++i) {
-        view.prev_pos[i] = view.pos[i];  // record previous pos
-        view.inertia_pos[i] = view.pos[i] + dt * view.vel[i] + dt * dt * (view.accel[i] + view.gravity);
+        prev_pos_[i] = state_in.particle_pos[i];
+        const float inv_mass = model.particle_inv_mass[i];
+        Vec3 accel = Vec3::Zero();
+        if (inv_mass > 0.0f) {
+            accel = state_in.particle_force[i] * inv_mass;
+        }
+        inertia_[i] = state_in.particle_pos[i] + dt * state_in.particle_vel[i] + dt * dt * accel;
     }
 }
 
-void VBDSolver::solve(SimView& view, const float dt) {
-    const VertexID num_nodes = view.pos.size();  // the number of nodes always should less than 0xFFFF
+void VBDSolver::solve(Scene& scene, const float dt) {
+    const auto& model = scene.model_;
+    auto& state_out = scene.state_out_;
+    const VertexID num_nodes = static_cast<VertexID>(model.total_particles());
 
-    // solve
     for (VertexID vtex_id = 0; vtex_id < num_nodes; ++vtex_id) {
+        auto& pos = state_out.particle_pos[vtex_id];
+        const auto& inv_mass = model.particle_inv_mass[vtex_id];
 
-        if (view.fixed[vtex_id]) continue;  // fixed flag up
+        if (inv_mass <= 0.0f) {
+            continue;
+        }
 
-        auto& pos = view.pos[vtex_id];
-        const auto& inv_mass = view.inv_mass[vtex_id];
+        const auto& face_adjacency = adjacency_info_.vertex_faces;
+        const auto& edge_adjacency = adjacency_info_.vertex_edges;
 
-        if (inv_mass <= 0.0f) continue;
-
-        const auto& inertia_pos = view.inertia_pos[vtex_id];
-        // const auto& prev_pos = view.prev_pos[vtex_id];
-        const auto& face_adjacency = view.adj.vertex_faces;
-        const auto& edge_adjacency = view.adj.vertex_edges;
-        const auto& mat = view.material_params;
-
-        // init force and hessian
         Vec3 force = Vec3::Zero();
         Mat3 hessian = Mat3::Zero();
 
-        // accumulate inertia force and hessian
-        force += - (pos - inertia_pos) / (inv_mass * dt * dt);
+        force += -(pos - inertia_[vtex_id]) / (inv_mass * dt * dt);
         hessian += Mat3::Identity() / (inv_mass * dt * dt);
 
-        // accumulate stvk triangle element force and hessian
-        for (uint32_t f = face_adjacency.begin(vtex_id); f < face_adjacency.end(vtex_id); ++f ) {
+        for (uint32_t f = face_adjacency.begin(vtex_id); f < face_adjacency.end(vtex_id); ++f) {
             const auto pack = face_adjacency.incidents[f];
             const auto face_id = AdjacencyCSR::unpack_id(pack);
-            const auto _order = AdjacencyCSR::unpack_order(pack);
-            const auto& _face = view.tris[face_id];
-            accumulate_stvk_triangle_force_hessian(view.pos, mat, _face, _order, force, hessian);
+            const auto order = AdjacencyCSR::unpack_order(pack);
+            const auto& face = model.tris[face_id];
+            accumulate_stvk_triangle_force_hessian(state_out.particle_pos, material_, face, order, force, hessian);
         }
-        // accumulate bending element force and hessian
+
         for (uint32_t e = edge_adjacency.begin(vtex_id); e < edge_adjacency.end(vtex_id); ++e) {
             const auto pack = edge_adjacency.incidents[e];
             const auto edge_id = AdjacencyCSR::unpack_id(pack);
-            const auto _order = AdjacencyCSR::unpack_order(pack);
-            const auto& _edge = view.edges[edge_id];
-            accumulate_dihedral_angle_based_bending_force_hessian(view.pos, mat, _edge, _order, force, hessian);
+            const auto order = AdjacencyCSR::unpack_order(pack);
+            const auto& edge = model.edges[edge_id];
+            accumulate_dihedral_angle_based_bending_force_hessian(state_out.particle_pos, material_, edge, order, force, hessian);
         }
 
-        // solve linear system and update result
         const auto delta_x = TY::SolveSPDOrRegularize(hessian, force);
         pos += delta_x;
     }
 }
 
-void VBDSolver::update_velocity(SimView& view, const float dt) {
-    for (size_t i = 0; i < view.pos.size(); ++i) {
-        if (view.fixed[i]) {
-            view.vel[i] = Vec3::Zero();
+void VBDSolver::update_velocity(Scene& scene, const float dt) {
+    const auto& model = scene.model_;
+    auto& state_out = scene.state_out_;
+    const size_t num_nodes = model.total_particles();
+
+    for (size_t i = 0; i < num_nodes; ++i) {
+        const float inv_mass = model.particle_inv_mass[i];
+        if (inv_mass <= 0.0f) {
+            state_out.particle_vel[i] = Vec3::Zero();
             continue;
         }
-        view.vel[i] = (view.pos[i] - view.prev_pos[i]) / dt;
+        state_out.particle_vel[i] = (state_out.particle_pos[i] - prev_pos_[i]) / dt;
     }
-}*/
-
-
-
+}
 
 
 

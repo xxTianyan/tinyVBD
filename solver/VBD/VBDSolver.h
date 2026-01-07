@@ -5,22 +5,30 @@
 #ifndef TAIYI_VBDDYNAMICS_H
 #define TAIYI_VBDDYNAMICS_H
 
+#include <span>
 #include <Types.h>
 #include "Scene.h"
+#include "ISolver.h"
+#include "MaterialParams.hpp"
 
 
 
-class VBDSolver {
+class VBDSolver : public ISolver {
 
 public:
-    explicit VBDSolver(const int num_iters) : num_iters(num_iters) {}
+    explicit VBDSolver(const int num_iters, const MMaterial& material = default_cloth())
+        : num_iters(num_iters), material_(material) {}
     ~VBDSolver() = default;
 
-    // static void forward_step(SimView& view, float dt);
+    void Init(const Scene& scene) override;
 
-    // static void solve(SimView& view, float dt);
+    void Step(Scene& scene, float dt) override;
 
-    // static void update_velocity(SimView& view, float dt);
+    void forward_step(Scene& scene, float dt);
+
+    void solve(Scene& scene, float dt);
+
+    void update_velocity(Scene& scene, float dt);
 
     static void accumulate_stvk_triangle_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
                                         const triangle& face, uint32_t vtex_order, Vec3& force, Mat3& H);
@@ -30,9 +38,11 @@ public:
 
 private:
     int num_iters;
-    std::vector<Vec3> inertia;
-    std::vector<Vec3> prev_pos;
-    std::vector<ForceElementAdjacencyInfo> adjacencyInfo;
+    MMaterial material_;
+    std::vector<Vec3> inertia_;
+    std::vector<Vec3> prev_pos_;
+    ForceElementAdjacencyInfo adjacency_info_;
+    uint64_t topology_version_ = 0;
 };
 
 

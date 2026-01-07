@@ -12,8 +12,8 @@ public:
     ISolver() = default;
     virtual ~ISolver() = default;
 
-    virtual void step(const float dt) = 0;
-    virtual void init(const Scene& scene);
+    virtual void Init(const Scene& scene) = 0;
+    virtual void Step(Scene& scene, float dt) = 0;
 };
 
 
