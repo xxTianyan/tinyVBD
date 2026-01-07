@@ -38,7 +38,6 @@ void BasicCloth::Render(AppContext &ctx) {
 
     BeginMode3D(ctx.orbitCam->camera);
 
-
     // floor
     if (RenderHelper::IsModelValid(floor_)) {
         DrawModel(floor_, Vector3{0,0,0}, 1.0f, WHITE);
@@ -74,28 +73,6 @@ void BasicCloth::BindShaders(AppContext &ctx) {
     SetShaderValue(cloth_shader, rough,   &clothRoughness, SHADER_UNIFORM_FLOAT);
     SetShaderValue(cloth_shader, specStr, &clothSpec,      SHADER_UNIFORM_FLOAT);
     SetShaderValue(cloth_shader, wrap,    &clothWrap,      SHADER_UNIFORM_FLOAT);
-
-    /*ctx.shader_manager->LoadShaderProgram("cloth", "../resources/shaders/cloth.vs", "../resources/shaders/cloth.fs");
-    const auto cloth_shader = ctx.shader_manager->Get("cloth")->shader;
-    ShaderManager::BindMatrices(cloth_shader);
-    ShaderManager::SetCommonShaderParams(cloth_shader);
-    cloth_shader.locs[SHADER_LOC_MAP_DIFFUSE] = GetShaderLocation(cloth_shader, "texture0");
-    auto m_cloth = models_[0];
-    m_cloth.materials[0].shader = cloth_shader;
-    m_cloth.materials[0].maps[MATERIAL_MAP_ALBEDO].color = Color{230, 200, 160, 255};
-    // m_cloth.materials[0].maps[MATERIAL_MAP_ALBEDO].texture = clothAlbedoTex;          // if texture
-
-    const int rough = ShaderManager::CheckSetShaderLocation(cloth_shader, "roughness");
-    const int specStr = ShaderManager::CheckSetShaderLocation(cloth_shader, "specStrength");
-    const int wrap = ShaderManager::CheckSetShaderLocation(cloth_shader, "wrapDiffuse");
-
-    constexpr float clothRoughness = 0.80f;  // 越大越哑、highlight 越宽
-    constexpr float clothSpec      = 0.22f;  // 高光强度：太大像塑料，太小没质感
-    constexpr float clothWrap      = 0.25f;  // 漫反射包裹：增大可让暗面不至于太死
-    SetShaderValue(cloth_shader, rough,   &clothRoughness, SHADER_UNIFORM_FLOAT);
-    SetShaderValue(cloth_shader, specStr, &clothSpec,      SHADER_UNIFORM_FLOAT);
-    SetShaderValue(cloth_shader, wrap,    &clothWrap,      SHADER_UNIFORM_FLOAT);*/
-
 }
 
 

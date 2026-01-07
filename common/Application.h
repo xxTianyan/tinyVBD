@@ -34,7 +34,7 @@ public:
         bool resizable = true;
     };
 
-    explicit Application(Desc desc);
+    explicit Application(const Desc &desc);
     ~Application();
 
     // get registry sample factory

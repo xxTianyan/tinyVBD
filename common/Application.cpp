@@ -10,7 +10,7 @@
 #include "CameraController.h"
 
 
-Application::Application(Desc desc) :
+Application::Application(const Desc &desc) :
         desc_(desc),
         orbitCam_(CreateOrbitCamera(Vector3{ 10.0f, 7.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f })) {
 
@@ -64,7 +64,6 @@ void Application::RequestSwitchSample_(const SampleId id) {
 }
 
 void Application::RequestReloadSample_() {
-    // TODO: use initial state to reload sample
     pending_.type = PendingActionType::ReloadSample;
     pending_.target = current_id_;
 }
@@ -159,9 +158,7 @@ void Application::ExecutePending_() {
             break;
 
         case PendingActionType::ReloadSample: {
-            // 关键：销毁并重建同一个 sample（最稳 reset）
-            ExitCurrentSample_();
-            EnterSample_(pending_.target);
+           current_->Reset(ctx_);
         } break;
 
         case PendingActionType::SwitchSample: {
@@ -231,7 +228,8 @@ void Application::Run(const SampleId start_sample) {
         ExecutePending_();
     }
 
-    // careful with these two cleaning functions
+    // careful with exiting
+    shader_manager_.UnloadAll();
     ExitCurrentSample_();
     ShutdownWindowAndUI_();
 }

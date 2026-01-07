@@ -15,7 +15,7 @@ void Sample::OnEnter(AppContext &ctx) {
     // upload mesh to gpu
     BuildRenderResources();
 
-    // bind shaders
+    // init and bind shaders
     BindShaders(ctx);
 
 }
@@ -55,6 +55,11 @@ void Sample::Render([[maybe_unused]]AppContext &ctx) {
 
 void Sample::DrawUI([[maybe_unused]]AppContext &ctx) {
     // no panel on default
+}
+
+void Sample::Reset([[maybe_unused]]AppContext &ctx) {
+    scene_->state_in_ = scene_->model_.MakeState();
+    scene_->state_out_ = scene_->model_.MakeState();
 }
 
 void Sample::CleanUp() {

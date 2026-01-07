@@ -33,6 +33,8 @@ public:
 
     void DrawUI(AppContext& ctx) override;
 
+    void Reset(AppContext& ctx) override;
+
     virtual void CreateFloor(AppContext& ctx);
 
     // api functions that need to be over-ride when inherited
@@ -44,8 +46,6 @@ public:
     virtual void CleanUp();
 
 protected:
-    // api functions that need to be over-ride when inherited
-    // upload mesh to get raylib model, tip: upload_all_models()
     virtual void BuildRenderResources();
 
     // clean gpu resource

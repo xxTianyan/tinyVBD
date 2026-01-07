@@ -28,6 +28,9 @@ public:
 
     // unique ui panel
     virtual void DrawUI(AppContext& ctx) = 0;
+
+    // reload sample
+    virtual void Reset(AppContext& ctx) = 0;
 };
 
 using SamplePtr = std::unique_ptr<ISample>;
