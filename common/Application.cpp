@@ -64,6 +64,7 @@ void Application::RequestSwitchSample_(const SampleId id) {
 }
 
 void Application::RequestReloadSample_() {
+    // TODO: use initial state to reload sample
     pending_.type = PendingActionType::ReloadSample;
     pending_.target = current_id_;
 }

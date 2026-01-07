@@ -144,7 +144,7 @@ struct range {
 };
 
 struct MeshInfo {
-    const char* name;
+    std::string name;
     range particle;
     range edge;
     range tri;
@@ -177,7 +177,6 @@ struct State {
 };
 
 struct MModel {
-    std::vector<std::string> name_pool_;
     // deformable body
     std::vector<MeshInfo> mesh_infos;
     // topology

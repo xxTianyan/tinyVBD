@@ -39,28 +39,14 @@ private:
     };
 
 private:
-    void Rebuild();                  // 用 model_ 重建所有 GPU mesh/model
+    void Rebuild();   // 用 model_ 重建所有 GPU mesh/model
     void UpdateDynamic(const State& state) const;
 
-    static void FillPositionsXYZ(const State& state,
-                                 size_t particle_begin,
-                                 size_t particle_count,
-                                 float* dst_xyz);
+    static void FillPositionsXYZ(const State& state, size_t particle_begin, size_t particle_count, float* dst_xyz);
 
-    static void ComputeNormalsXYZ(const MModel& model,
-                                  const State& state,
-                                  range tri_range,
-                                  size_t particle_begin,
-                                  size_t particle_count,
-                                  float* dst_nxyz);
+    static void ComputeNormalsXYZ(const MModel& model, const State& state, range tri_range, size_t particle_begin, size_t particle_count, float* dst_nxyz);
 
-    static void BuildIndicesU16(const MModel& model,
-                               range tri_range,
-                               size_t particle_begin,
-                               size_t particle_count,
-                               unsigned short* dst_indices);
-
-
+    static void BuildIndicesU16(const MModel& model,range tri_range, size_t particle_begin, size_t particle_count, unsigned short* dst_indices);
 
 private:
     const MModel* model_ = nullptr;

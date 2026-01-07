@@ -35,9 +35,7 @@ private:
     std::vector<ForceElementAdjacencyInfo> adjacencyInfo;
 };
 
-struct Node {
-    VertexID idx = INVALID_VERTEX_ID;
-};
+
 
 
 

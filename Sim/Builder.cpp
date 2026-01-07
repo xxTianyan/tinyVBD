@@ -16,13 +16,19 @@ float M_PI = 3.14159265358979323846;
 MeshID Builder::add_cloth(const float width, const float height,
                              const int resX, const int resY,
                              const Vec3& center,
-                             const ClothOrientation orientation) const {
+                             const ClothOrientation orientation,
+                             const char* name) const {
 
     if (resX <= 0 || resY <= 0)
         throw std::runtime_error("Builder::add_cloth: resX <= 0 || resY <= 0");
 
-    const size_t num_nodes = static_cast<size_t>(resX + 1) * static_cast<size_t>(resY + 1);
-    PrepareCapacity(num_nodes);
+    const size_t particle_count = static_cast<size_t>(resX + 1) * static_cast<size_t>(resY + 1);
+
+    // raylib Mesh indices is u16：the number of a single mesh must be less than 0xFFFF
+    if (particle_count > static_cast<size_t>(std::numeric_limits<unsigned short>::max()) + 1ull) {
+        throw std::runtime_error("Builder::add_cloth: particle_count > 65536, raylib u16 indices not supported. Split mesh.");
+    }
+    PrepareCapacity(particle_count);
 
     const float dx = width  / static_cast<float>(resX);
     const float dy = height / static_cast<float>(resY);
@@ -81,7 +87,7 @@ MeshID Builder::add_cloth(const float width, const float height,
     }
 
     // add mesh info
-    AddMeshInfo("cloth", num_nodes, model_.edges.size(), model_.tris.size(), model_.tets.size());
+    AddMeshInfo(name, particle_count, model_.edges.size(), model_.tris.size(), model_.tets.size());
 
     model_.topology_version++;
 
@@ -111,9 +117,7 @@ void Builder::AddMeshInfo(const char* name, const size_t n_particle, const size_
             const size_t n_tri, const size_t n_tet) const {
 
     MeshInfo info{};
-    model_.name_pool_.emplace_back(name);
-    info.name = model_.name_pool_.back().c_str();
-
+    info.name = name;
     info.particle = range{model_.particle_pos0.size() - n_particle, n_particle};
     info.edge = range{model_.edges.size() - n_edge, n_edge};
     info.tri = range{model_.tris.size() - n_tri, n_tri};

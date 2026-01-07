@@ -43,8 +43,8 @@ class Builder {
 public:
     explicit Builder(MModel& model) : model_(model) {};
 
-    MeshID add_cloth(float width, float height, int resX, int resY, const Vec3& center = Vec3(0,0,0),
-                        ClothOrientation orientation = ClothOrientation::Vertical) const;
+    [[nodiscard]] MeshID add_cloth(float width, float height, int resX, int resY, const Vec3& center = Vec3(0,0,0),
+                        ClothOrientation orientation = ClothOrientation::Vertical, const char* = "cloth") const;
 
     // void add_rigidbody();
 
