@@ -32,7 +32,7 @@ private:
             throw std::invalid_argument("MMaterial: E must be > 0");
         }
         // 3D isotropic linear elasticity stability range (common)
-        if (!(nu_ > -1.0f && nu_ < 0.5f)) {
+        if (!(nu_ > -1.0f && nu_ <= 0.5f)) {
             throw std::invalid_argument("MMaterial: nu must be in (-1, 0.5) for 3D isotropic linear elasticity");
         }
 
@@ -46,7 +46,7 @@ private:
 
 
 inline MMaterial default_cloth() {
-    return {1e4f, 0.1f, 0.5f};
+    return {2.5e3f, 0.25f, 1e1f};
 };
 
 

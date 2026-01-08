@@ -6,7 +6,6 @@
 #define TAIYI_ADJACENCYCSR_HPP
 
 #include <vector>
-#include <cstdint>
 #include "Types.h"
 
 struct AdjacencyCSR {

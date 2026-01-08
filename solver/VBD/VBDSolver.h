@@ -30,12 +30,18 @@ public:
 
     void update_velocity(State& stat_out, float dt) const;
 
+
     static void accumulate_stvk_triangle_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
                                         const triangle& face, uint32_t vtex_order, Vec3& force, Mat3& H);
+
+    static void accumulate_stvk_triangle_force_hessian_serial(std::span<const Vec3> pos, const MMaterial& mat,
+                                    const triangle& face, uint32_t vtex_order, Vec3& force, Mat3& H);
 
     static void accumulate_dihedral_angle_based_bending_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
                                         const edge& e, uint32_t vtex_order, Vec3& force, Mat3& H);
 
+    static void accumulate_dihedral_angle_based_bending_force_hessian_serial(std::span<const Vec3> pos, const MMaterial& mat,
+                                    const edge& e, uint32_t vtex_order, Vec3& force, Mat3& H);
 private:
 
     void BuildAdjacencyInfo();
