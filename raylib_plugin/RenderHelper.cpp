@@ -157,6 +157,7 @@ void RenderHelper::Draw() const {
     for (const auto& rm : meshes_) {
         if (!rm.valid) continue;
         DrawModel(rm.model, Vector3{0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
+        // DrawModelWires(rm.model, Vector3{0.0f, 0.0f, 0.0f}, 1.0, BLACK);
     }
 }
 

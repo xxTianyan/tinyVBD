@@ -28,24 +28,21 @@ private:
     float bend_stiff_{};  // element bending stiffness;
 
     void update_lambda_mu() {
-        /*
-         * Important: it is plane-stress 2D membrane (sheet modulus: N/m)
-         * if 3d: lambda_ = (E_ * nu_) / (one_plus_nu + one_minus_nu2)
-         */
+
         if (!(E_ > 0.0f)) throw std::invalid_argument("MMaterial: E must be > 0");
         if (!(nu_ > -1.0f && nu_ < 0.5f)) throw std::invalid_argument("MMaterial: nu must be in (-1, 0.5)");
 
         const float one_plus_nu = 1.0f + nu_;
-        const float one_minus_nu2 = 1.0f - nu_ * nu_;
+        const float one_minus_2nu = 1.0f - 2 * nu_;
 
-        mu_     = E_ / (2.0f * one_plus_nu);          // N/m
-        lambda_ = (E_ * nu_) / (one_minus_nu2);       // N/m
+        mu_ = E_ / (2.0f * one_plus_nu);          // N/m
+        lambda_ = (E_ * nu_) / (one_plus_nu + one_minus_2nu);       // N/m
     };
 
 };
 
 inline MMaterial default_cloth() {
-    return {3.0e4f, 0.30f, 0.0};
+    return {2.5e3f, 0.25f, 1.0f};
 };
 
 

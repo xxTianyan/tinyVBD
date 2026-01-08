@@ -13,16 +13,15 @@ float M_PI = 3.14159265358979323846;
 size_t Builder::add_cloth(const float width, const float height,
                              const int resX, const int resY,
                              const Vec3& center,
-                             const float density,
+                             const float mass,
                              const ClothOrientation orientation,
                              const char* name) const {
-    {
     if (resX <= 0 || resY <= 0)
         throw std::runtime_error("Builder::add_cloth: resX <= 0 || resY <= 0");
     if (width <= 0.0f || height <= 0.0f)
         throw std::runtime_error("Builder::add_cloth: width/height <= 0");
-    if (density <= 0.0f)
-        throw std::runtime_error("Builder::add_cloth: density <= 0 (expect kg/m^2)");
+    if (mass <= 0.0f)
+        throw std::runtime_error("Builder::add_cloth: mass_per_particle <= 0 (expect kg per particle)");
 
     const size_t local_particle_count =
         static_cast<size_t>(resX + 1) * static_cast<size_t>(resY + 1);
@@ -35,7 +34,6 @@ size_t Builder::add_cloth(const float width, const float height,
     // ----- base offsets -----
     const size_t base_particle =
         model_.mesh_infos.empty() ? 0ull : static_cast<size_t>(model_.mesh_infos.back().particle.end());
-
 
     PrepareCapacity(local_particle_count);
 
@@ -72,10 +70,21 @@ size_t Builder::add_cloth(const float width, const float height,
         }
     }
 
+    // ---- unit：mass_per_particle (kg) -> total_mass (kg) -> areal_density (kg/m^2) ----
+
+    const float total_mass = mass * static_cast<float>(local_particle_count);
+    const float cloth_area = width * height;
+    const float areal_density = total_mass / cloth_area; // kg/m^2
+
     // 2) triangles and edges (+ accumulate lumped mass from triangle areas)
     auto tri_area = [](const Vec3& a, const Vec3& b, const Vec3& c) -> float {
         return 0.5f * (b - a).cross(c - a).norm();
     };
+
+    // count topology for MeshInfo
+    const size_t local_tri_count  = static_cast<size_t>(2) * static_cast<size_t>(resX) * static_cast<size_t>(resY);
+    const size_t local_edge_count = static_cast<size_t>(resX) * static_cast<size_t>(resY);
+    const size_t local_tet_count  = 0;
 
     for (int j = 0; j < resY; ++j) {
         for (int i = 0; i < resX; ++i) {
@@ -98,8 +107,8 @@ size_t Builder::add_cloth(const float width, const float height,
             model_.tris.emplace_back(v0, v1, v2, p0, p1, p2);
             {
                 const float A = tri_area(p0, p1, p2);
-                const float m = density * A;
-                const float add = m / 3.0f;
+                const float m_tri = areal_density * A; // kg
+                const float add = m_tri / 3.0f;
                 mass_local[i0] += add;
                 mass_local[i1] += add;
                 mass_local[i2] += add;
@@ -109,31 +118,25 @@ size_t Builder::add_cloth(const float width, const float height,
             model_.tris.emplace_back(v1, v3, v2, p1, p3, p2);
             {
                 const float A = tri_area(p1, p3, p2);
-                const float m = density * A;
-                const float add = m / 3.0f;
+                const float m_tri = areal_density * A; // kg
+                const float add = m_tri / 3.0f;
                 mass_local[i1] += add;
                 mass_local[i3] += add;
                 mass_local[i2] += add;
             }
 
-            // bending edge (v0, v3, v1, v2)  -- keep your original convention
+            // bending edge (v0, v3, v1, v2) -- keep your original convention
             model_.edges.emplace_back(v0, v3, v1, v2, p0, p3, p1, p2);
         }
     }
 
-    // add mesh info (kept as your original call pattern)
-    AddMeshInfo(name, local_particle_count, model_.edges.size(), model_.tris.size(), model_.tets.size());
+    // add mesh info：add local count!
+    AddMeshInfo(name, local_particle_count, local_edge_count, local_tri_count, local_tet_count);
 
     // 3) assign inverse mass from lumped masses (only for this cloth's vertex range)
     //    inv_mass = 1 / mass (kg^-1). fixed => inv_mass = 0.
 
-    // Example: fix the "top edge" along +v_dir (invariant to center/orientation)
-    auto is_fixed = [&](const Vec3& p) -> bool {
-        // coordinate along v_dir relative to center should be +height/2
-        const float s = (p - center).dot(v_dir); // v_dir is unit
-        return std::abs(s - height * 0.5f) < 1e-5f;
-    };
-
+    // Example: fix the "top row" (j == resY)
     for (size_t local_i = 0; local_i < local_particle_count; ++local_i) {
         constexpr float eps_mass = 1e-12f;
         const size_t gid = base_particle + local_i;
@@ -141,7 +144,7 @@ size_t Builder::add_cloth(const float width, const float height,
         const float m = mass_local[local_i];
         model_.particle_inv_mass[gid] = (m > eps_mass) ? (1.0f / m) : 0.0f;
 
-        if (is_fixed(model_.particle_pos0[gid])) {
+        if (const int j = static_cast<int>(local_i / static_cast<size_t>(resX + 1)); j == resY) {
             model_.particle_inv_mass[gid] = 0.0f;
         }
     }
@@ -150,7 +153,7 @@ size_t Builder::add_cloth(const float width, const float height,
 
     return model_.mesh_infos.size() - 1;
 }
-}
+
 
 
 void Builder::PrepareCapacity(const size_t num) const {

@@ -44,7 +44,7 @@ public:
     explicit Builder(MModel& model) : model_(model) {};
 
     [[nodiscard]] size_t add_cloth(float width, float height, int resX, int resY, const Vec3& center = Vec3(0,0,0),
-                        float density = 100, ClothOrientation orientation = ClothOrientation::Horizontal, const char* = "cloth") const;
+                        float mass = 0.3, ClothOrientation orientation = ClothOrientation::Horizontal, const char* = "cloth") const;
 
     // void add_rigidbody();
 

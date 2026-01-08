@@ -539,7 +539,7 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
             const auto face_id = AdjacencyCSR::unpack_id(pack);
             const auto order = AdjacencyCSR::unpack_order(pack);
             const auto& face = model_->tris[face_id];
-            accumulate_stvk_triangle_force_hessian_serial(state_in.particle_pos, material_, face, order, force, hessian);
+            accumulate_stvk_triangle_force_hessian(state_in.particle_pos, material_, face, order, force, hessian);
         }
 
         for (uint32_t e = edge_adjacency.begin(vtex_id); e < edge_adjacency.end(vtex_id); ++e) {
@@ -547,7 +547,7 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
             const auto edge_id = AdjacencyCSR::unpack_id(pack);
             const auto order = AdjacencyCSR::unpack_order(pack);
             const auto& edge = model_->edges[edge_id];
-            accumulate_dihedral_angle_based_bending_force_hessian_serial(state_in.particle_pos, material_, edge, order, force, hessian);
+            accumulate_dihedral_angle_based_bending_force_hessian(state_in.particle_pos, material_, edge, order, force, hessian);
         }
 
         const auto delta_x = TY::SolveSPDOrRegularize(hessian, force);
