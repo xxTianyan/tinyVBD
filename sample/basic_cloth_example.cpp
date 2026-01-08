@@ -13,7 +13,7 @@ void BasicCloth::CreateWorld([[maybe_unused]]AppContext &ctx) {
     scene_ = std::make_unique<Scene>(Vec3{0.0f,-9.81f, 0.0f});
     solver_ = std::make_unique<VBDSolver>(10);
     auto m = std::make_unique<mesh_on_cpu>();
-    MeshBuilder::BuildCloth(m.get(), 2.0f, 2.0f, 10, 20, Vec3{0.0f, 3.0f, 0.0f}, ClothOrientation::Horizontal);
+    MeshBuilder::BuildCloth(m.get(), 2.0f, 3.0f, 16, 24, Vec3{0.0f, 3.0f, 0.0f}, ClothOrientation::Horizontal);
     const auto mesh_id = scene_->Add(std::move(m));
 
     // create and bind material
@@ -21,7 +21,7 @@ void BasicCloth::CreateWorld([[maybe_unused]]AppContext &ctx) {
     scene_->BindMeshMaterial(mesh_id, material_id);
 
     auto fix_left_z = [](const Vec3& pos) {
-        if (std::abs(pos.z() - 1.0f) < 1e-5 ) return true;
+        if (std::abs(pos.z() - 1.5f) < 1e-5 ) return true;
         return false;
     };
 
