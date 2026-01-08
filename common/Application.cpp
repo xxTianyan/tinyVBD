@@ -12,7 +12,7 @@
 
 Application::Application(const Desc &desc) :
         desc_(desc),
-        orbitCam_(CreateOrbitCamera(Vector3{ 10.0f, 7.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f })) {
+        orbitCam_(CreateOrbitCamera(Vector3{ 6.0f, 7.0f, 0.0f }, Vector3{ 0.0f, 0.0f, 0.0f })) {
 
     // bind cxt
     ctx_.shader_manager = &shader_manager_;
@@ -175,10 +175,10 @@ void Application::Run(const SampleId start_sample) {
 
     // init sample
     EnterSample_(start_sample);
-    double ms_init = 0.0;
+    /*double ms_init = 0.0;
     double ms_step = 0.0;
     double ms_render = 0.0;
-    int frame_count = 0;
+    int frame_count = 0;*/
 
     while (!WindowShouldClose()) {
 
@@ -204,7 +204,7 @@ void Application::Run(const SampleId start_sample) {
         }
 
         // Update
-        {   ScopeTimer t(&ms_step);
+        {   // ScopeTimer t(&ms_step);
             if (current_ && !ctx_.paused) {
             current_->Update(ctx_);
             }
@@ -235,11 +235,11 @@ void Application::Run(const SampleId start_sample) {
         ExecutePending_();
 
 
-        if (frame_count % 300 == 0) {
+        /*if (frame_count % 300 == 0) {
             printf("Init %.3f ms | Step %.10f ms | Render %.3f ms\n",
                    ms_init / 300.0, ms_step / 300.0, ms_render / 300.0);
             ms_init = ms_step = ms_render = 0.0;
-        }
+        }*/
     }
 
     // careful with exiting
