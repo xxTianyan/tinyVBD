@@ -492,7 +492,6 @@ void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian_serial(
 
 
 void VBDSolver::forward_step(State& state_in, const float dt) {
-
     const size_t num_nodes = model_->total_particles();
     const auto& gravity = model_->gravity_;
 
@@ -505,11 +504,9 @@ void VBDSolver::forward_step(State& state_in, const float dt) {
             continue;
         }
 
-        const Vec3 vel_new = state_in.particle_vel[i] + (state_in.particle_force[i] * inv_mass * dt)
-                                    + gravity * dt;
+        const Vec3 vel_new = state_in.particle_vel[i] + (state_in.particle_force[i] * inv_mass * dt) + gravity * dt;
         state_in.particle_pos[i] = state_in.particle_pos[i] + vel_new * dt;
         inertia_[i] = state_in.particle_pos[i];
-
     }
 }
 
@@ -567,7 +564,7 @@ void VBDSolver::update_velocity(State& state_out, const float dt) const {
     const auto num_nodes = model_->total_particles();
 
     for (size_t i = 0; i < num_nodes; ++i) {
-        state_out.particle_vel[i] = (state_out.particle_pos[i] - prev_pos_[i]) / dt;
+        state_out.particle_vel[i] = (state_out.particle_pos[i] - prev_pos_[i]) / dt ;
     }
 }
 

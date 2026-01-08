@@ -12,7 +12,6 @@
 #include "MaterialParams.hpp"
 
 
-
 class VBDSolver final : public ISolver {
 
 public:
