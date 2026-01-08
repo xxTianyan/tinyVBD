@@ -4,6 +4,7 @@
 
 #include <stdexcept>
 #include "Application.h"
+#include "Profiler.h"
 #include "raylib.h"
 #include "imgui.h"
 #include "rlImGui.h"
@@ -177,22 +178,32 @@ void Application::Run(const SampleId start_sample) {
     EnterSample_(start_sample);
 
     while (!WindowShouldClose()) {
+        Profiler::BeginFrame();
+        PROFILE_SCOPE("Application::Run Frame");
 
         const float dt = GetFrameTime();
         ctx_.dt = dt;
 
         // common updates
         perfMonitor_.Update(dt);
-        RefreshCameraTransform(orbitCam_);
+        {
+            PROFILE_SCOPE("RefreshCameraTransform");
+            RefreshCameraTransform(orbitCam_);
+        }
 
         // key event
-        PollHotkeys_();
+        {
+            PROFILE_SCOPE("PollHotkeys");
+            PollHotkeys_();
+        }
         if (!ImGui::GetIO().WantCaptureKeyboard) {
+            PROFILE_SCOPE("UpdateOrbitCameraKeyboard");
             UpdateOrbitCameraKeyboard(orbitCam_, dt, 10.0f);
         }
 
         // mouse event
         if (!ImGui::GetIO().WantCaptureMouse) {
+            PROFILE_SCOPE("UpdateOrbitCameraMouse");
             auto [x, y] = GetMouseDelta();
             const float wheel = GetMouseWheelMove();
             UpdateOrbitCameraMouse(orbitCam_, Vector2{(float)x, (float)y}, wheel,
@@ -201,34 +212,47 @@ void Application::Run(const SampleId start_sample) {
 
         // Update
         if (current_ && !ctx_.paused) {
+            PROFILE_SCOPE("Sample Update");
             current_->Update(ctx_);
         }
 
         // Render
-        BeginDrawing();
-        ClearBackground(RAYWHITE);
-        DrawRectangleGradientV(
-            0, 0, GetScreenWidth(), GetScreenHeight(),
-            Color{ 45, 93, 125, 255 },   // top
-            Color{ 10, 12, 16, 255 }    // bottom
-            );
+        {
+            PROFILE_SCOPE("Render Frame");
+            BeginDrawing();
+            ClearBackground(RAYWHITE);
+            DrawRectangleGradientV(
+                0, 0, GetScreenWidth(), GetScreenHeight(),
+                Color{ 45, 93, 125, 255 },   // top
+                Color{ 10, 12, 16, 255 }    // bottom
+                );
 
-        if (current_) {
-            current_->Render(ctx_);
+            if (current_) {
+                PROFILE_SCOPE("Sample Render");
+                current_->Render(ctx_);
+            }
+
+            // ImGui
+            {
+                PROFILE_SCOPE("ImGui");
+                rlImGuiBegin();
+                DrawAppUI_();
+                rlImGuiEnd();
+            }
+
+            EndDrawing();
         }
 
-        // ImGui
-        rlImGuiBegin();
-        DrawAppUI_();
-        rlImGuiEnd();
-
-        EndDrawing();
-
         // delay executing
-        ExecutePending_();
+        {
+            PROFILE_SCOPE("ExecutePending");
+            ExecutePending_();
+        }
+        Profiler::EndFrame();
     }
 
     // careful with exiting
+    Profiler::Shutdown();
     shader_manager_.UnloadAll();
     ExitCurrentSample_();
     ShutdownWindowAndUI_();

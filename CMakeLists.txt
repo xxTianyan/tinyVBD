@@ -70,6 +70,7 @@ add_executable(Taiyi sample/main.cpp
         sample/basic_cloth_example.cpp
         sample/SampleRegistry.cpp
         common/Application.cpp
+        common/Profiler.cpp
         collision/BroadPhase.cpp
         solver/VBD/VBDSolver.cpp
         raylib_plugin/RenderHelper.cpp)
@@ -104,4 +105,3 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(Taiyi PRIVATE -Wall -Wextra -Wpedantic)
 endif()
-

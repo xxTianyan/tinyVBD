@@ -31,14 +31,14 @@ public:
             // 计算当前瞬时值
             m_displayFps = (dt > 0.0f) ? 1.0f / dt : 0.0f;
             m_displayMs = frameTimeMs;
-
             // 计算统计值 (遍历历史记录)
             float sum = 0.0f;
             float minT = 9999.0f;
             float maxT = 0.0f;
             int validCount = 0;
 
-            for (float t : m_frameTimes) {
+            for (size_t i = 0; i < m_frameTimes.size(); ++i) {
+                const float t = m_frameTimes[i];
                 if (t <= 0.0f) continue;
                 sum += t;
                 if (t < minT) minT = t;
@@ -120,6 +120,7 @@ public:
             // scale_max 设为 33.3ms (即 30FPS)，超过这个数值的波峰会被切断，适合观察流畅度
             ImGui::PlotLines(
                 "##FrameTimes", m_frameTimes.data(), HISTORY_SIZE, m_offset, nullptr, 0.0f, 33.3f, ImVec2(plotWidth, 50));
+
         }
         ImGui::End();
     }
