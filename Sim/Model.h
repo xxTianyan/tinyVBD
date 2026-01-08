@@ -150,25 +150,47 @@ struct MeshInfo {
     range tri;
     range tet;
 };
+struct RigidBodyInfo {
+    std::string name;
 
+    // future need：range shape; range render_mesh; range joints ...
+};
 
 struct State {
 
-    // deformable mesh
+    // deformable body
     std::vector<Vec3> particle_pos;          // current frame pos
     std::vector<Vec3> particle_vel;          // velocity
-    std::vector<Vec3> particle_force;          // force
+    std::vector<Vec3> particle_force;        // force
 
-    void resize(const size_t n_nodes) {
+    // rigid body
+    std::vector<Vec3> body_pos;             // world position
+    std::vector<Quat> body_rot;             // world orientation
+    std::vector<Vec3> body_lin_vel;         // world linear velocity
+    std::vector<Vec3> body_ang_vel;         // world angular velocity
+
+    std::vector<Vec3> body_force;           // world accumulated force
+    std::vector<Vec3> body_torque;          // world accumulated torque
+
+    void resize_particle(const size_t n_nodes) {
         particle_pos.resize(n_nodes);
         particle_vel.resize(n_nodes);
         particle_force.resize(n_nodes);
     }
 
+    void resize_bodies(const size_t n) {
+        body_pos.resize(n);
+        body_rot.resize(n);
+        body_lin_vel.resize(n);
+        body_ang_vel.resize(n);
+        body_force.resize(n);
+        body_torque.resize(n);
+    }
+
 };
 
 struct MModel {
-    // deformable body
+    // --- deformable body ---
     std::vector<MeshInfo> mesh_infos;
     // topology
     std::vector<tetrahedron> tets;
@@ -184,24 +206,45 @@ struct MModel {
 
     uint64_t topology_version = 0;
 
+    // --- rigid bodies (minimal) ---
+
+    std::vector<RigidBodyInfo> body_infos;
+
+    std::vector<Vec3> body_pos0;
+    std::vector<Quat> body_rot0;
+    std::vector<Vec3> body_lin_vel0;   // optional
+    std::vector<Vec3> body_ang_vel0;   // optional
+
+    std::vector<float> body_inv_mass;  // inv_mass==0 => static/kinematic
+    std::vector<Mat3>  body_inv_inertia_body; // inverse inertia in BODY frame
+
+    size_t num_bodies = 0;
+    [[nodiscard]] size_t total_bodies() const { return num_bodies; }
+
     [[nodiscard]] State MakeState() const {
         State s;
-        s.resize(num_particles);
-
+        // ----------- particle --------------------
+        s.resize_particle(num_particles);
         std::ranges::copy(particle_pos0, s.particle_pos.begin());
-
-        if (particle_vel0.size() == num_particles) {
-            std::ranges::copy(particle_vel0, s.particle_vel.begin());
-        } else {
-            std::ranges::fill(s.particle_vel, Vec3::Zero());
-        }
-
+        if (particle_vel0.size() == num_particles) std::ranges::copy(particle_vel0, s.particle_vel.begin());
+        else std::ranges::fill(s.particle_vel, Vec3::Zero());
         std::ranges::fill(s.particle_force, Vec3::Zero());
+
+        // -------------- rigid body ---------------------
+        s.resize_bodies(num_bodies);
+        std::ranges::copy(body_pos0, s.body_pos.begin());
+        std::ranges::copy(body_rot0, s.body_rot.begin());
+        if (body_lin_vel0.size() == num_bodies) std::ranges::copy(body_lin_vel0, s.body_lin_vel.begin());
+        else std::ranges::fill(s.body_lin_vel, Vec3::Zero());
+
+        if (body_ang_vel0.size() == num_bodies) std::ranges::copy(body_ang_vel0, s.body_ang_vel.begin());
+        else std::ranges::fill(s.body_ang_vel, Vec3::Zero());
+
+        std::ranges::fill(s.body_force,  Vec3::Zero());
+        std::ranges::fill(s.body_torque, Vec3::Zero());
+
         return s;
     }
-
-    // rigid body
-    // ...
 
     // global
     Vec3 gravity_{};
