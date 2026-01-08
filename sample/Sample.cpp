@@ -33,7 +33,21 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
     if (ctx.paused) return;
     if (scene_ == nullptr) return;
 
-    Step(ctx.dt);
+    // accumulate simulation time
+    float frame_dt = ctx.dt;
+    if (frame_dt > 0.05f) frame_dt = 0.05f; // prevent dt explosion
+    sim_accum_ += frame_dt;
+
+    //run simulation time
+    int ticks = 0;
+    while (sim_accum_ >= fixed_dt_ && ticks < max_ticks_per_frame_) {
+        const float sub_dt = fixed_dt_ / static_cast<float>(substeps_);
+        for (int s = 0; s < substeps_; s++) {
+            Step(sub_dt);
+        }
+        sim_accum_ -= fixed_dt_;
+        ++ticks;
+    }
 
     renderHelper_.Update(scene_->state_out());
 }

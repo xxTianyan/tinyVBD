@@ -51,7 +51,7 @@ public:
         int width  = 1280;
         int height = 720;
         const char* title = "ProjectTaiyi";
-        int target_fps = 120;
+        int target_fps = 60;
         bool resizable = true;
     };
 
