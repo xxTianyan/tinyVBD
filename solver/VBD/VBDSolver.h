@@ -26,7 +26,7 @@ public:
 
     void forward_step(State& state_in, float dt);
 
-    void solve_serial(State& state_in, State& state_out, float dt);
+    void solve_serial(State& state_in, State& state_out, float dt) const;
 
     void update_velocity(State& stat_out, float dt) const;
 

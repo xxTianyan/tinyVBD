@@ -513,7 +513,7 @@ void VBDSolver::forward_step(State& state_in, const float dt) {
     }
 }
 
-void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) {
+void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) const {
 
     const auto num_nodes = model_->total_particles();
 
