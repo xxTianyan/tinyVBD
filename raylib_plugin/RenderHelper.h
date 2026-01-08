@@ -27,7 +27,7 @@ public:
     static bool IsModelValid(const Model& model);
     static void UnloadRLModelSafe(Model& rl_model);
 
-    void Draw() const;
+    void Draw(bool is_wire_mode) const;
     void Shutdown();                 // release all gpu resources
     [[nodiscard]] bool Ready() const { return ready_; }
 

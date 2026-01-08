@@ -61,7 +61,7 @@ void Sample::Render([[maybe_unused]]AppContext &ctx) {
     }
 
     // scene models
-    renderHelper_.Draw();
+    renderHelper_.Draw(ctx.is_wire_mode);
 
     EndMode3D();
 }

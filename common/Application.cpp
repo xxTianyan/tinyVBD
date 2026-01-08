@@ -98,11 +98,11 @@ void Application::DrawAppUI_() {
     // Pause / Reset / Reload shaders
     if (ImGui::Checkbox("Paused", &ctx_.paused)) {
     }
-    if (ImGui::Button("Reset (Reload Sample) [R]")) {
+    if (ImGui::Button("Reset (Reload Sample)")) {
         RequestReloadSample_();
     }
-    if (ImGui::Button("Reload Shaders [F5]")) {
-        pending_.type = PendingActionType::ReloadShaders;
+    if (ImGui::Button("Wire Mode")) {
+        ctx_.is_wire_mode = !ctx_.is_wire_mode;
     }
 
     ImGui::Separator();

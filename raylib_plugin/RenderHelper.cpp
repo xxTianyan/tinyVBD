@@ -151,13 +151,15 @@ void RenderHelper::UpdateDynamic(const State& state) const {
     }
 }
 
-void RenderHelper::Draw() const {
+void RenderHelper::Draw(const bool is_wire_mode) const {
     if (!ready_) return;
 
     for (const auto& rm : meshes_) {
         if (!rm.valid) continue;
-        DrawModel(rm.model, Vector3{0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
-        // DrawModelWires(rm.model, Vector3{0.0f, 0.0f, 0.0f}, 1.0, BLACK);
+        if (is_wire_mode)
+            DrawModelWires(rm.model, Vector3{0.0f, 0.0f, 0.0f}, 1.0, BLACK);
+        else
+            DrawModel(rm.model, Vector3{0.0f, 0.0f, 0.0f}, 1.0f, WHITE);
     }
 }
 

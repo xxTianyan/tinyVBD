@@ -14,7 +14,7 @@ void BasicCloth::CreateWorld([[maybe_unused]]AppContext &ctx) {
     Builder builder(model);
     m_cloth_id_ = builder.add_cloth(2.0f, 3.0f, 16, 24, Vec3{0.0f, 4.0f, 0.0f});
     scene_ = std::make_unique<Scene>(std::move(model));
-    solver_ = std::make_unique<VBDSolver>(&scene_->model_, 10);
+    solver_ = std::make_unique<VBDSolver>(&scene_->model_, 5);
 }
 
 void BasicCloth::Render(AppContext &ctx) {
@@ -28,7 +28,7 @@ void BasicCloth::Render(AppContext &ctx) {
 
     // scene models
     rlDisableBackfaceCulling();
-    renderHelper_.Draw();
+    renderHelper_.Draw(ctx.is_wire_mode);
     rlEnableBackfaceCulling();
 
     EndMode3D();

@@ -26,7 +26,7 @@ public:
         // double cache
         state_buf_[0] = model_.MakeState();
         state_buf_[1] = model_.MakeState();
-        SetGravity(Vec3{0.0f, -9.8f, 0.0f});
+        SetGravity(Vec3{0.0f, -9.81f, 0.0f});
     }
 
     [[nodiscard]] State& state_in() noexcept { return state_buf_[in_idx_]; }

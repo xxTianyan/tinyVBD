@@ -38,6 +38,7 @@ struct AppContext {
     float dt = 0.0f;
     bool paused = true;
     int target_fps = 0;
+    bool is_wire_mode = false;
 
     OrbitCamera* orbitCam = nullptr;
 

@@ -35,14 +35,18 @@ private:
         const float one_plus_nu = 1.0f + nu_;
         const float one_minus_2nu = 1.0f - 2 * nu_;
 
-        mu_ = E_ / (2.0f * one_plus_nu);          // N/m
-        lambda_ = (E_ * nu_) / (one_plus_nu + one_minus_2nu);       // N/m
+        mu_ = E_ / (2.0f * one_plus_nu);
+        lambda_ = (E_ * nu_) / (one_plus_nu + one_minus_2nu);
     };
 
 };
 
 inline MMaterial default_cloth() {
-    return {2.5e3f, 0.25f, 1.0f};
+    return {5e3f, 0.1f, 0.5f};
+};
+
+inline MMaterial soft_cloth() {
+    return {1e4f, 0.1f, 0.5f};
 };
 
 
