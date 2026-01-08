@@ -14,7 +14,7 @@
 
 
 enum SampleId : int {
-    DUMMY_SAMPLE,
+    EMPTY_SCENE,
     BASIC_CLOTH_EXAMPLE,
 };
 

@@ -76,6 +76,12 @@ void Sample:: DestroyRenderResources() {
     RenderHelper::UnloadRLModelSafe(floor_);  // models that have no physical meanings is owned by sample itself
 }
 
+void Sample::CreateWorld([[maybe_unused]]AppContext& ctx) {
+    // just a scene with floor
+    MModel model;
+    scene_ = std::make_unique<Scene>(std::move(model));
+};
+
 void Sample::CreateFloor([[maybe_unused]]AppContext& ctx) {
 
     if (ctx.shader_manager == nullptr)

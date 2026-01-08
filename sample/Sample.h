@@ -38,7 +38,7 @@ public:
     virtual void CreateFloor(AppContext& ctx);
 
     // api functions that need to be over-ride when inherited
-    virtual void CreateWorld([[maybe_unused]]AppContext& ctx) {};
+    virtual void CreateWorld(AppContext& ctx);
     virtual void Step([[maybe_unused]]const float dt) {}
     virtual void BindShaders([[maybe_unused]]AppContext& ctx) {};
 

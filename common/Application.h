@@ -54,7 +54,7 @@ private:
 
     struct PendingAction {
         PendingActionType type = PendingActionType::None;
-        SampleId target = SampleId::DUMMY_SAMPLE; // for switch
+        SampleId target = SampleId::EMPTY_SCENE; // for switch
     };
 
 private:
@@ -83,7 +83,7 @@ private:
     PerformanceMonitor perfMonitor_;
     OrbitCamera orbitCam_;
 
-    SampleId current_id_ = SampleId::DUMMY_SAMPLE;
+    SampleId current_id_ = SampleId::EMPTY_SCENE;
     std::unique_ptr<ISample> current_;
 
     PendingAction pending_{};

@@ -10,7 +10,7 @@
 void RegisterAllSamples(SampleRegistry& reg) {
 
     // Empty Scene
-    reg.Register(SampleId::DUMMY_SAMPLE, "Dummy Sample",
+    reg.Register(SampleId::EMPTY_SCENE, "Dummy Sample",
         []() -> SamplePtr { return std::make_unique<Sample>(); });
 
     reg.Register(SampleId::BASIC_CLOTH_EXAMPLE, "Basic Cloth Example",
