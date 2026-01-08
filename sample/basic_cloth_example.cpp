@@ -60,7 +60,6 @@ void BasicCloth::BindShaders(AppContext &ctx) {
 
 
 void BasicCloth::Step(const float dt) {
-    scene_->InitStep();
     solver_->Step(scene_->state_in(), scene_->state_out(), dt);
     scene_->SwapStates();
 }

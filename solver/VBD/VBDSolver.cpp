@@ -578,7 +578,8 @@ void VBDSolver::BuildAdjacencyInfo() {
             [](const edge& e, uint32_t k) { return static_cast<uint32_t>(e.vertices[k]); },
             adjacency_info_.vertex_edges
         );
-    } else {
+    }
+    else {
         AssignOffsets(num_nodes, adjacency_info_.vertex_edges.offsets);
         adjacency_info_.vertex_edges.incidents.clear();
     }
@@ -591,7 +592,8 @@ void VBDSolver::BuildAdjacencyInfo() {
             [](const triangle& t, uint32_t k) { return static_cast<uint32_t>(t.vertices[k]); },
             adjacency_info_.vertex_faces
         );
-    } else {
+    }
+    else {
         AssignOffsets(num_nodes, adjacency_info_.vertex_faces.offsets);
         adjacency_info_.vertex_faces.incidents.clear();
     }
@@ -604,7 +606,8 @@ void VBDSolver::BuildAdjacencyInfo() {
             [](const tetrahedron& t, uint32_t k) { return static_cast<uint32_t>(t.vertices[k]); },
             adjacency_info_.vertex_tets
         );
-    } else {
+    }
+    else {
         AssignOffsets(num_nodes, adjacency_info_.vertex_tets.offsets);
         adjacency_info_.vertex_tets.incidents.clear();
     }

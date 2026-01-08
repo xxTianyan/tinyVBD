@@ -33,6 +33,8 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
     if (ctx.paused) return;
     if (scene_ == nullptr) return;
 
+    scene_->InitStep();
+
     // accumulate simulation time
     float frame_dt = ctx.dt;
     if (frame_dt > 0.05f) frame_dt = 0.05f; // prevent dt explosion
