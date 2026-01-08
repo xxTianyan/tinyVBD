@@ -87,7 +87,7 @@ void BasicCloth::Step(const float dt) {
         // make inertia step
         VBDSolver::forward_step(view, dt);
         // iter newton step
-        for (size_t iter = 0; iter < 5; iter++)
+        for (size_t iter = 0; iter < 10; iter++)
             VBDSolver::solve(view, dt);
         VBDSolver::update_velocity(view, dt);
     }
