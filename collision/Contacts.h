@@ -13,7 +13,7 @@
 //------------------------------------------------------------------------------
 // AoS view types (NOT used for storage; only for debug/inspection).
 //------------------------------------------------------------------------------
-struct SoftContact {
+/*struct SoftContact {
     VertexID vertex{};
     ShapeID    shape{};
     Vec3       normal_ws{};   // push-out direction (unit length preferred)
@@ -228,6 +228,6 @@ struct Contacts {
         soft.set_capacity(soft_cap);
         rigid.set_capacity(rigid_cap);
     }
-};
+};*/
 
 #endif //TAIYI_CONTACTS_H

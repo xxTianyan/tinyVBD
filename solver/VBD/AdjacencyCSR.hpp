@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <cstdint>
+#include "Types.h"
 
 struct AdjacencyCSR {
     // offsets.size() = num_nodes + 1

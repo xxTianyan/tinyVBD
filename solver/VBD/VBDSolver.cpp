@@ -2,12 +2,86 @@
 // Created by tianyan on 12/22/25.
 //
 
-#include <iostream>
+#include <stdexcept>
 #include "VBDSolver.h"
-#include "MaterialParams.hpp"
 #include "Math.hpp"
 
-/*void VBDSolver::accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> pos,
+namespace {
+    void AssignOffsets(const size_t num_nodes, std::vector<uint32_t>& offsets) {
+        offsets.assign(num_nodes + 1, 0u);
+    }
+
+    template <class Elem, class GetVertex>
+    void BuildVertexIncidentCSR(const size_t num_nodes,
+                                const std::vector<Elem>& elems,
+                                const uint32_t verts_per_elem,
+                                GetVertex get_vertex,
+                                AdjacencyCSR& adj) {
+        auto& offsets = adj.offsets;
+        auto& incidents = adj.incidents;
+
+        offsets.assign(num_nodes + 1, 0u);
+        incidents.clear();
+
+        if (elems.empty()) {
+            return;
+        }
+
+        for (uint32_t elem_id = 0; elem_id < static_cast<uint32_t>(elems.size()); ++elem_id) {
+            const auto& elem = elems[elem_id];
+            for (uint32_t k = 0; k < verts_per_elem; ++k) {
+                const auto v = static_cast<uint32_t>(get_vertex(elem, k));
+                offsets[v + 1] += 1u;
+            }
+        }
+
+        for (size_t i = 1; i < offsets.size(); ++i) {
+            offsets[i] += offsets[i - 1];
+        }
+
+        incidents.resize(offsets.back());
+        std::vector<uint32_t> cursor = offsets;
+
+        for (uint32_t elem_id = 0; elem_id < static_cast<uint32_t>(elems.size()); ++elem_id) {
+            const auto& elem = elems[elem_id];
+            for (uint32_t k = 0; k < verts_per_elem; ++k) {
+                const auto v = static_cast<uint32_t>(get_vertex(elem, k));
+                const uint32_t dst = cursor[v]++;
+                incidents[dst] = AdjacencyCSR::pack(elem_id, k);
+            }
+        }
+    }
+}
+
+void VBDSolver::Init() {
+
+    const size_t num_nodes = model_->total_particles();
+    inertia_.assign(num_nodes, Vec3::Zero());
+    prev_pos_.assign(num_nodes, Vec3::Zero());
+
+    if (model_->topology_version != topology_version_
+        || adjacency_info_.vertex_faces.offsets.size() != num_nodes + 1) {
+        BuildAdjacencyInfo();
+        topology_version_ = model_->topology_version;
+    }
+}
+
+void VBDSolver::Step(State& state_in, State& state_out, float dt) {
+
+    if (dt <= 0.0f) {
+        return;
+    }
+
+    Init();
+
+    forward_step(state_in, dt);
+    for (int iter = 0; iter < num_iters; ++iter) {
+        solve_serial(state_in, state_out, dt);
+    }
+    update_velocity(state_out, dt);
+}
+
+void VBDSolver::accumulate_stvk_triangle_force_hessian(const std::span<const Vec3> pos,
                                                    const MMaterial& mat,
                                                    const triangle& face,
                                                    const uint32_t vtex_order,
@@ -40,9 +114,9 @@
     const auto f1_dot_f1 = f1.dot(f1);
     const auto f0_dot_f1 = f0.dot(f1);
 
-    const auto G00 = 0.5 * (f0_dot_f0 - 1.0);
-    const auto G11 = 0.5 * (f1_dot_f1 - 1.0);
-    const auto G01 = 0.5 * f0_dot_f1;
+    const auto G00 = 0.5f * (f0_dot_f0 - 1.0f);
+    const auto G11 = 0.5f * (f1_dot_f1 - 1.0f);
+    const auto G01 = 0.5f * f0_dot_f1;
 
     // Frobenius norm squared of Green strain: ||G||_F^2 = G00^2 + G11^2 + 2 * G01^2
     float G_frobenius_sq = G00 * G00 + G11 * G11 + 2.0f * G01 * G01;
@@ -201,76 +275,127 @@ void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian(const std:
     H += bending_hessian;
 }
 
+void VBDSolver::forward_step(State& state_in, const float dt) {
 
-void VBDSolver::forward_step(SimView &view, const float dt) {
-    const size_t num_nodes = view.pos.size();
+    const size_t num_nodes = model_->total_particles();
+    const auto& gravity = model_->gravity_;
+
     for (size_t i = 0; i < num_nodes; ++i) {
-        view.prev_pos[i] = view.pos[i];  // record previous pos
-        view.inertia_pos[i] = view.pos[i] + dt * view.vel[i] + dt * dt * (view.accel[i] + view.gravity);
+        prev_pos_[i] = state_in.particle_pos[i];
+
+        const float inv_mass = model_->particle_inv_mass[i];
+        if (inv_mass == 0) {
+            inertia_[i] = state_in.particle_pos[i];
+            continue;
+        }
+
+        const Vec3 vel_new = state_in.particle_vel[i] + (state_in.particle_force[i] * inv_mass * dt)
+                                    + gravity * dt;
+        state_in.particle_pos[i] = state_in.particle_pos[i] + vel_new * dt;
+        inertia_[i] = state_in.particle_pos[i];
+
     }
 }
 
-void VBDSolver::solve(SimView& view, const float dt) {
-    const VertexID num_nodes = view.pos.size();  // the number of nodes always should less than 0xFFFF
+void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) {
 
-    // solve
-    for (VertexID vtex_id = 0; vtex_id < num_nodes; ++vtex_id) {
+    const auto num_nodes = model_->total_particles();
 
-        if (view.fixed[vtex_id]) continue;  // fixed flag up
+    for (size_t vtex_id = 0; vtex_id < num_nodes; ++vtex_id) {
+        auto& pos = state_in.particle_pos[vtex_id];
+        auto& pos_new = state_out.particle_pos[vtex_id];
+        const auto& inv_mass = model_->particle_inv_mass[vtex_id];
 
-        auto& pos = view.pos[vtex_id];
-        const auto& inv_mass = view.inv_mass[vtex_id];
+        if (inv_mass <= 0.0f) {
+            pos_new = pos;
+            continue;
+        }
 
-        if (inv_mass <= 0.0f) continue;
+        const auto& face_adjacency = adjacency_info_.vertex_faces;
+        const auto& edge_adjacency = adjacency_info_.vertex_edges;
 
-        const auto& inertia_pos = view.inertia_pos[vtex_id];
-        // const auto& prev_pos = view.prev_pos[vtex_id];
-        const auto& face_adjacency = view.adj.vertex_faces;
-        const auto& edge_adjacency = view.adj.vertex_edges;
-        const auto& mat = view.material_params;
-
-        // init force and hessian
         Vec3 force = Vec3::Zero();
         Mat3 hessian = Mat3::Zero();
 
-        // accumulate inertia force and hessian
-        force += - (pos - inertia_pos) / (inv_mass * dt * dt);
+        force += -(pos - inertia_[vtex_id]) / (inv_mass * dt * dt);
         hessian += Mat3::Identity() / (inv_mass * dt * dt);
 
-        // accumulate stvk triangle element force and hessian
-        for (uint32_t f = face_adjacency.begin(vtex_id); f < face_adjacency.end(vtex_id); ++f ) {
+
+        for (uint32_t f = face_adjacency.begin(vtex_id); f < face_adjacency.end(vtex_id); ++f) {
             const auto pack = face_adjacency.incidents[f];
             const auto face_id = AdjacencyCSR::unpack_id(pack);
-            const auto _order = AdjacencyCSR::unpack_order(pack);
-            const auto& _face = view.tris[face_id];
-            accumulate_stvk_triangle_force_hessian(view.pos, mat, _face, _order, force, hessian);
+            const auto order = AdjacencyCSR::unpack_order(pack);
+            const auto& face = model_->tris[face_id];
+            accumulate_stvk_triangle_force_hessian(state_in.particle_pos, material_, face, order, force, hessian);
         }
-        // accumulate bending element force and hessian
+
         for (uint32_t e = edge_adjacency.begin(vtex_id); e < edge_adjacency.end(vtex_id); ++e) {
             const auto pack = edge_adjacency.incidents[e];
             const auto edge_id = AdjacencyCSR::unpack_id(pack);
-            const auto _order = AdjacencyCSR::unpack_order(pack);
-            const auto& _edge = view.edges[edge_id];
-            accumulate_dihedral_angle_based_bending_force_hessian(view.pos, mat, _edge, _order, force, hessian);
+            const auto order = AdjacencyCSR::unpack_order(pack);
+            const auto& edge = model_->edges[edge_id];
+            accumulate_dihedral_angle_based_bending_force_hessian(state_in.particle_pos, material_, edge, order, force, hessian);
         }
 
-        // solve linear system and update result
         const auto delta_x = TY::SolveSPDOrRegularize(hessian, force);
-        pos += delta_x;
+        pos_new = pos + delta_x;
+
+        // if parallel with color group, need to copy new pos back to state_in to satisfy GS.
+        // state_in.pos = state_out.pos ...
+        pos = pos_new;
     }
 }
 
-void VBDSolver::update_velocity(SimView& view, const float dt) {
-    for (size_t i = 0; i < view.pos.size(); ++i) {
-        if (view.fixed[i]) {
-            view.vel[i] = Vec3::Zero();
-            continue;
-        }
-        view.vel[i] = (view.pos[i] - view.prev_pos[i]) / dt;
+void VBDSolver::update_velocity(State& state_out, const float dt) const {
+
+    const auto num_nodes = model_->total_particles();
+
+    for (size_t i = 0; i < num_nodes; ++i) {
+        state_out.particle_vel[i] = (state_out.particle_pos[i] - prev_pos_[i]) / dt;
     }
-}*/
+}
 
+void VBDSolver::BuildAdjacencyInfo() {
+    const size_t num_nodes = model_->total_particles();
+    if (!model_->edges.empty()) {
+        BuildVertexIncidentCSR(
+            num_nodes,
+            model_->edges,
+            4u,
+            [](const edge& e, uint32_t k) { return static_cast<uint32_t>(e.vertices[k]); },
+            adjacency_info_.vertex_edges
+        );
+    } else {
+        AssignOffsets(num_nodes, adjacency_info_.vertex_edges.offsets);
+        adjacency_info_.vertex_edges.incidents.clear();
+    }
 
+    if (!model_->tris.empty()) {
+        BuildVertexIncidentCSR(
+            num_nodes,
+            model_->tris,
+            3u,
+            [](const triangle& t, uint32_t k) { return static_cast<uint32_t>(t.vertices[k]); },
+            adjacency_info_.vertex_faces
+        );
+    } else {
+        AssignOffsets(num_nodes, adjacency_info_.vertex_faces.offsets);
+        adjacency_info_.vertex_faces.incidents.clear();
+    }
+
+    if (!model_->tets.empty()) {
+        BuildVertexIncidentCSR(
+            num_nodes,
+            model_->tets,
+            4u,
+            [](const tetrahedron& t, uint32_t k) { return static_cast<uint32_t>(t.vertices[k]); },
+            adjacency_info_.vertex_tets
+        );
+    } else {
+        AssignOffsets(num_nodes, adjacency_info_.vertex_tets.offsets);
+        adjacency_info_.vertex_tets.incidents.clear();
+    }
+}
 
 
 
