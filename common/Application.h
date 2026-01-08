@@ -50,7 +50,7 @@ public:
         int width  = 1280;
         int height = 720;
         const char* title = "tinyVBD";
-        int target_fps = 0;
+        int target_fps = 120;
         bool resizable = true;
     };
 
