@@ -203,9 +203,9 @@ void RenderHelper::BuildIndicesU16(const MModel& model,
             throw std::runtime_error("BuildIndicesU16: triangle references vertex before particle_begin");
         }
 
-        const auto i0 = static_cast<size_t>(g0 - particle_begin);
-        const auto i1 = static_cast<size_t>(g1 - particle_begin);
-        const auto i2 = static_cast<size_t>(g2 - particle_begin);
+        const auto i0 = g0 - particle_begin;
+        const auto i1 = g1 - particle_begin;
+        const auto i2 = g2 - particle_begin;
 
         if (i0 >= particle_count || i1 >= particle_count || i2 >= particle_count) {
             throw std::runtime_error("BuildIndicesU16: triangle references vertex out of this mesh particle range");

@@ -12,7 +12,7 @@ struct State;
 struct MModel;
 class ISample;
 
-using VertexID = uint16_t;
+using VertexID = size_t;
 constexpr VertexID INVALID_VERTEX_ID = 0xFFFF;
 
 using Vec3 = Eigen::Vector3f;

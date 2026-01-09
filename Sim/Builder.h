@@ -38,13 +38,15 @@ enum class ClothOrientation {
     Horizontal  //  (XZ Plane)
 };
 
+enum FixSide { NONE = 0, TOP = 1, BOTTOM = 2, LEFT = 4, RIGHT = 8 };
+
 class Builder {
 
 public:
     explicit Builder(MModel& model) : model_(model) {};
 
     [[nodiscard]] size_t add_cloth(float width, float height, int resX, int resY, const Vec3& center = Vec3(0,0,0),
-                        float mass = .1f, ClothOrientation orientation = ClothOrientation::Horizontal, const char* = "cloth") const;
+                        float mass = .1f, ClothOrientation orientation = ClothOrientation::Horizontal, FixSide fix_mask = FixSide::TOP, const char* = "cloth") const;
 
     // void add_rigidbody();
 
@@ -57,6 +59,11 @@ private:
     void AddMeshInfo(const char* name, size_t n_particle, size_t n_edge,
                 size_t n_tri, size_t n_tet) const;
 
+    static void CheckVertexLimit(const uint32_t local_particle_count) {
+        if (local_particle_count > static_cast<size_t>(std::numeric_limits<unsigned short>::max()) + 1ull) {
+            throw std::runtime_error("Builder: particle_count > 65536, raylib u16 indices not supported.");
+        }
+    }
 };
 
 
