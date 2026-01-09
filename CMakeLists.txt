@@ -72,7 +72,8 @@ add_executable(Taiyi sample/main.cpp
         common/Application.cpp
         collision/BroadPhase.cpp
         solver/VBD/VBDSolver.cpp
-        raylib_plugin/RenderHelper.cpp)
+        raylib_plugin/RenderHelper.cpp
+        sample/bunny.cpp)
 
 
 

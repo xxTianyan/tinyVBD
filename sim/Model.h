@@ -13,10 +13,35 @@
 
 struct tetrahedron {
     std::array<VertexID, 4> vertices{0,0,0,0};
+    float restVolume{};
+    Mat3 Dm_inv{};
+
     tetrahedron(const VertexID vtex0, const VertexID vtex1, const VertexID vtex2, const VertexID vtex3,
         const Vec3& vtex0_pos, const Vec3& vtex1_pos, const Vec3& vtex2_pos, const Vec3& vtex3_pos) :
     vertices{vtex0, vtex1, vtex2, vtex3} {
-        ;
+        // construct Dm
+        const Vec3 e1 = vtex1_pos - vtex0_pos;
+        const Vec3 e2 = vtex2_pos - vtex0_pos;
+        const Vec3 e3 = vtex3_pos - vtex0_pos;
+
+        Mat3 Dm;
+        Dm.col(0) = e1;
+        Dm.col(1) = e2;
+        Dm.col(2) = e3;
+
+        // more stable det：det = dot(e1, cross(e2, e3))
+        const auto detDm = static_cast<float>(e1.dot(e2.cross(e3)));
+
+        const float absDet = std::fabs(detDm);
+
+        // check if degenerate
+        if (constexpr float kEps = 1.0e-12f; absDet < kEps)
+            throw std::runtime_error("tetrahedron::compute_rest: degenerate tetrahedron (|det(Dm)| too small).");
+
+        restVolume = absDet * (1.0f / 6.0f);
+
+        // pre-compute
+        Dm_inv  = Dm.inverse();
     };
 };
 

@@ -60,6 +60,7 @@ protected:
 public:
     // for simulation， remember to initialize
     std::unique_ptr<Scene> scene_;
+    // need to change to ISolver
     std::unique_ptr<VBDSolver> solver_;
 
     // for rendering

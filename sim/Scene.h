@@ -7,17 +7,18 @@
 
 #include <span>
 
-#include "Contacts.h"
-#include "Builder.h"
-#include "Model.h"
-#include "Types.h"
-struct MMaterial;
+
+
 
 // all static values are stored in model struct, all changing values are stored in state struct
 
 #include <array>
 #include <cstdint>
 #include <utility>  // std::swap
+#include "Model.h"
+#include "Types.h"
+struct MMaterial;
+
 
 class Scene {
 public:
@@ -36,7 +37,11 @@ public:
     // state_in, state_out = state_out, state_in
     void SwapStates() noexcept { std::swap(in_idx_, out_idx_); }
 
-    void InitStep() {};
+    void InitStep() {
+        /*
+         * TODO:Clean force here.
+         */
+    };
 
     void SetGravity(const Vec3& gravity) { model_.gravity_ = gravity; }
 

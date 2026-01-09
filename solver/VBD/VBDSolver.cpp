@@ -11,6 +11,19 @@ namespace {
         offsets.assign(num_nodes + 1, 0u);
     }
 
+    Mat3 Cofactor(const Mat3& F)
+    {
+        const Vec3 f0 = F.col(0);
+        const Vec3 f1 = F.col(1);
+        const Vec3 f2 = F.col(2);
+
+        Mat3 C;
+        C.col(0) = f1.cross(f2);
+        C.col(1) = f2.cross(f0);
+        C.col(2) = f0.cross(f1);
+        return C; // == cof(F)
+    }
+
     template <class Elem, class GetVertex>
     void BuildVertexIncidentCSR(const size_t num_nodes,
                                 const std::vector<Elem>& elems,
@@ -490,6 +503,77 @@ void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian_serial(
     H += bending_hessian;
 }
 
+void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const Vec3> pos, const MMaterial &mat,
+    const tetrahedron &tet, uint32_t vtex_order, Vec3 &force, Mat3 &H) {
+        // ---- material ----
+    const float mu     = mat.mu();       // or mat.miu
+    const float lambda = mat.lambda();   // or mat.lmbd
+
+    // Guard: lambda can be ~0 for nu ~ 0.0; avoid division blow-up
+    const float inv_lambda = (lambda > 1.0e-12f) ? (1.0f / lambda) : 0.0f;
+    const float alpha = 1.0f + mu * inv_lambda;  // stable NH variant
+
+    // ---- gather positions ----
+    const uint32_t i0 = tet.vertices[0];
+    const uint32_t i1 = tet.vertices[1];
+    const uint32_t i2 = tet.vertices[2];
+    const uint32_t i3 = tet.vertices[3];
+
+    const Vec3& x0 = pos[i0];
+    const Vec3& x1 = pos[i1];
+    const Vec3& x2 = pos[i2];
+    const Vec3& x3 = pos[i3];
+
+    // ---- Ds ----
+    Mat3 Ds;
+    Ds.col(0) = x1 - x0;
+    Ds.col(1) = x2 - x0;
+    Ds.col(2) = x3 - x0;
+
+    // ---- F = Ds * invDm ----
+    const Mat3 F = Ds * tet.Dm_inv;
+
+    // ---- cof(F) and J ----
+    const Mat3 cofF = Cofactor(F);
+    const float J = F.col(0).dot(cofF.col(0));
+
+    // ---- build wi (from invDm^T) ----
+    // If tet.invDm == Dm^{-1}, then invDmT = Dm^{-T}
+    const Mat3 invDmT = tet.Dm_inv.transpose();
+
+    const Vec3 w1 = invDmT.col(0);
+    const Vec3 w2 = invDmT.col(1);
+    const Vec3 w3 = invDmT.col(2);
+    const Vec3 w0 = -(w1 + w2 + w3);
+
+    // branchless select (GPU-friendly)
+    const float m0 = (vtex_order == 0u) ? 1.0f : 0.0f;
+    const float m1 = (vtex_order == 1u) ? 1.0f : 0.0f;
+    const float m2 = (vtex_order == 2u) ? 1.0f : 0.0f;
+    const float m3 = (vtex_order == 3u) ? 1.0f : 0.0f;
+
+    const Vec3 wi = w0 * m0 + w1 * m1 + w2 * m2 + w3 * m3;
+
+    // ---- n_i = dJ/dx_i = cof(F) * w_i  (since cof(F)=J F^{-T}) ----
+    const Vec3 ni = cofF * wi;
+
+    // ---- First Piola * wi ----
+    // P = mu*F + lambda*(J - alpha)*cof(F)   (since cof(F)=J F^{-T})
+    // => P*wi = mu*(F*wi) + lambda*(J - alpha)*(cof(F)*wi)
+    const Vec3 P_wi = (mu * (F * wi)) + (lambda * (J - alpha) * ni);
+
+    // ---- accumulate force: f_i = -V0 * P * wi ----
+    force -= tet.restVolume * P_wi;
+
+    // ---- PSD / Gauss-Newton Hessian approximation ----
+    // H_i ≈ V0 * [ mu * ||wi||^2 * I  +  lambda * (ni ni^T) ]
+    const float wi2 = wi.squaredNorm();
+    const Mat3 H_dev = (mu * tet.restVolume * wi2) * Mat3::Identity();
+    const Mat3 H_vol = (lambda * tet.restVolume) * (ni * ni.transpose());
+
+    H += (H_dev + H_vol);
+}
+
 
 void VBDSolver::forward_step(State& state_in, const float dt) {
     const size_t num_nodes = model_->total_particles();
@@ -526,6 +610,7 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
 
         const auto& face_adjacency = adjacency_info_.vertex_faces;
         const auto& edge_adjacency = adjacency_info_.vertex_edges;
+        const auto& tet_adjacency = adjacency_info_.vertex_tets;
 
         Vec3 force = Vec3::Zero();
         Mat3 hessian = Mat3::Zero();
@@ -548,6 +633,14 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
             const auto order = AdjacencyCSR::unpack_order(pack);
             const auto& edge = model_->edges[edge_id];
             accumulate_dihedral_angle_based_bending_force_hessian(state_in.particle_pos, material_, edge, order, force, hessian);
+        }
+
+        for (uint32_t t = tet_adjacency.begin(vtex_id); t < tet_adjacency.end(vtex_id); ++t) {
+            const auto pack = tet_adjacency.incidents[t];
+            const auto tet_id = AdjacencyCSR::unpack_id(pack);
+            const auto order = AdjacencyCSR::unpack_order(pack);
+            const auto& tet = model_->tets[tet_id];
+            accumulate_neo_hookean_tetrahedron_force_hessian(state_in.particle_pos, material_, tet, order, force, hessian);
         }
 
         const auto delta_x = TY::SolveSPDOrRegularize(hessian, force);
