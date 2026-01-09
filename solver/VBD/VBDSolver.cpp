@@ -24,6 +24,28 @@ namespace {
         return C; // == cof(F)
     }
 
+    void project_ground_plane_inelastic(
+        std::span<Vec3> pos_in,
+        std::span<Vec3> pos_out,
+        std::span<Vec3> prev_pos,
+        std::span<const float> inv_mass,
+        float groundY,
+        float radius) {
+        const float yMin = groundY + radius;
+
+        for (size_t i = 0; i < pos_in.size(); ++i) {
+            if (inv_mass[i] == 0.0f) continue; // 固定点不动（临时 demo 允许分支）
+
+            const float phi = pos_in[i].y() - yMin;          // signed distance to plane along n
+            const float corr = std::min(0.0f, phi);       // corr <= 0 when penetrating
+            // push out: pos.y -= corr  (since corr negative)
+            pos_in[i].y() -= corr;
+            prev_pos[i].y() -= corr;
+            pos_out[i] = pos_in[i];
+        }
+    }
+
+
     template <class Elem, class GetVertex>
     void BuildVertexIncidentCSR(const size_t num_nodes,
                                 const std::vector<Elem>& elems,
@@ -547,10 +569,10 @@ void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const
     const Vec3 w0 = -(w1 + w2 + w3);
 
     // branchless select (GPU-friendly)
-    const float m0 = (vtex_order == 0u) ? 1.0f : 0.0f;
-    const float m1 = (vtex_order == 1u) ? 1.0f : 0.0f;
-    const float m2 = (vtex_order == 2u) ? 1.0f : 0.0f;
-    const float m3 = (vtex_order == 3u) ? 1.0f : 0.0f;
+    const float m0 = (vtex_order == 0u);
+    const float m1 = (vtex_order == 1u);
+    const float m2 = (vtex_order == 2u);
+    const float m3 = (vtex_order == 3u);
 
     const Vec3 wi = w0 * m0 + w1 * m1 + w2 * m2 + w3 * m3;
 
@@ -594,7 +616,7 @@ void VBDSolver::forward_step(State& state_in, const float dt) {
     }
 }
 
-void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) const {
+void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) {
 
     const auto num_nodes = model_->total_particles();
 
@@ -650,6 +672,9 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
         // state_in.pos = state_out.pos ...
         pos = pos_new;
     }
+
+    project_ground_plane_inelastic(state_in.particle_pos, state_out.particle_pos, prev_pos_, model_->particle_inv_mass, 0.0f, 0.1f);
+
 }
 
 void VBDSolver::update_velocity(State& state_out, const float dt) const {

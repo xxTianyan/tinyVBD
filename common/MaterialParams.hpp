@@ -49,5 +49,9 @@ inline MMaterial soft_cloth() {
     return {1e4f, 0.1f, 0.5f};
 };
 
+inline MMaterial soft_bunny() {
+    return {1e5f, 0.3f, 0.5f};
+}
+
 
 #endif //MATERIALPARAMS_HPP

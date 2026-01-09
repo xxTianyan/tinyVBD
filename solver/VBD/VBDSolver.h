@@ -26,7 +26,7 @@ public:
 
     void forward_step(State& state_in, float dt);
 
-    void solve_serial(State& state_in, State& state_out, float dt) const;
+    void solve_serial(State& state_in, State& state_out, float dt);
 
     void update_velocity(State& stat_out, float dt) const;
 
@@ -45,6 +45,8 @@ public:
 
     static void accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
                                         const tetrahedron& tet, uint32_t vtex_order, Vec3& force, Mat3& H);
+
+
 private:
 
     void BuildAdjacencyInfo();
