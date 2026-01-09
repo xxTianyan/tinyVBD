@@ -3,6 +3,8 @@
 //
 
 #include "Builder.h"
+
+#include "AdjacencyCSR.hpp"
 #include "Model.h"
 
 #ifdef _WIN64
@@ -203,5 +205,7 @@ void Builder::AddMeshInfo(const char* name, const size_t n_particle, const size_
 
     model_.mesh_infos.emplace_back(info);
 }
+
+
 
 

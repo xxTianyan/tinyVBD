@@ -10,7 +10,6 @@
 #include <array>
 #include <algorithm>
 #include "Types.h"
-#include "AdjacencyCSR.hpp"
 
 struct tetrahedron {
     std::array<VertexID, 4> vertices{0,0,0,0};

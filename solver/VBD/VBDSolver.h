@@ -7,6 +7,7 @@
 
 #include <span>
 #include <Types.h>
+#include "AdjacencyCSR.hpp"
 #include "Scene.h"
 #include "ISolver.h"
 #include "MaterialParams.hpp"
