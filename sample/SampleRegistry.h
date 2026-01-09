@@ -16,6 +16,7 @@
 enum SampleId : int {
     EMPTY_SCENE,
     BASIC_CLOTH_EXAMPLE,
+    BUNNY,
 };
 
 struct SampleInfo {

@@ -14,7 +14,7 @@ struct CommonShaderParams {
     float ambientStrength = 10.14f;              // 环境亮度：越小越“聚光”对比越强
 
     // 2) 曝光：整体亮度；值越大越亮（配合 HDR）
-    float exposure = 1.6f;
+    float exposure = 1.3f;
 
     // 3) 弱方向光补光：避免背光面完全死黑；但不要抢聚光灯戏份
     // lightDir 是光线传播方向 (Light->Scene)
@@ -22,12 +22,12 @@ struct CommonShaderParams {
     Vector3 lightColor  = { 0.25f, 0.25f, 0.25f };   // 很弱！如果你想更暗，可降到 0.1
 
     // 4) 聚光灯
-    Vector3 spotPos   = { 8.0f, 8.0f, 8.0f };      // 灯的位置：越高光圈越大更柔
+    Vector3 spotPos   = { 12.0f, 12.0f, 12.0f };      // 灯的位置：越高光圈越大更柔
     Vector3 spotDir   = Vector3Normalize(Vector3{ -1.0f, -1.0f, -1.0f }); // 朝下
     Vector3 spotColor = { 1.0f, 0.95f, 0.85f };    // 略暖色，舞台灯感觉
-    float spotIntensity = 22.0f;                   // 光圈亮度强弱（主要旋钮）
+    float spotIntensity = 18.0f;                   // 光圈亮度强弱（主要旋钮）
     float spotRange     = 30.0f;                   // 光能覆盖多远（太小会断崖式黑）
-    float innerDeg = 12.0f;                        // 内锥角：中心最亮区域大小
+    float innerDeg = 10.0f;                        // 内锥角：中心最亮区域大小
     float outerDeg = 20.0f;                        // 外锥角：边缘软过渡宽度
     float spotInnerCos = cosf(innerDeg * DEG2RAD);
     float spotOuterCos = cosf(outerDeg * DEG2RAD);

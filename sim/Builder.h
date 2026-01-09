@@ -45,8 +45,9 @@ class Builder {
 public:
     explicit Builder(MModel& model) : model_(model) {};
 
-    [[nodiscard]] size_t add_cloth(float width, float height, int resX, int resY, const Vec3& center = Vec3(0,0,0),
+    [[nodiscard]] size_t add_cloth(float width, float height, int resX, int resY, const Vec3& center = Vec3{0.0f,0.0f,0.0f},
                         float mass = .1f, ClothOrientation orientation = ClothOrientation::Horizontal, FixSide fix_mask = FixSide::TOP, const char* = "cloth") const;
+    [[nodiscard]] size_t add_bunny(float mass = 1.f);
 
     // void add_rigidbody();
 
@@ -55,6 +56,7 @@ private:
     MModel& model_;
 
     void PrepareCapacity(size_t num) const;
+    // void PrepareTopologyCapacity(size_t num) const;
 
     void AddMeshInfo(const char* name, size_t n_particle, size_t n_edge,
                 size_t n_tri, size_t n_tet) const;

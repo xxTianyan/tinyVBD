@@ -6,6 +6,7 @@
 #include "VBDSolver.h"
 #include "Sample.h"
 #include "basic_cloth_example.h"
+#include "bunny.h"
 
 void RegisterAllSamples(SampleRegistry& reg) {
 
@@ -16,4 +17,6 @@ void RegisterAllSamples(SampleRegistry& reg) {
     reg.Register(SampleId::BASIC_CLOTH_EXAMPLE, "Basic Cloth Example",
         []()->SamplePtr { return std::make_unique<BasicCloth>();});
 
+    reg.Register(SampleId::BUNNY, "Falling Bunny",
+    []()->SamplePtr { return std::make_unique<FallingBunny>();});
 }
