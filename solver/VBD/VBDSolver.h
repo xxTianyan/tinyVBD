@@ -30,7 +30,7 @@ public:
 
     void update_velocity(State& stat_out, float dt) const;
 
-    static void apply_ground_collision(std::span<const Vec3> pos, float ground_k, Vec3& force, Mat3& H);
+    static void apply_ground_collision(const Vec3& pos, float ground_k, Vec3& force, Mat3& H);
 
     static void accumulate_stvk_triangle_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
                                         const triangle& face, uint32_t vtex_order, Vec3& force, Mat3& H);

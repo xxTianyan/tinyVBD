@@ -567,12 +567,10 @@ void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const
     H += h;
 }
 
-void VBDSolver::apply_ground_collision(std::span<const Vec3> pos, const float ground_k,Vec3 &force, Mat3 &H) {
-    for (auto& p : pos) {
-        if (p.y() < 0.5) {
-            force.y() -= ground_k * (p.y()-0.5);
-            H(1,1) += ground_k;
-        }
+void VBDSolver::apply_ground_collision(const Vec3& pos, const float ground_k,Vec3 &force, Mat3 &H) {
+    if(pos.y() < 0.5) {
+        force.y() -= ground_k * (pos.y()-0.5);
+        H(1,1) += ground_k;
     }
 }
 
@@ -644,7 +642,7 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
             accumulate_neo_hookean_tetrahedron_force_hessian(state_in.particle_pos, material_, tet, order, force, hessian);
         }
 
-        apply_ground_collision(state_in.particle_pos, 1.0, force, hessian);
+        // apply_ground_collision(pos, 20.0, force, hessian);
 
         const auto delta_x = TY::SolveSPDOrRegularize(hessian, force);
         pos_new = pos + delta_x;

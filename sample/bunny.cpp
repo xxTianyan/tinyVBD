@@ -13,7 +13,7 @@
 void FallingBunny::CreateWorld(AppContext &ctx) {
     MModel model;
     Builder builder(model);
-    m_bunny_id_ = builder.add_bunny();
+    m_bunny_id_ = builder.add_single_tet();
     scene_ = std::make_unique<Scene>(std::move(model));
     solver_ = std::make_unique<VBDSolver>(&scene_->model_, 5, soft_bunny());
 }
