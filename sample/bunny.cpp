@@ -23,7 +23,6 @@ void FallingBunny::Step(const float dt) {
     scene_->SwapStates();
 }
 
-
 void FallingBunny::BindShaders(AppContext &ctx) {
     ctx.shader_manager->LoadShaderProgram("bunny", "../resources/shaders/bunny.vs", "../resources/shaders/bunny.fs");
     const auto bunny_shader = ctx.shader_manager->Get("bunny")->shader;
@@ -33,4 +32,5 @@ void FallingBunny::BindShaders(AppContext &ctx) {
     auto m_bunny_model = renderHelper_.GetRLModel(m_bunny_id_);
     m_bunny_model.materials[0].shader = bunny_shader;
     m_bunny_model.materials[0].maps[MATERIAL_MAP_ALBEDO].color = Color{230, 200, 160, 255};
+
 }

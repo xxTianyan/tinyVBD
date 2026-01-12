@@ -4,6 +4,9 @@
 
 #include <stdexcept>
 #include "VBDSolver.h"
+
+#include <bits/fs_fwd.h>
+
 #include "Math.hpp"
 
 namespace {
@@ -23,28 +26,6 @@ namespace {
         C.col(2) = f0.cross(f1);
         return C; // == cof(F)
     }
-
-    void project_ground_plane_inelastic(
-        std::span<Vec3> pos_in,
-        std::span<Vec3> pos_out,
-        std::span<Vec3> prev_pos,
-        std::span<const float> inv_mass,
-        float groundY,
-        float radius) {
-        const float yMin = groundY + radius;
-
-        for (size_t i = 0; i < pos_in.size(); ++i) {
-            if (inv_mass[i] == 0.0f) continue; // 固定点不动（临时 demo 允许分支）
-
-            const float phi = pos_in[i].y() - yMin;          // signed distance to plane along n
-            const float corr = std::min(0.0f, phi);       // corr <= 0 when penetrating
-            // push out: pos.y -= corr  (since corr negative)
-            pos_in[i].y() -= corr;
-            prev_pos[i].y() -= corr;
-            pos_out[i] = pos_in[i];
-        }
-    }
-
 
     template <class Elem, class GetVertex>
     void BuildVertexIncidentCSR(const size_t num_nodes,
@@ -527,9 +508,13 @@ void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian_serial(
 
 void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const Vec3> pos, const MMaterial &mat,
     const tetrahedron &tet, uint32_t vtex_order, Vec3 &force, Mat3 &H) {
-        // ---- material ----
-    const float mu     = mat.mu();       // or mat.miu
-    const float lambda = mat.lambda();   // or mat.lmbd
+    // ---- material ----
+    const float mu     = mat.mu();
+    const float lambda = mat.lambda();
+
+    // rest info
+    const auto& Dm_inv = tet.Dm_inv;
+    const auto& rest_volume = tet.restVolume;
 
     // Guard: lambda can be ~0 for nu ~ 0.0; avoid division blow-up
     const float inv_lambda = (lambda > 1.0e-12f) ? (1.0f / lambda) : 0.0f;
@@ -553,49 +538,43 @@ void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const
     Ds.col(2) = x3 - x0;
 
     // ---- F = Ds * invDm ----
-    const Mat3 F = Ds * tet.Dm_inv;
-
-    // ---- cof(F) and J ----
+    const Mat3 F = Ds * Dm_inv;
+    const float J = F.determinant();
     const Mat3 cofF = Cofactor(F);
-    const float J = F.col(0).dot(cofF.col(0));
 
-    // ---- build wi (from invDm^T) ----
-    // If tet.invDm == Dm^{-1}, then invDmT = Dm^{-T}
-    const Mat3 invDmT = tet.Dm_inv.transpose();
-
+    // ------ f = - V0 (mu * F wi + lambda(J - alpha) * n_i) ---------
+    // ---- build wi from invDmT = Dm^{-T} ----
+    const Mat3 invDmT = Dm_inv.transpose();
     const Vec3 w1 = invDmT.col(0);
     const Vec3 w2 = invDmT.col(1);
     const Vec3 w3 = invDmT.col(2);
     const Vec3 w0 = -(w1 + w2 + w3);
 
-    // branchless select (GPU-friendly)
-    const float m0 = (vtex_order == 0u);
-    const float m1 = (vtex_order == 1u);
-    const float m2 = (vtex_order == 2u);
-    const float m3 = (vtex_order == 3u);
 
-    const Vec3 wi = w0 * m0 + w1 * m1 + w2 * m2 + w3 * m3;
+    const auto mask1 = static_cast<float>(vtex_order == 1);
+    const auto mask2 = static_cast<float>(vtex_order == 2);
+    const auto mask3 = static_cast<float>(vtex_order == 3);
+    const auto mask0 = static_cast<float>(vtex_order == 0);
 
-    // ---- n_i = dJ/dx_i = cof(F) * w_i  (since cof(F)=J F^{-T}) ----
+    const Vec3 wi = w1 * mask1 + w2 * mask2 + w3 * mask3 + w0 * mask0;
     const Vec3 ni = cofF * wi;
 
-    // ---- First Piola * wi ----
-    // P = mu*F + lambda*(J - alpha)*cof(F)   (since cof(F)=J F^{-T})
-    // => P*wi = mu*(F*wi) + lambda*(J - alpha)*(cof(F)*wi)
-    const Vec3 P_wi = (mu * (F * wi)) + (lambda * (J - alpha) * ni);
-
-    // ---- accumulate force: f_i = -V0 * P * wi ----
-    force -= tet.restVolume * P_wi;
-
-    // ---- PSD / Gauss-Newton Hessian approximation ----
-    // H_i ≈ V0 * [ mu * ||wi||^2 * I  +  lambda * (ni ni^T) ]
+    const Vec3 f = - rest_volume * (mu * F * wi + lambda * (J - alpha) * ni);
     const float wi2 = wi.squaredNorm();
-    const Mat3 H_dev = (mu * tet.restVolume * wi2) * Mat3::Identity();
-    const Mat3 H_vol = (lambda * tet.restVolume) * (ni * ni.transpose());
+    const Mat3 h = rest_volume * ( (mu * wi2) * Mat3::Identity() + lambda * (ni * ni.transpose()) );
 
-    H += (H_dev + H_vol);
+    force += f;
+    H += h;
 }
 
+void VBDSolver::apply_ground_collision(std::span<const Vec3> pos, const float ground_k,Vec3 &force, Mat3 &H) {
+    for (auto& p : pos) {
+        if (p.y() < 0.5) {
+            force.y() -= ground_k * (p.y()-0.5);
+            H(1,1) += ground_k;
+        }
+    }
+}
 
 void VBDSolver::forward_step(State& state_in, const float dt) {
     const size_t num_nodes = model_->total_particles();
@@ -616,7 +595,7 @@ void VBDSolver::forward_step(State& state_in, const float dt) {
     }
 }
 
-void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) {
+void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) const {
 
     const auto num_nodes = model_->total_particles();
 
@@ -641,13 +620,13 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
         hessian += Mat3::Identity() / (inv_mass * dt * dt);
 
 
-        for (uint32_t f = face_adjacency.begin(vtex_id); f < face_adjacency.end(vtex_id); ++f) {
+        /*for (uint32_t f = face_adjacency.begin(vtex_id); f < face_adjacency.end(vtex_id); ++f) {
             const auto pack = face_adjacency.incidents[f];
             const auto face_id = AdjacencyCSR::unpack_id(pack);
             const auto order = AdjacencyCSR::unpack_order(pack);
             const auto& face = model_->tris[face_id];
             accumulate_stvk_triangle_force_hessian(state_in.particle_pos, material_, face, order, force, hessian);
-        }
+        }*/
 
         for (uint32_t e = edge_adjacency.begin(vtex_id); e < edge_adjacency.end(vtex_id); ++e) {
             const auto pack = edge_adjacency.incidents[e];
@@ -665,6 +644,8 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
             accumulate_neo_hookean_tetrahedron_force_hessian(state_in.particle_pos, material_, tet, order, force, hessian);
         }
 
+        apply_ground_collision(state_in.particle_pos, 1.0, force, hessian);
+
         const auto delta_x = TY::SolveSPDOrRegularize(hessian, force);
         pos_new = pos + delta_x;
 
@@ -672,9 +653,6 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
         // state_in.pos = state_out.pos ...
         pos = pos_new;
     }
-
-    project_ground_plane_inelastic(state_in.particle_pos, state_out.particle_pos, prev_pos_, model_->particle_inv_mass, 0.0f, 0.1f);
-
 }
 
 void VBDSolver::update_velocity(State& state_out, const float dt) const {

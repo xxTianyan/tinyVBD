@@ -30,7 +30,7 @@ struct tetrahedron {
         Dm.col(2) = e3;
 
         // more stable det：det = dot(e1, cross(e2, e3))
-        const auto detDm = static_cast<float>(e1.dot(e2.cross(e3)));
+        const auto detDm = e1.dot(e2.cross(e3));
 
         const float absDet = std::fabs(detDm);
 
