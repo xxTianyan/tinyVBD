@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include "VBDSolver.h"
 
+#include <iostream>
 #include <bits/fs_fwd.h>
 
 #include "Math.hpp"
@@ -508,28 +509,19 @@ void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian_serial(
 
 void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const Vec3> pos, const MMaterial &mat,
     const tetrahedron &tet, uint32_t vtex_order, Vec3 &force, Mat3 &H) {
-    // ---- material ----
+
     const float mu     = mat.mu();
     const float lambda = mat.lambda();
 
-    // rest info
-    const auto& Dm_inv = tet.Dm_inv;
-    const auto& rest_volume = tet.restVolume;
-
-    // Guard: lambda can be ~0 for nu ~ 0.0; avoid division blow-up
-    const float inv_lambda = (lambda > 1.0e-12f) ? (1.0f / lambda) : 0.0f;
-    const float alpha = 1.0f + mu * inv_lambda;  // stable NH variant
+    const float V0 = tet.restVolume;
+    const Mat3& invDm = tet.Dm_inv;                 // Dm^{-1}
+    const Mat3 invDmT = invDm.transpose();          // Dm^{-T}
 
     // ---- gather positions ----
-    const uint32_t i0 = tet.vertices[0];
-    const uint32_t i1 = tet.vertices[1];
-    const uint32_t i2 = tet.vertices[2];
-    const uint32_t i3 = tet.vertices[3];
-
-    const Vec3& x0 = pos[i0];
-    const Vec3& x1 = pos[i1];
-    const Vec3& x2 = pos[i2];
-    const Vec3& x3 = pos[i3];
+    const Vec3& x0 = pos[tet.vertices[0]];
+    const Vec3& x1 = pos[tet.vertices[1]];
+    const Vec3& x2 = pos[tet.vertices[2]];
+    const Vec3& x3 = pos[tet.vertices[3]];
 
     // ---- Ds ----
     Mat3 Ds;
@@ -537,39 +529,92 @@ void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const
     Ds.col(1) = x2 - x0;
     Ds.col(2) = x3 - x0;
 
-    // ---- F = Ds * invDm ----
-    const Mat3 F = Ds * Dm_inv;
-    const float J = F.determinant();
-    const Mat3 cofF = Cofactor(F);
+    // ---- F ----
+    const Mat3 F = Ds * invDm;
 
-    // ------ f = - V0 (mu * F wi + lambda(J - alpha) * n_i) ---------
-    // ---- build wi from invDmT = Dm^{-T} ----
-    const Mat3 invDmT = Dm_inv.transpose();
+    // ---- cof(F) and J (use cof for a consistent det) ----
+    const Mat3 cofF = Cofactor(F);
+    const float J = F.col(0).dot(cofF.col(0));  // det(F)
+
+    // If J is NaN/Inf, bail out (do not inject NaNs)
+    if (!std::isfinite(J)) {
+        return;
+    }
+
+    // ---- build wi (grad Ni) ----
     const Vec3 w1 = invDmT.col(0);
     const Vec3 w2 = invDmT.col(1);
     const Vec3 w3 = invDmT.col(2);
     const Vec3 w0 = -(w1 + w2 + w3);
 
+    const float m0 = static_cast<float>(vtex_order == 0u);
+    const float m1 = static_cast<float>(vtex_order == 1u);
+    const float m2 = static_cast<float>(vtex_order == 2u);
+    const float m3 = static_cast<float>(vtex_order == 3u);
 
-    const auto mask1 = static_cast<float>(vtex_order == 1);
-    const auto mask2 = static_cast<float>(vtex_order == 2);
-    const auto mask3 = static_cast<float>(vtex_order == 3);
-    const auto mask0 = static_cast<float>(vtex_order == 0);
+    const Vec3 wi = w0*m0 + w1*m1 + w2*m2 + w3*m3;
 
-    const Vec3 wi = w1 * mask1 + w2 * mask2 + w3 * mask3 + w0 * mask0;
-    const Vec3 ni = cofF * wi;
+    // ---- n_i = dJ/dx_i = cof(F) * w_i ----
+    Vec3 ni = cofF * wi;
 
-    const Vec3 f = - rest_volume * (mu * F * wi + lambda * (J - alpha) * ni);
+    if (!ni.allFinite()) {
+        return;
+    }
+
+    // ------------------------------------------------------------------
+    // Stable NH variant WITHOUT alpha division:
+    // lambda*(J - alpha)  with alpha = 1 + mu/lambda  == lambda*(J-1) - mu
+    // This avoids division by lambda and catastrophic cancellation.
+    // ------------------------------------------------------------------
+    float s = lambda * (J - 1.0f) - mu; // = lambda*(J-alpha)
+
+    // ------------------------------------------------------------------
+    // Bad-J handling (stability-first):
+    // - If J is too small or negative, scale down the volumetric response
+    //   to prevent exploding forces/Hessian.
+    //
+    // J_min can be tuned. 0.2~0.5 is common for "don't explode" demos.
+    // ------------------------------------------------------------------
+    constexpr float J_min = 0.2f;
+    if (J < J_min) {
+        // scale in (0,1], continuous at J_min
+        const float scale = std::max(0.0f, J / J_min);
+        s  *= scale;
+        ni *= scale;
+    }
+
+    // ---- force contribution (negative gradient) ----
+    // f_i = -V0 * ( mu * F * wi + s * ni )
+    const Vec3 fi = -V0 * (mu * (F * wi) + s * ni);
+
+    // ---- Hessian diagonal block (SPD) ----
+    // H_ii = V0 * ( mu*||wi||^2 I + lambda * ni ni^T )
+    // (vol term already scaled via ni above)
     const float wi2 = wi.squaredNorm();
-    const Mat3 h = rest_volume * ( (mu * wi2) * Mat3::Identity() + lambda * (ni * ni.transpose()) );
 
-    force += f;
-    H += h;
+    // Small diagonal floor to keep SPD even when wi2 is tiny (rare but helps)
+    constexpr float diag_eps = 1.0e-10f;
+
+    Mat3 Hi = (V0 * (mu * wi2)) * Mat3::Identity();
+    Hi.diagonal().array() += diag_eps;
+
+    if (lambda > 0.0f) {
+        Hi += (V0 * lambda) * (ni * ni.transpose());
+    }
+
+    // ---- final finite guards ----
+    if (!fi.allFinite() || !Hi.allFinite()) {
+        return;
+    }
+
+    force += fi;
+    H += Hi;
 }
 
+
 void VBDSolver::apply_ground_collision(const Vec3& pos, const float ground_k,Vec3 &force, Mat3 &H) {
-    if(pos.y() < 0.5) {
-        force.y() -= ground_k * (pos.y()-0.5);
+    if(pos.y() < 0.0) {
+        force.y() -= ground_k * (pos.y()-0.0);
         H(1,1) += ground_k;
     }
 }
@@ -592,8 +637,16 @@ void VBDSolver::forward_step(State& state_in, const float dt) {
         inertia_[i] = state_in.particle_pos[i];
     }
 }
+inline void project_ground(Vec3& p, float groundY)
+{
+    if (p.y() < groundY) p.y() = groundY;
+}
 
 void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) const {
+
+    if (&state_in == &state_out) {
+        throw std::runtime_error("VBDSolver::Step requires distinct state_in/state_out.");
+    }
 
     const auto num_nodes = model_->total_particles();
 
@@ -626,13 +679,13 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
             accumulate_stvk_triangle_force_hessian(state_in.particle_pos, material_, face, order, force, hessian);
         }*/
 
-        for (uint32_t e = edge_adjacency.begin(vtex_id); e < edge_adjacency.end(vtex_id); ++e) {
+        /*for (uint32_t e = edge_adjacency.begin(vtex_id); e < edge_adjacency.end(vtex_id); ++e) {
             const auto pack = edge_adjacency.incidents[e];
             const auto edge_id = AdjacencyCSR::unpack_id(pack);
             const auto order = AdjacencyCSR::unpack_order(pack);
             const auto& edge = model_->edges[edge_id];
             accumulate_dihedral_angle_based_bending_force_hessian(state_in.particle_pos, material_, edge, order, force, hessian);
-        }
+        }*/
 
         for (uint32_t t = tet_adjacency.begin(vtex_id); t < tet_adjacency.end(vtex_id); ++t) {
             const auto pack = tet_adjacency.incidents[t];
@@ -642,10 +695,20 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
             accumulate_neo_hookean_tetrahedron_force_hessian(state_in.particle_pos, material_, tet, order, force, hessian);
         }
 
-        // apply_ground_collision(pos, 20.0, force, hessian);
+        // apply_ground_collision(pos, 10.0, force, hessian);
 
-        const auto delta_x = TY::SolveSPDOrRegularize(hessian, force);
-        pos_new = pos + delta_x;
+        auto dx = TY::SolveSPDOrRegularize(hessian, force);
+
+        /*const float maxStep = 0.05f * model_->avg_edge_length; // model average edge length
+        float n = dx.norm();
+        if (n > maxStep) dx *= (maxStep / n);*/
+
+        /*const float maxStep = 0.05f  / std::sqrt(2); // model average edge length
+        float n = dx.norm();
+        if (n > maxStep) dx *= (maxStep / n);*/
+
+        pos_new = pos + dx;
+        project_ground(pos_new, 0.5f);
 
         // if parallel with color group, need to copy new pos back to state_in to satisfy GS.
         // state_in.pos = state_out.pos ...
@@ -658,7 +721,11 @@ void VBDSolver::update_velocity(State& state_out, const float dt) const {
     const auto num_nodes = model_->total_particles();
 
     for (size_t i = 0; i < num_nodes; ++i) {
-        state_out.particle_vel[i] = (state_out.particle_pos[i] - prev_pos_[i]) / dt ;
+        Vec3 v = (state_out.particle_pos[i] - prev_pos_[i]) / dt;
+        if (state_out.particle_pos[i].y() <= 0.0f + 1e-6f && v.y() < 0.0f)
+            v.y() = 0.0f; // no-bounce
+        state_out.particle_vel[i] = v;
+        // state_out.particle_vel[i] = (state_out.particle_pos[i] - prev_pos_[i]) / dt ;
     }
 }
 

@@ -250,8 +250,8 @@ struct MModel {
         // ----------- particle --------------------
         s.resize_particle(num_particles);
         std::ranges::copy(particle_pos0, s.particle_pos.begin());
-        if (particle_vel0.size() == num_particles) std::ranges::copy(particle_vel0, s.particle_vel.begin());
-        else std::ranges::fill(s.particle_vel, Vec3::Zero());
+        // currently, no initial velocity
+        std::ranges::fill(s.particle_vel, Vec3::Zero());
         std::ranges::fill(s.particle_force, Vec3::Zero());
 
         // -------------- rigid body ---------------------

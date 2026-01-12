@@ -4,6 +4,8 @@
 
 #include "Builder.h"
 
+#include <map>
+
 #include "AdjacencyCSR.hpp"
 #include "Model.h"
 
@@ -203,7 +205,7 @@ size_t Builder::add_bunny(const float mass) const {
 
     for (size_t i = 0; i < local_particle_count; i++) {
         const auto gid = base_particle + i;
-        model_.particle_pos0[gid] = Vec3{temp_pos[3*i + 0], temp_pos[3*i + 1] + 5.0f, temp_pos[3*i + 2]};
+        model_.particle_pos0[gid] = Vec3{temp_pos[3*i + 0], temp_pos[3*i + 1] + 1.5f, temp_pos[3*i + 2]};
         model_.particle_vel0[gid].setZero();
     }
 
@@ -249,7 +251,7 @@ size_t Builder::add_bunny(const float mass) const {
 
 size_t Builder::add_single_tet() const {
 
-    constexpr float y = 3.0;
+    constexpr float y = 10.0;
     const float s = 1.0f / std::sqrt(2.0);
 
     PrepareCapacity(4);
@@ -276,10 +278,188 @@ size_t Builder::add_single_tet() const {
     for (auto& inv_m : model_.particle_inv_mass)
         inv_m = 1.0f;
 
-    model_.particle_inv_mass[0] = 0.0f;
+    // model_.particle_inv_mass[0] = 0.0f;
 
     // add mesh info
     AddMeshInfo("tet", 4,0,4,1);
+
+    model_.topology_version++;
+    return model_.mesh_infos.size() - 1;
+}
+
+#include <vector>
+#include <cmath>
+#include <algorithm>
+
+// 辅助函数：将立方体空间的坐标映射到球体空间
+// 输入: x, y, z 在 [-1, 1] 范围内
+// 输出: 映射到单位球表面的坐标
+Vec3 MapCubeToSphere(float x, float y, float z) {
+    float x2 = x * x;
+    float y2 = y * y;
+    float z2 = z * z;
+
+    float sx = x * std::sqrt(1.0f - y2 / 2.0f - z2 / 2.0f + (y2 * z2) / 3.0f);
+    float sy = y * std::sqrt(1.0f - z2 / 2.0f - x2 / 2.0f + (z2 * x2) / 3.0f);
+    float sz = z * std::sqrt(1.0f - x2 / 2.0f - y2 / 2.0f + (x2 * y2) / 3.0f);
+
+    return Vec3(sx, sy, sz);
+}
+
+size_t Builder::add_sphere(const float radius,
+                           const int res, // 分辨率：建议 10-20 之间
+                           const Vec3& center,
+                           const float mass,
+                           const char* name) const {
+    if (radius <= 0.0f || res <= 0)
+        throw std::runtime_error("Builder::add_sphere: Invalid parameters");
+
+    // 1. Setup Counts
+    // 我们将建立一个 (res x res x res) 的逻辑立方体网格，然后将其变形
+    const int nodes_per_dim = res + 1;
+    const size_t num_particles = nodes_per_dim * nodes_per_dim * nodes_per_dim;
+
+    // 每个立方体单元拆分为 6 个四面体 (Kuhn decomposition)
+    // 总单元数 = res * res * res
+    const size_t num_cells = res * res * res;
+    const size_t num_tets = num_cells * 6;
+
+    // 表面三角形数量：立方体有6个面，每个面有 res*res 个小方块，每个方块2个三角形
+    const size_t num_tris = 6 * res * res * 2;
+
+    Builder::CheckVertexLimit(num_particles);
+    const size_t base_particle = model_.mesh_infos.empty() ? 0ull : static_cast<size_t>(model_.mesh_infos.back().particle.end());
+    PrepareCapacity(num_particles);
+
+    std::vector<float> mass_local(num_particles, 0.0f);
+
+    // 2. Generate Particles (Vertices)
+    // 生成网格并应用 "Cube to Sphere" 映射
+    for (int k = 0; k < nodes_per_dim; ++k) {
+        for (int j = 0; j < nodes_per_dim; ++j) {
+            for (int i = 0; i < nodes_per_dim; ++i) {
+                // 计算归一化坐标 [-1, 1]
+                float u = (static_cast<float>(i) / res) * 2.0f - 1.0f;
+                float v = (static_cast<float>(j) / res) * 2.0f - 1.0f;
+                float w = (static_cast<float>(k) / res) * 2.0f - 1.0f;
+
+                // 核心：映射到球体
+                Vec3 sphere_pos = MapCubeToSphere(u, v, w);
+
+                // 应用半径和中心偏移
+                Vec3 final_pos = center + sphere_pos * radius;
+
+                size_t gid = base_particle + (k * nodes_per_dim * nodes_per_dim + j * nodes_per_dim + i);
+                model_.particle_pos0[gid] = final_pos;
+                model_.particle_vel0[gid].setZero();
+            }
+        }
+    }
+
+    // 3. Build Tetrahedra (Volume)
+    // 遍历每一个逻辑立方体单元 (Cell)
+    auto get_idx = [&](int i, int j, int k) {
+        return base_particle + (k * nodes_per_dim * nodes_per_dim + j * nodes_per_dim + i);
+    };
+
+    auto tet_vol = [](const Vec3& a, const Vec3& b, const Vec3& c, const Vec3& d) -> float {
+        return std::abs((b - a).dot((c - a).cross(d - a))) / 6.0f;
+    };
+
+    float total_vol_calculated = 0.0f;
+
+    for (int k = 0; k < res; ++k) {
+        for (int j = 0; j < res; ++j) {
+            for (int i = 0; i < res; ++i) {
+                // 当前单元的8个顶点
+                size_t n000 = get_idx(i,   j,   k);
+                size_t n100 = get_idx(i+1, j,   k);
+                size_t n010 = get_idx(i,   j+1, k);
+                size_t n110 = get_idx(i+1, j+1, k);
+                size_t n001 = get_idx(i,   j,   k+1);
+                size_t n101 = get_idx(i+1, j,   k+1);
+                size_t n011 = get_idx(i,   j+1, k+1);
+                size_t n111 = get_idx(i+1, j+1, k+1);
+
+                // Kuhn Decomposition (6 Tets per cell)
+                // 这种切分方式与网格对角线一致，能保证变形后的单元质量较好
+                size_t tets[6][4] = {
+                    {n000, n100, n110, n111},
+                    {n000, n110, n010, n111},
+                    {n000, n010, n011, n111},
+                    {n000, n011, n001, n111},
+                    {n000, n001, n101, n111},
+                    {n000, n101, n100, n111}
+                };
+
+                for (auto& t : tets) {
+                    const Vec3 &p0 = model_.particle_pos0[t[0]];
+                    const Vec3 &p1 = model_.particle_pos0[t[1]];
+                    const Vec3 &p2 = model_.particle_pos0[t[2]];
+                    const Vec3 &p3 = model_.particle_pos0[t[3]];
+
+                    model_.tets.emplace_back(t[0], t[1], t[2], t[3], p0, p1, p2, p3);
+
+                    // 质量分配
+                    float vol = tet_vol(p0, p1, p2, p3);
+                    total_vol_calculated += vol;
+                    float node_m = vol / 4.0f;
+                    mass_local[t[0] - base_particle] += node_m;
+                    mass_local[t[1] - base_particle] += node_m;
+                    mass_local[t[2] - base_particle] += node_m;
+                    mass_local[t[3] - base_particle] += node_m;
+                }
+            }
+        }
+    }
+
+    // 4. Build Surface Triangles (Rendering)
+    // 既然是结构化网格，我们不需要复杂的面计数，只需要提取逻辑边界
+    auto add_quad_as_tris = [&](size_t v0, size_t v1, size_t v2, size_t v3) {
+        // Quad (v0, v1, v2, v3) split into 2 tris
+        const Vec3 &p0 = model_.particle_pos0[v0];
+        const Vec3 &p1 = model_.particle_pos0[v1];
+        const Vec3 &p2 = model_.particle_pos0[v2];
+        const Vec3 &p3 = model_.particle_pos0[v3];
+        model_.tris.emplace_back(v0, v1, v2, p0, p1, p2);
+        model_.tris.emplace_back(v0, v2, v3, p0, p2, p3);
+    };
+
+    // 遍历6个面提取三角形
+    // Face X- (Left)
+    for (int k = 0; k < res; ++k) for (int j = 0; j < res; ++j)
+        add_quad_as_tris(get_idx(0, j, k), get_idx(0, j, k+1), get_idx(0, j+1, k+1), get_idx(0, j+1, k));
+
+    // Face X+ (Right)
+    for (int k = 0; k < res; ++k) for (int j = 0; j < res; ++j)
+        add_quad_as_tris(get_idx(res, j+1, k), get_idx(res, j+1, k+1), get_idx(res, j, k+1), get_idx(res, j, k));
+
+    // Face Y- (Bottom)
+    for (int k = 0; k < res; ++k) for (int i = 0; i < res; ++i)
+        add_quad_as_tris(get_idx(i, 0, k), get_idx(i+1, 0, k), get_idx(i+1, 0, k+1), get_idx(i, 0, k+1));
+
+    // Face Y+ (Top)
+    for (int k = 0; k < res; ++k) for (int i = 0; i < res; ++i)
+        add_quad_as_tris(get_idx(i, res, k+1), get_idx(i+1, res, k+1), get_idx(i+1, res, k), get_idx(i, res, k));
+
+    // Face Z- (Front)
+    for (int j = 0; j < res; ++j) for (int i = 0; i < res; ++i)
+        add_quad_as_tris(get_idx(i, j, 0), get_idx(i, j+1, 0), get_idx(i+1, j+1, 0), get_idx(i+1, j, 0));
+
+    // Face Z+ (Back)
+    for (int j = 0; j < res; ++j) for (int i = 0; i < res; ++i)
+        add_quad_as_tris(get_idx(i+1, j, res), get_idx(i+1, j+1, res), get_idx(i, j+1, res), get_idx(i, j, res));
+
+
+    AddMeshInfo(name, num_particles, 0, model_.tris.size() - (model_.mesh_infos.empty() ? 0 : model_.mesh_infos.back().tri.end()), num_tets);
+
+    // 5. Finalize Mass
+    float density_scaling = (total_vol_calculated > 1e-9f) ? (mass / total_vol_calculated) : 0.0f;
+    for (size_t local_i = 0; local_i < num_particles; ++local_i) {
+        const size_t gid = base_particle + local_i;
+        float m = mass_local[local_i] * density_scaling;
+        model_.particle_inv_mass[gid] = (m > 1e-12f) ? (1.0f / m) : 0.0f;
+    }
 
     model_.topology_version++;
     return model_.mesh_infos.size() - 1;

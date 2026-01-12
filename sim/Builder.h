@@ -31,11 +31,20 @@ static void ensure_capacity(std::vector<T>& v, size_t extra, const size_t min_gr
     v.reserve(new_cap);
 }
 
-
-
 enum class ClothOrientation {
     Vertical,   //  (XY Plane)
     Horizontal  //  (XZ Plane)
+};
+
+struct SortedFace {
+    int v[3];
+    SortedFace(int a, int b, int c) {
+        v[0] = a; v[1] = b; v[2] = c;
+        std::sort(std::begin(v), std::end(v));
+    }
+    bool operator<(const SortedFace& other) const {
+        return std::tie(v[0], v[1], v[2]) < std::tie(other.v[0], other.v[1], other.v[2]);
+    }
 };
 
 enum FixSide { NONE = 0, TOP = 1, BOTTOM = 2, LEFT = 4, RIGHT = 8 };
@@ -47,9 +56,11 @@ public:
 
     [[nodiscard]] size_t add_cloth(float width, float height, int resX, int resY, const Vec3& center = Vec3{0.0f,0.0f,0.0f},
                         float mass = .1f, ClothOrientation orientation = ClothOrientation::Horizontal, FixSide fix_mask = FixSide::TOP, const char* = "cloth") const;
-    [[nodiscard]] size_t add_bunny(float mass = 1.f) const;
+    [[nodiscard]] size_t add_bunny(float mass = 0.01f) const;
 
     [[nodiscard]] size_t add_single_tet() const;
+
+    [[nodiscard]] size_t add_sphere(const float radius,  const int res, const Vec3& center, const float mass, const char* name) const;
 
     // void add_rigidbody();
 

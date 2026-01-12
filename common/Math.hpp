@@ -52,25 +52,40 @@ namespace TY {
 
     inline Vec3 SolveSPDOrRegularize(Mat3& H, const Vec3& f) {
         using Scalar = Mat3::Scalar;
-        H = static_cast<Scalar>(0.5) * (H + H.transpose());
 
-        Eigen::LLT<Mat3> llt;
+        // 先做对称化（用临时，避免引用 alias）
+        H = Scalar(0.5) * (H + H.transpose());
 
-        Scalar tau = static_cast<Scalar>(1e-6) * H.diagonal().cwiseAbs().maxCoeff();
-        if (!(tau > static_cast<Scalar>(0))) tau = static_cast<Scalar>(1e-6);
-
-        for (int k = 0; k < 10; ++k) {
-            Mat3 Hreg = H;
-            Hreg.diagonal().array() += tau;
-
-            llt.compute(Hreg);
-            if (llt.info() == Eigen::Success)
-                return llt.solve(f);
-
-            tau *= static_cast<Scalar>(10);
+        // finite check（强烈建议）
+        if (!H.allFinite() || !f.allFinite()) {
+            return Vec3::Zero();
         }
 
-        return Vec3::Zero();
+        Eigen::SelfAdjointEigenSolver<Mat3> es(H);
+        if (es.info() != Eigen::Success) {
+            return Vec3::Zero();
+        }
+
+        Eigen::Matrix<Scalar,3,1> d = es.eigenvalues();
+        const Mat3& Q = es.eigenvectors();
+
+        // 选择一个更稳的 tau：与矩阵谱/尺度相关
+        Scalar dmax = d.cwiseAbs().maxCoeff();
+        Scalar tau  = Scalar(1e-6) * std::max(Scalar(1), dmax);  // 你可改 1e-5/1e-4 更稳
+
+        // clamp eigenvalues to be >= tau (SPD)
+        d = d.cwiseMax(tau);
+
+        // solve: x = Q * diag(1/d) * Q^T * f
+        Eigen::Matrix<Scalar,3,1> rhs = f;
+        Eigen::Matrix<Scalar,3,1> y = Q.transpose() * rhs;
+        y.array() /= d.array();
+        Vec3 x = Q * y;
+
+        if (!x.allFinite()) {
+            return Vec3::Zero();
+        }
+        return x;
     }
 
 }
