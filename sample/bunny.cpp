@@ -49,16 +49,23 @@ void print_quality_histogram(const std::vector<tetrahedron>& tets) {
 void FallingBunny::CreateWorld(AppContext &ctx) {
     MModel model;
     Builder builder(model);
-    m_bunny_id_ = builder.add_sphere(1.0f, 10, Vec3{0.0f,30.0f,0.0f}, 3.f, "sphere");
-    // m_bunny_id_ = builder.add_bunny();
+    // m_bunny_id_ = builder.add_sphere(1.0f, 10, Vec3{0.0f,30.0f,0.0f}, 3.f, "sphere");
+    m_bunny_id_ = builder.add_bunny();
     scene_ = std::make_unique<Scene>(std::move(model));
     solver_ = std::make_unique<VBDSolver>(&scene_->model_, 10, soft_bunny());
     print_quality_histogram(scene_->model_.tets);
 }
 
 void FallingBunny::Step(const float dt) {
-    solver_->Step(scene_->state_in(), scene_->state_out(), dt);
-    scene_->SwapStates();
+    if (solver_->DebugPaused()) {
+        // 不推进仿真，只渲染 + ImGui
+        // 你也可以在 ImGui 里加一个按钮：solver.ClearDebugPause();
+    }
+    else {
+        solver_->Step(scene_->state_in(), scene_->state_out(), dt);
+        scene_->SwapStates();
+    }
+
 }
 
 void FallingBunny::BindShaders(AppContext &ctx) {

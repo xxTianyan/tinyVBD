@@ -830,6 +830,56 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
         float n = dx.norm();
         if (n > maxStep) dx *= (maxStep / n);*/
 
+
+        // ---- debug trigger (after dx computed, before applying) ----
+        if (debug_cfg_.enabled && !debug_pause_) {
+            const float dx_norm = dx.norm();
+            const float dx_limit = debug_cfg_.dx_limit_scale * 0.03f;
+
+            // 当前顶点（若更新后）对地面穿透（无 radius）
+            const float pen = std::max(0.0f, 0.0f - (pos.y() + dx.y())); // ground_y=0
+
+            bool trigger = false;
+
+            if (debug_cfg_.trigger_on_nan) {
+                if (!dx.allFinite() || !force.allFinite() || !hessian.allFinite()) {
+                    trigger = true;
+                }
+            }
+
+            if (!trigger && dx_norm > dx_limit) {
+                trigger = true;
+            }
+
+            if (!trigger && debug_cfg_.trigger_on_first_contact && pen > 0.0f) {
+                trigger = true;
+            }
+
+            if (trigger) {
+                DebugFrameStats stats = ComputeDebugStats(state_in.particle_pos, /*ground_y=*/0.0f);
+                stats.trigger_vertex = vtex_id;
+                stats.trigger_dx_norm = dx_norm;
+                stats.trigger_pen = pen;
+                // 如果你有 frame_id，把它写进去
+                // stats.frame_id = frame_id_;
+
+                // 额外触发：若发现 J 已经很小 / 体积翻转，也强触发（可选）
+                if (stats.minJ < debug_cfg_.J_min) {
+                    // still trigger (already)
+                }
+                if (debug_cfg_.trigger_on_inversion && stats.minSignedVol <= 0.0f) {
+                    // still trigger
+                }
+
+                last_debug_stats_ = stats;
+                DumpDebugStats(last_debug_stats_);
+
+                if (debug_cfg_.freeze_on_trigger) {
+                    debug_pause_ = true;
+                }
+            }
+        }
+
         pos_new = pos + dx;
 
         // if parallel with color group, need to copy new pos back to state_in to satisfy GS.
@@ -891,6 +941,81 @@ void VBDSolver::BuildAdjacencyInfo() {
         adjacency_info_.vertex_tets.incidents.clear();
     }
 }
+
+
+// debug part
+static inline float SignedTetVolume6(const Vec3& x0, const Vec3& x1, const Vec3& x2, const Vec3& x3) {
+    // 6*V = dot(x1-x0, (x2-x0) x (x3-x0))
+    const Vec3 a = x1 - x0;
+    const Vec3 b = x2 - x0;
+    const Vec3 c = x3 - x0;
+    return a.dot(b.cross(c));
+}
+
+DebugFrameStats VBDSolver::ComputeDebugStats(std::span<const Vec3> pos, float ground_y) const {
+    DebugFrameStats s;
+
+    // --- penetration over ground plane y=ground_y ---
+    // 你没有 radius 的话 penetration = max(0, ground_y - y)
+    const size_t n = pos.size();
+    for (size_t i = 0; i < n; ++i) {
+        const float pen = std::max(0.0f, ground_y - pos[i].y());
+        if (pen > s.maxPenetration) {
+            s.maxPenetration = pen;
+            s.maxPen_vtx = i;
+        }
+    }
+
+    // --- per-tet minJ / minVol ---
+    const auto& tets = model_->tets;
+    for (size_t tid = 0; tid < tets.size(); ++tid) {
+        const auto& tet = tets[tid];
+
+        const Vec3& x0 = pos[tet.vertices[0]];
+        const Vec3& x1 = pos[tet.vertices[1]];
+        const Vec3& x2 = pos[tet.vertices[2]];
+        const Vec3& x3 = pos[tet.vertices[3]];
+
+        // current signed volume
+        const float v6 = SignedTetVolume6(x0, x1, x2, x3);
+        const float v  = v6 / 6.0f;
+        const float av = std::abs(v);
+
+        if (v < s.minSignedVol) { s.minSignedVol = v;  s.minVol_tet = tid; }
+        if (av < s.minAbsVol)   { s.minAbsVol   = av; s.minAbsVol_tet = tid; }
+
+        // deformation gradient F = Ds * invDm
+        Mat3 Ds;
+        Ds.col(0) = x1 - x0;
+        Ds.col(1) = x2 - x0;
+        Ds.col(2) = x3 - x0;
+
+        const Mat3 F = Ds * tet.Dm_inv;     // 你 tet 里存的 invDm
+        const float J = F.determinant();    // det(F)
+
+        if (std::isfinite(J) && J < s.minJ) {
+            s.minJ = J;
+            s.minJ_tet = tid;
+        }
+    }
+
+    return s;
+}
+
+void VBDSolver::DumpDebugStats(const DebugFrameStats& s) const {
+    // 你可以换成 spdlog / ImGui log，这里用 printf 简单直接
+    std::printf("\n========== [VBD DEBUG TRIGGER] ==========\n");
+    std::printf("frame=%zu  trigger_vertex=%zu\n", s.frame_id, s.trigger_vertex);
+    std::printf("trigger_dx_norm=%.9g  trigger_pen=%.9g\n", s.trigger_dx_norm, s.trigger_pen);
+
+    std::printf("minJ=%.9g  (tet=%zu)\n", s.minJ, s.minJ_tet);
+    std::printf("minSignedVol=%.9g  (tet=%zu)\n", s.minSignedVol, s.minVol_tet);
+    std::printf("minAbsVol=%.9g  (tet=%zu)\n", s.minAbsVol, s.minAbsVol_tet);
+
+    std::printf("maxPenetration=%.9g  (vtx=%zu)\n", s.maxPenetration, s.maxPen_vtx);
+    std::printf("=========================================\n");
+}
+
 
 
 
