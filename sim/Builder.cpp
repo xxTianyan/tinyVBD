@@ -205,7 +205,7 @@ size_t Builder::add_bunny(const float mass) const {
 
     for (size_t i = 0; i < local_particle_count; i++) {
         const auto gid = base_particle + i;
-        model_.particle_pos0[gid] = Vec3{temp_pos[3*i + 0], temp_pos[3*i + 1] + 1.5f, temp_pos[3*i + 2]};
+        model_.particle_pos0[gid] = Vec3{temp_pos[3*i + 0], temp_pos[3*i + 1] + 5.0f, temp_pos[3*i + 2]};
         model_.particle_vel0[gid].setZero();
     }
 
@@ -276,9 +276,9 @@ size_t Builder::add_single_tet() const {
 
     // assigen mass
     for (auto& inv_m : model_.particle_inv_mass)
-        inv_m = 1.0f;
+        inv_m = 0.0f;
 
-    // model_.particle_inv_mass[0] = 0.0f;
+    model_.particle_inv_mass[0] = 1.0f;
 
     // add mesh info
     AddMeshInfo("tet", 4,0,4,1);

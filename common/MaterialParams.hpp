@@ -50,7 +50,7 @@ inline MMaterial soft_cloth() {
 };
 
 inline MMaterial soft_bunny() {
-    return {1e8f, 0.45f, 0.0f};
+    return {1e5f, 0.1f, 0.0f};
 }
 
 
