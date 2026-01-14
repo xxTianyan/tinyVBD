@@ -6,9 +6,6 @@
 #include "VBDSolver.h"
 
 #include <iostream>
-#include <bits/fs_fwd.h>
-
-#include "JFilter.hpp"
 #include "Math.hpp"
 
 namespace {
@@ -820,7 +817,7 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
     const float radius = 0.15f * 0.1;  // need eigen length
 
     // Contact stiffness scaling: ke ~ factor * m/dt^2 keeps behavior stable across dt
-    const float ke_factor = 1.0f; // tune: 10~200 (start smaller if exploding)
+    const float ke_factor = 1.0f;
 
     // Newton uses damping_coeff = kd_ratio * ke
     const float kd_ratio = 0.02f;  // start tiny (0~0.05)
@@ -857,7 +854,7 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
         force += -(pos - inertia_[vtex_id]) / (inv_mass * dt * dt);
         hessian += Mat3::Identity() / (inv_mass * dt * dt);
 
-        if (1) {
+        if (surface_vertices[vtex_id]) {
             Vec3 fc = Vec3::Zero();
             Mat3 Hc = Mat3::Zero();
 

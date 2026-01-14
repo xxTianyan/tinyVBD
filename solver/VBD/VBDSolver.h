@@ -14,7 +14,7 @@
 
 
 struct DebugTriggerConfig {
-    bool enabled = true;
+    bool enabled = false;
     bool freeze_on_trigger = true;
 
     // 触发条件（可按你单位调）
