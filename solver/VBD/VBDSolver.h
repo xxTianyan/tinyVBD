@@ -36,12 +36,16 @@ struct DebugFrameStats {
     float minAbsVol = std::numeric_limits<float>::infinity();
     size_t minAbsVol_tet = size_t(-1);
 
+    float minRestVol = std::numeric_limits<float>::infinity();
+    size_t minRestVol_tet = size_t(-1);
+
     float maxPenetration = 0.0f;
     size_t maxPen_vtx = size_t(-1);
 
     // 触发点信息
     size_t trigger_vertex = size_t(-1);
     float trigger_dx_norm = 0.0f;
+    float trigger_dx_limit = 0.0f;
     float trigger_pen = 0.0f;
 
     // 你也可以加 frame_id / iter_id

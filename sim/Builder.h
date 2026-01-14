@@ -56,7 +56,7 @@ public:
 
     [[nodiscard]] size_t add_cloth(float width, float height, int resX, int resY, const Vec3& center = Vec3{0.0f,0.0f,0.0f},
                         float mass = .1f, ClothOrientation orientation = ClothOrientation::Horizontal, FixSide fix_mask = FixSide::TOP, const char* = "cloth") const;
-    [[nodiscard]] size_t add_bunny(float mass = 0.01f) const;
+    [[nodiscard]] size_t add_bunny(float height, float mass) const;
 
     [[nodiscard]] size_t add_single_tet() const;
 

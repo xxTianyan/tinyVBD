@@ -49,10 +49,11 @@ void print_quality_histogram(const std::vector<tetrahedron>& tets) {
 void FallingBunny::CreateWorld(AppContext &ctx) {
     MModel model;
     Builder builder(model);
-    // m_bunny_id_ = builder.add_sphere(1.0f, 10, Vec3{0.0f,30.0f,0.0f}, 3.f, "sphere");
-    m_bunny_id_ = builder.add_bunny();
+    m_bunny_id_ = builder.add_sphere(.5f, 10, Vec3{0.0f,10.0f,0.0f}, .3f, "sphere");
+    // m_bunny_id_ = builder.add_bunny(5.0, 0.5);
+    // m_bunny_id_ = builder.add_single_tet();
     scene_ = std::make_unique<Scene>(std::move(model));
-    solver_ = std::make_unique<VBDSolver>(&scene_->model_, 10, soft_bunny());
+    solver_ = std::make_unique<VBDSolver>(&scene_->model_, 2, soft_bunny());
     print_quality_histogram(scene_->model_.tets);
 }
 

@@ -37,7 +37,7 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
 
     // accumulate simulation time
     float frame_dt = ctx.dt;
-    if (frame_dt > 0.05f) frame_dt = 0.05f; // prevent dt explosion
+    // if (frame_dt > 0.05f) frame_dt = 0.05f; // prevent dt explosion
     sim_accum_ += frame_dt;
 
     //run simulation time
@@ -48,7 +48,7 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
             Step(sub_dt);
         }
         sim_accum_ -= fixed_dt_;
-        ++ticks;
+        // ++ticks;
     }
 
     renderHelper_.Update(scene_->state_out());

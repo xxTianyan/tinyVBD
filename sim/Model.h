@@ -23,6 +23,7 @@ struct tetrahedron {
     std::array<VertexID, 4> vertices{0,0,0,0};
     float restVolume{};
     Mat3 Dm_inv{};
+    float restSign{};       // +1 or -1
 
     // 存储质量信息（可选，或者仅在需要时计算）
     TetQuality qualityStats{};
@@ -43,6 +44,7 @@ struct tetrahedron {
         // --- 2. Calculate Determinant ---
         // det = dot(e1, cross(e2, e3))
         const auto detDm = e1.dot(e2.cross(e3));
+        restSign = detDm > 0 ? 1.0f : -1.0f;
         const float absDet = std::fabs(detDm);
 
         // Check degenerate (Robust check)

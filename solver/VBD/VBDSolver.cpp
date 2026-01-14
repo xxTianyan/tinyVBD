@@ -8,6 +8,7 @@
 #include <iostream>
 #include <bits/fs_fwd.h>
 
+#include "JFilter.hpp"
 #include "Math.hpp"
 
 namespace {
@@ -128,7 +129,7 @@ namespace {
         }
 
         // Optional: clamp penetration to avoid extreme impulses when tunneling
-        // d = std::min(d, 0.2f); // tune in length units (or 0.2*avg_edge_length)
+        d = std::min(d, 0.01f); // tune in length units (or 0.2*avg_edge_length)
 
         // Normal spring
         const float fn = ke * d;
@@ -163,6 +164,76 @@ namespace {
         f_out = f;
         H_out = K;
     }
+
+    float SignedTetVolume(const Vec3& x0, const Vec3& x1, const Vec3& x2, const Vec3& x3) {
+    // V = dot(x1-x0, (x2-x0)x(x3-x0)) / 6
+    const Vec3 a = x1 - x0;
+    const Vec3 b = x2 - x0;
+    const Vec3 c = x3 - x0;
+    return a.dot(b.cross(c)) * (1.0f / 6.0f);
+}
+
+    Vec3 TetVolumeGradWrtVertex(
+        int vid_order, const Vec3& x0, const Vec3& x1, const Vec3& x2, const Vec3& x3) {
+        // ∂V/∂xk = ± (opposite face normal) / 6
+        // Consistent with SignedTetVolume above.
+        switch (vid_order) {
+        case 0: return -((x2 - x1).cross(x3 - x1)) * (1.0f / 6.0f);
+        case 1: return  ((x2 - x0).cross(x3 - x0)) * (1.0f / 6.0f);
+        case 2: return  ((x3 - x0).cross(x1 - x0)) * (1.0f / 6.0f);
+        case 3: return  ((x1 - x0).cross(x2 - x0)) * (1.0f / 6.0f);
+        default: return Vec3::Zero();
+        }
+    }
+
+    // 在 solve_serial 里，对单个顶点的 dx 做体积下限过滤
+    float ApplyTetVolumeStepFilter(
+        size_t vtex_id,
+        Vec3& dx,
+        std::span<const Vec3> pos,
+        const AdjacencyCSR& vertex_tets,
+        const std::vector<tetrahedron>& tets,
+        float vol_floor_ratio) // e.g. 0.1f
+    {
+        float alpha = 1.0f;
+
+        for (uint32_t t = vertex_tets.begin(vtex_id); t < vertex_tets.end(vtex_id); ++t) {
+            const auto pack = vertex_tets.incidents[t];
+            const size_t tet_id = AdjacencyCSR::unpack_id(pack);
+            const int order = (int)AdjacencyCSR::unpack_order(pack);
+            const auto& tet = tets[tet_id];
+
+            const Vec3& x0 = pos[tet.vertices[0]];
+            const Vec3& x1 = pos[tet.vertices[1]];
+            const Vec3& x2 = pos[tet.vertices[2]];
+            const Vec3& x3 = pos[tet.vertices[3]];
+
+            const float V_signed = SignedTetVolume(x0,x1,x2,x3);
+            const float s0 = tet.restSign; // +1 or -1
+            const float V = s0 * V_signed; // volume in rest orientation
+
+            const float Vmin = vol_floor_ratio * tet.restVolume;
+            if (!(V > 0.0f)) continue;     // 现在这句表示“相对 rest 方向为正”
+
+
+            Vec3 g = TetVolumeGradWrtVertex(order, x0,x1,x2,x3);
+            g *= s0;
+            const float dV = g.dot(dx); // dV/dalpha
+
+            if (dV < 0.0f) {
+                // 需要限制 alpha，避免 V(alpha) < Vmin
+                const float amax = (V - Vmin) / (-dV);
+                if (amax < alpha) alpha = amax;
+            }
+        }
+
+        // 稍微留裕度，避免贴边抖动
+        alpha = std::clamp(alpha, 0.0f, 1.0f);
+        dx *= (0.99f * alpha);
+
+        return alpha;
+    }
+
 
 }
 
@@ -672,7 +743,7 @@ void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const
     // We clamp J to a small positive value to avoid NaNs/Infs.
     // For robust inversion handling, add a dedicated inversion-safe method later.
     // ------------------------------------------------------------
-    constexpr float J_eps = 1.0e-8f;          // numerical floor
+    constexpr float J_eps = 0.1f;          // numerical floor
     const float J_safe = std::max(J, J_eps);
     const float logJ   = std::log(J_safe);
 
@@ -749,7 +820,7 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
     const float radius = 0.15f * 0.1;  // need eigen length
 
     // Contact stiffness scaling: ke ~ factor * m/dt^2 keeps behavior stable across dt
-    const float ke_factor = 50.0f; // tune: 10~200 (start smaller if exploding)
+    const float ke_factor = 1.0f; // tune: 10~200 (start smaller if exploding)
 
     // Newton uses damping_coeff = kd_ratio * ke
     const float kd_ratio = 0.02f;  // start tiny (0~0.05)
@@ -757,6 +828,14 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
     // friction
     const float mu_fric = 0.5f;    // start with 0.0 then enable
     const float eps_fric = 0.01f * 0.1; // length scale, need eigen length
+
+
+    // debug things
+    size_t trigger_vertex = 0;
+    float trigger_dx_norm = -1.f;
+    float trigger_pen;
+    float trigger_dx_limit;
+    bool trigger = false;
 
     for (size_t vtex_id = 0; vtex_id < num_nodes; ++vtex_id) {
         auto& pos = state_in.particle_pos[vtex_id];
@@ -830,16 +909,41 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
         float n = dx.norm();
         if (n > maxStep) dx *= (maxStep / n);*/
 
+        /*ApplyTetVolumeStepFilter(
+            vtex_id, dx,
+            state_in.particle_pos,
+            adjacency_info_.vertex_tets,
+            model_->tets,
+            /*vol_floor_ratio=#1#0.1f  // 0.05~0.2 可调，越大越“防扁”
+        );*/
+        /*constexpr float J_min = 0.2f; // 先用 0.2，想更稳就 0.3，想更软（但更危险）就 0.1
+        auto jr = ApplyTetJStepFilter(
+            vtex_id,
+            dx,
+            state_in.particle_pos,
+            adjacency_info_.vertex_tets,
+            model_->tets,
+            J_min,
+            /*max_iters=#1#12,
+            /*safety=#1#0.99f
+        );*/
+
+        pos_new = pos + dx;
+        /*if (surface_vertices[vtex_id])
+            if (pos_new.y() < radius) pos_new.y() = radius;*/
+
+        // if parallel with color group, need to copy new pos back to state_in to satisfy GS.
+        // state_in.pos = state_out.pos ...
+        pos = pos_new;
+
 
         // ---- debug trigger (after dx computed, before applying) ----
         if (debug_cfg_.enabled && !debug_pause_) {
             const float dx_norm = dx.norm();
-            const float dx_limit = debug_cfg_.dx_limit_scale * 0.03f;
+            const float dx_limit = debug_cfg_.dx_limit_scale * 0.5f;
 
             // 当前顶点（若更新后）对地面穿透（无 radius）
             const float pen = std::max(0.0f, 0.0f - (pos.y() + dx.y())); // ground_y=0
-
-            bool trigger = false;
 
             if (debug_cfg_.trigger_on_nan) {
                 if (!dx.allFinite() || !force.allFinite() || !hessian.allFinite()) {
@@ -847,44 +951,51 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
                 }
             }
 
+            // too large dx step
             if (!trigger && dx_norm > dx_limit) {
                 trigger = true;
             }
 
-            if (!trigger && debug_cfg_.trigger_on_first_contact && pen > 0.0f) {
+            // stop when penatration happen
+            /*if (!trigger && debug_cfg_.trigger_on_first_contact && pen > 0.0f) {
                 trigger = true;
-            }
+            }*/
 
-            if (trigger) {
-                DebugFrameStats stats = ComputeDebugStats(state_in.particle_pos, /*ground_y=*/0.0f);
-                stats.trigger_vertex = vtex_id;
-                stats.trigger_dx_norm = dx_norm;
-                stats.trigger_pen = pen;
-                // 如果你有 frame_id，把它写进去
-                // stats.frame_id = frame_id_;
-
-                // 额外触发：若发现 J 已经很小 / 体积翻转，也强触发（可选）
-                if (stats.minJ < debug_cfg_.J_min) {
-                    // still trigger (already)
-                }
-                if (debug_cfg_.trigger_on_inversion && stats.minSignedVol <= 0.0f) {
-                    // still trigger
-                }
-
-                last_debug_stats_ = stats;
-                DumpDebugStats(last_debug_stats_);
-
-                if (debug_cfg_.freeze_on_trigger) {
-                    debug_pause_ = true;
-                }
+            if (trigger && trigger_dx_norm < 0) {
+                trigger_vertex = vtex_id;
+                trigger_dx_norm = dx_norm;
+                trigger_pen = pen;
+                trigger_dx_limit = dx_limit;
             }
         }
+    }
 
-        pos_new = pos + dx;
+    if (trigger) {
+        DebugFrameStats stats = ComputeDebugStats(state_in.particle_pos, /*ground_y=*/0.015f);
+        stats.trigger_vertex = trigger_vertex;
+        stats.trigger_dx_norm = trigger_dx_norm;
+        stats.trigger_pen = trigger_pen;
+        stats.trigger_dx_limit = trigger_dx_limit;
+        // 如果你有 frame_id，把它写进去
+        // stats.frame_id = frame_id_;
 
-        // if parallel with color group, need to copy new pos back to state_in to satisfy GS.
-        // state_in.pos = state_out.pos ...
-        pos = pos_new;
+        /*DebugFrameStats stats = ComputeDebugStats(state_in.particle_pos, /*ground_y=#1#0.015f);
+        // J become too small
+        if (stats.minJ < debug_cfg_.J_min) {
+            trigger = true;
+        }
+
+        // tet volume less than 0
+        if (debug_cfg_.trigger_on_inversion && stats.minSignedVol <= 0.0f) {
+            trigger = true;
+        }*/
+
+        last_debug_stats_ = stats;
+        DumpDebugStats(last_debug_stats_);
+
+        if (debug_cfg_.freeze_on_trigger) {
+            debug_pause_ = true;
+        }
     }
 }
 
@@ -981,8 +1092,12 @@ DebugFrameStats VBDSolver::ComputeDebugStats(std::span<const Vec3> pos, float gr
         const float v  = v6 / 6.0f;
         const float av = std::abs(v);
 
+        // rest volume
+        const float rest_vol = tet.restVolume;
+
         if (v < s.minSignedVol) { s.minSignedVol = v;  s.minVol_tet = tid; }
-        if (av < s.minAbsVol)   { s.minAbsVol   = av; s.minAbsVol_tet = tid; }
+        if (av < s.minAbsVol)   { s.minAbsVol = av; s.minAbsVol_tet = tid; }
+        if (rest_vol < s.minRestVol) {s.minRestVol = rest_vol; s.minRestVol_tet = tid; }
 
         // deformation gradient F = Ds * invDm
         Mat3 Ds;
@@ -1006,10 +1121,11 @@ void VBDSolver::DumpDebugStats(const DebugFrameStats& s) const {
     // 你可以换成 spdlog / ImGui log，这里用 printf 简单直接
     std::printf("\n========== [VBD DEBUG TRIGGER] ==========\n");
     std::printf("frame=%zu  trigger_vertex=%zu\n", s.frame_id, s.trigger_vertex);
-    std::printf("trigger_dx_norm=%.9g  trigger_pen=%.9g\n", s.trigger_dx_norm, s.trigger_pen);
+    std::printf("trigger_dx_norm=%.9g   trigger_dx_limit=%.9g   trigger_pen=%.9g\n", s.trigger_dx_norm, s.trigger_dx_limit, s.trigger_pen);
 
     std::printf("minJ=%.9g  (tet=%zu)\n", s.minJ, s.minJ_tet);
     std::printf("minSignedVol=%.9g  (tet=%zu)\n", s.minSignedVol, s.minVol_tet);
+    std::printf("minRestVol=%.9g  (tet=%zu)\n", s.minRestVol, s.minRestVol_tet);
     std::printf("minAbsVol=%.9g  (tet=%zu)\n", s.minAbsVol, s.minAbsVol_tet);
 
     std::printf("maxPenetration=%.9g  (vtx=%zu)\n", s.maxPenetration, s.maxPen_vtx);
