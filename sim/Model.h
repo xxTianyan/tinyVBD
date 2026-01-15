@@ -11,27 +11,16 @@
 #include <algorithm>
 #include "Types.h"
 
-struct TetQuality {
-    float scaledJacobian; // 范围 [-1, 1], <0 表示翻转, 接近0表示退化
-    float meanRatio;      // 范围 [0, 1], 1.0 为正四面体
-    float edgeRatio;      // 最长边 / 最短边, >1.0, 越大越差
-    float minEdgeLen;
-    float maxEdgeLen;
-};
 
 struct tetrahedron {
     std::array<VertexID, 4> vertices{0,0,0,0};
     float restVolume{};
     Mat3 Dm_inv{};
-    float restSign{};       // +1 or -1
-
-    // 存储质量信息（可选，或者仅在需要时计算）
-    TetQuality qualityStats{};
 
     tetrahedron(const VertexID vtex0, const VertexID vtex1, const VertexID vtex2, const VertexID vtex3,
         const Vec3& vtex0_pos, const Vec3& vtex1_pos, const Vec3& vtex2_pos, const Vec3& vtex3_pos) :
     vertices{vtex0, vtex1, vtex2, vtex3} {
-        // --- 1. Construct Dm (基于顶点0的参考系) ---
+        // construct Dm
         const Vec3 e1 = vtex1_pos - vtex0_pos;
         const Vec3 e2 = vtex2_pos - vtex0_pos;
         const Vec3 e3 = vtex3_pos - vtex0_pos;
@@ -41,75 +30,20 @@ struct tetrahedron {
         Dm.col(1) = e2;
         Dm.col(2) = e3;
 
-        // --- 2. Calculate Determinant ---
-        // det = dot(e1, cross(e2, e3))
+        // more stable det：det = dot(e1, cross(e2, e3))
         const auto detDm = e1.dot(e2.cross(e3));
-        restSign = detDm > 0 ? 1.0f : -1.0f;
+
         const float absDet = std::fabs(detDm);
 
-        // Check degenerate (Robust check)
-        constexpr float kEps = 1.0e-12f;
-        if (absDet < kEps) {
-            throw std::runtime_error("tetrahedron: degenerate element (zero volume).");
-        }
+        // check if degenerate
+        if (constexpr float kEps = 1.0e-12f; absDet < kEps)
+            throw std::runtime_error("tetrahedron::compute_rest: degenerate tetrahedron (|det(Dm)| too small).");
 
         restVolume = absDet * (1.0f / 6.0f);
-        Dm_inv = Dm.inverse();
 
-        // --- 3. Compute Quality Statistics ---
-        // 为了计算完整的边长统计，我们需要另外3条边
-        const Vec3 e4 = vtex2_pos - vtex1_pos; // v1 -> v2
-        const Vec3 e5 = vtex3_pos - vtex1_pos; // v1 -> v3
-        const Vec3 e6 = vtex3_pos - vtex2_pos; // v2 -> v3
-
-        // 计算所有6条边的长度平方
-        float l1_sq = e1.squaredNorm();
-        float l2_sq = e2.squaredNorm();
-        float l3_sq = e3.squaredNorm();
-        float l4_sq = e4.squaredNorm();
-        float l5_sq = e5.squaredNorm();
-        float l6_sq = e6.squaredNorm();
-
-        // 统计边长
-        float max_sq = std::max({l1_sq, l2_sq, l3_sq, l4_sq, l5_sq, l6_sq});
-        float min_sq = std::min({l1_sq, l2_sq, l3_sq, l4_sq, l5_sq, l6_sq});
-
-        qualityStats.minEdgeLen = std::sqrt(min_sq);
-        qualityStats.maxEdgeLen = std::sqrt(max_sq);
-
-        // --- Metric A: Edge Ratio (越接近1越好) ---
-        // 防止除以0（虽然前面检查了退化，但min_sq可能极小）
-        if (min_sq > kEps) {
-            qualityStats.edgeRatio = qualityStats.maxEdgeLen / qualityStats.minEdgeLen;
-        } else {
-            qualityStats.edgeRatio = std::numeric_limits<float>::max();
-        }
-
-        // --- Metric B: Scaled Jacobian (归一化雅可比) ---
-        // 衡量顶点处的扭曲度。公式：det(Dm) / (|e1|*|e2|*|e3|)
-        // 乘以 sqrt(2) 是为了让正四面体的值为 1.0
-        float prod_lengths = std::sqrt(l1_sq * l2_sq * l3_sq);
-        if (prod_lengths > kEps) {
-            // 注意：这里使用带符号的 detDm 来检测翻转
-            qualityStats.scaledJacobian = (detDm * std::sqrt(2.0f)) / prod_lengths;
-        } else {
-            qualityStats.scaledJacobian = 0.0f;
-        }
-
-        // --- Metric C: Mean Ratio (综合形状指标) ---
-        // 公式：q = 12 * (3 * Volume)^(2/3) / (Sum of Edge Lengths Squared)
-        // 范围 [0, 1]，1.0 为完美正四面体
-        float sum_sq = l1_sq + l2_sq + l3_sq + l4_sq + l5_sq + l6_sq;
-        float numerator = 12.0f * std::pow(3.0f * std::abs(detDm) / 6.0f, 2.0f / 3.0f);
-        // 简化: restVolume = absDet/6 -> 3*restVolume = absDet/2
-        // numerator = 12 * (absDet/2)^(2/3)
-
-        if (sum_sq > kEps) {
-            qualityStats.meanRatio = numerator / sum_sq;
-        } else {
-            qualityStats.meanRatio = 0.0f;
-        }
-    }
+        // pre-compute
+        Dm_inv  = Dm.inverse();
+    };
 };
 
 struct triangle {

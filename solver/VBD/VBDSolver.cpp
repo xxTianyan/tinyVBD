@@ -161,77 +161,6 @@ namespace {
         f_out = f;
         H_out = K;
     }
-
-    float SignedTetVolume(const Vec3& x0, const Vec3& x1, const Vec3& x2, const Vec3& x3) {
-    // V = dot(x1-x0, (x2-x0)x(x3-x0)) / 6
-    const Vec3 a = x1 - x0;
-    const Vec3 b = x2 - x0;
-    const Vec3 c = x3 - x0;
-    return a.dot(b.cross(c)) * (1.0f / 6.0f);
-}
-
-    Vec3 TetVolumeGradWrtVertex(
-        int vid_order, const Vec3& x0, const Vec3& x1, const Vec3& x2, const Vec3& x3) {
-        // ∂V/∂xk = ± (opposite face normal) / 6
-        // Consistent with SignedTetVolume above.
-        switch (vid_order) {
-        case 0: return -((x2 - x1).cross(x3 - x1)) * (1.0f / 6.0f);
-        case 1: return  ((x2 - x0).cross(x3 - x0)) * (1.0f / 6.0f);
-        case 2: return  ((x3 - x0).cross(x1 - x0)) * (1.0f / 6.0f);
-        case 3: return  ((x1 - x0).cross(x2 - x0)) * (1.0f / 6.0f);
-        default: return Vec3::Zero();
-        }
-    }
-
-    // 在 solve_serial 里，对单个顶点的 dx 做体积下限过滤
-    float ApplyTetVolumeStepFilter(
-        size_t vtex_id,
-        Vec3& dx,
-        std::span<const Vec3> pos,
-        const AdjacencyCSR& vertex_tets,
-        const std::vector<tetrahedron>& tets,
-        float vol_floor_ratio) // e.g. 0.1f
-    {
-        float alpha = 1.0f;
-
-        for (uint32_t t = vertex_tets.begin(vtex_id); t < vertex_tets.end(vtex_id); ++t) {
-            const auto pack = vertex_tets.incidents[t];
-            const size_t tet_id = AdjacencyCSR::unpack_id(pack);
-            const int order = (int)AdjacencyCSR::unpack_order(pack);
-            const auto& tet = tets[tet_id];
-
-            const Vec3& x0 = pos[tet.vertices[0]];
-            const Vec3& x1 = pos[tet.vertices[1]];
-            const Vec3& x2 = pos[tet.vertices[2]];
-            const Vec3& x3 = pos[tet.vertices[3]];
-
-            const float V_signed = SignedTetVolume(x0,x1,x2,x3);
-            const float s0 = tet.restSign; // +1 or -1
-            const float V = s0 * V_signed; // volume in rest orientation
-
-            const float Vmin = vol_floor_ratio * tet.restVolume;
-            if (!(V > 0.0f)) continue;     // 现在这句表示“相对 rest 方向为正”
-
-
-            Vec3 g = TetVolumeGradWrtVertex(order, x0,x1,x2,x3);
-            g *= s0;
-            const float dV = g.dot(dx); // dV/dalpha
-
-            if (dV < 0.0f) {
-                // 需要限制 alpha，避免 V(alpha) < Vmin
-                const float amax = (V - Vmin) / (-dV);
-                if (amax < alpha) alpha = amax;
-            }
-        }
-
-        // 稍微留裕度，避免贴边抖动
-        alpha = std::clamp(alpha, 0.0f, 1.0f);
-        dx *= (0.99f * alpha);
-
-        return alpha;
-    }
-
-
 }
 
 void VBDSolver::Init() {
@@ -245,7 +174,7 @@ void VBDSolver::Init() {
         BuildAdjacencyInfo();
         topology_version_ = model_->topology_version;
 
-        // record surface vertex, temporary
+        // record surface vertex
         surface_vertices.resize(model_->num_particles, 0);
         for (const auto& tri: model_->tris) {
             surface_vertices[tri.vertices[0]] = 1;
