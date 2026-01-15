@@ -73,6 +73,7 @@ public:
     explicit SolverDebugger(const size_t history_capacity = 200) {
         frame_history_.resize(history_capacity);
     }
+    ~SolverDebugger() = default;
 
     // --- 流程控制 ---
 
@@ -103,7 +104,9 @@ public:
         if (triggered_this_frame_.load()) {
             state_ = RunState::Frozen; // 锁死
             step_once_armed_ = false;  // 取消单步
-        } else if (step_once_armed_) {
+        }
+
+        else if (step_once_armed_) {
             // 如果是单步执行且没报错，执行完这一次后，切回 Frozen
             state_ = RunState::Frozen;
             step_once_armed_ = false;
@@ -203,6 +206,34 @@ public:
                 << "}" << (i < count - 1 ? "," : "") << "\n";
         }
         out << "  ]\n}\n";
+    }
+
+    // --- 重置功能 ---
+    void reset() {
+        // 1. 线程安全锁：防止 UI 重置时，后台恰好还在写入最后一帧数据
+        std::lock_guard<std::mutex> lock(data_mutex_);
+
+        // 2. 恢复运行状态
+        state_ = RunState::Running;      // 恢复为 Running
+        step_once_armed_ = false;        // 清除单步标志
+        triggered_this_frame_.store(false); // 清除原子 Trigger 标志
+
+        // 3. 重置计数器
+        frame_id_ = 0;
+
+        // 4. 重置当前帧数据
+        current_frame_.reset(0);
+
+        // 5. 清空历史记录 (Ring Buffer)
+        // 我们不 resize vector (避免内存分配开销)，而是将内容恢复为初始默认值
+        // 这样 UI 在读取历史时，不会读到上一次运行遗留的“幽灵数据”
+        for (auto& frame : frame_history_) {
+            // 这里使用 DebugFrameStats 的默认构造函数覆盖旧数据
+            // 默认构造会将 minJ 设为 infinity，maxPen 设为负无穷等安全值
+            frame = DebugFrameStats{};
+        }
+
+        printf("[Debugger] System Reset. State: RUNNING, Frame: 0.\n");
     }
 
 public:

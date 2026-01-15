@@ -7,13 +7,19 @@
 
 #include <memory>
 #include <raylib.h>
-#include <vector>
+
+#include "Debugger.hpp"
 #include "ISample.h"
 #include "RenderHelper.h"
 
 class Scene;
 class VBDSolver;
 struct AppContext;
+
+struct SimContext {
+    float dt{};
+    size_t frame_id{};
+};
 
 class Sample : public ISample {
 public:
@@ -39,7 +45,7 @@ public:
 
     // api functions that need to be over-ride when inherited
     virtual void CreateWorld(AppContext& ctx);
-    virtual void Step([[maybe_unused]]const float dt) {}
+    virtual void Step([[maybe_unused]]const float dt);
     virtual void BindShaders([[maybe_unused]]AppContext& ctx) {};
 
     // clean cpu resource
@@ -58,10 +64,12 @@ protected:
 
 
 public:
-    // for simulation， remember to initialize
+    // for simulation, remember to initialize
     std::unique_ptr<Scene> scene_;
     // need to change to ISolver
     std::unique_ptr<VBDSolver> solver_;
+    // debugger
+    std::unique_ptr<SolverDebugger> dbg_;
 
     // for rendering
     RenderHelper renderHelper_;

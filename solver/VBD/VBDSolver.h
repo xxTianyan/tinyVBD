@@ -12,11 +12,13 @@
 #include "ISolver.h"
 #include "MaterialParams.hpp"
 
+class SolverDebugger;
+
 class VBDSolver final : public ISolver {
 
 public:
-    explicit VBDSolver(const MModel* model, const int num_iters, const MMaterial& material = default_cloth())
-        : model_(model), num_iters(num_iters), material_(material) {}
+    explicit VBDSolver(const MModel* model, const int num_iters, const MMaterial& material = default_cloth(), SolverDebugger* dbg = nullptr)
+        : model_(model), num_iters(num_iters), dbg_(dbg),material_(material) {}
     ~VBDSolver() override = default;
 
     void Init() override;
@@ -44,6 +46,7 @@ public:
     static void accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
                                         const tetrahedron& tet, uint32_t vtex_order, Vec3& force, Mat3& H);
 
+
 private:
 
     void BuildAdjacencyInfo();
@@ -51,6 +54,8 @@ private:
     const MModel*  model_;
 
     int num_iters;
+
+    SolverDebugger* dbg_;
 
     MMaterial material_;
 
@@ -64,8 +69,6 @@ private:
 
     uint64_t topology_version_ = 0;
 };
-
-
 
 
 

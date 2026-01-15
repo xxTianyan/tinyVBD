@@ -5,7 +5,8 @@
 #ifndef TAIYI_ISOLVER_H
 #define TAIYI_ISOLVER_H
 
-class Scene;
+struct State;
+
 
 class ISolver {
 public:

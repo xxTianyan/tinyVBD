@@ -6,6 +6,8 @@
 #include "VBDSolver.h"
 
 #include <iostream>
+
+#include "Debugger.hpp"
 #include "Math.hpp"
 
 inline void AssignOffsets(const size_t num_nodes, std::vector<uint32_t>& offsets) {
@@ -139,7 +141,7 @@ void VBDSolver::Init() {
     }
 }
 
-void VBDSolver::Step(State& state_in, State& state_out, float dt) {
+void VBDSolver::Step(State& state_in, State& state_out, const float dt) {
 
     if (dt <= 0.0f) {
         return;
@@ -563,8 +565,9 @@ void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian_serial(
     H += bending_hessian;
 }
 
-void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const Vec3> pos, const MMaterial &mat,
-    const tetrahedron &tet, uint32_t vtex_order, Vec3 &force, Mat3 &H) {
+void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(
+    const std::span<const Vec3> pos, const MMaterial &mat,
+    const tetrahedron &tet, const uint32_t vtex_order, Vec3 &force, Mat3 &H) {
 
     const float mu     = mat.mu();
     const float lambda = mat.lambda();
@@ -711,12 +714,6 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
     const float eps_fric = 0.01f * 0.1; // length scale, need eigen length
 
 
-    // debug things
-    size_t trigger_vertex = 0;
-    float trigger_dx_norm = -1.f;
-    float trigger_pen;
-    float trigger_dx_limit;
-    bool trigger = false;
 
     for (size_t vtex_id = 0; vtex_id < num_nodes; ++vtex_id) {
         auto& pos = state_in.particle_pos[vtex_id];
@@ -790,13 +787,19 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
         float n = dx.norm();
         if (n > maxStep) dx *= (maxStep / n);*/
 
-
         pos_new = pos + dx;
 
 
         // if parallel with color group, need to copy new pos back to state_in to satisfy GS.
         // state_in.pos = state_out.pos ...
         pos = pos_new;
+
+
+        // debug
+        if (dbg_) {
+            dbg_->inspect_vertex(vtex_id, force, hessian, dx.norm(), 0.0, .001);
+        }
+
     }
 }
 
@@ -855,14 +858,6 @@ void VBDSolver::BuildAdjacencyInfo() {
 }
 
 
-// debug part
-static inline float SignedTetVolume6(const Vec3& x0, const Vec3& x1, const Vec3& x2, const Vec3& x3) {
-    // 6*V = dot(x1-x0, (x2-x0) x (x3-x0))
-    const Vec3 a = x1 - x0;
-    const Vec3 b = x2 - x0;
-    const Vec3 c = x3 - x0;
-    return a.dot(b.cross(c));
-}
 
 
 

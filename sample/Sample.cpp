@@ -5,6 +5,7 @@
 #include "Sample.h"
 #include "Application.h"
 #include "VBDSolver.h"
+
 void Sample::OnEnter(AppContext &ctx) {
     // set up scene
     CreateWorld(ctx);
@@ -33,10 +34,13 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
     if (ctx.paused) return;
     if (scene_ == nullptr) return;
 
+    if (dbg_ && !dbg_->begin_step(ctx.frame_id))
+        return;
+
     scene_->InitStep();
 
     // accumulate simulation time
-    float frame_dt = ctx.dt;
+    const float frame_dt = ctx.dt;
     // if (frame_dt > 0.05f) frame_dt = 0.05f; // prevent dt explosion
     sim_accum_ += frame_dt;
 
@@ -50,6 +54,8 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
         sim_accum_ -= fixed_dt_;
         // ++ticks;
     }
+
+    if (dbg_) dbg_->end_step();
 
     renderHelper_.Update(scene_->state_out());
 }
@@ -73,16 +79,34 @@ void Sample::DrawUI([[maybe_unused]]AppContext &ctx) {
 }
 
 void Sample::Reset([[maybe_unused]]AppContext &ctx) {
+
+    ctx.frame_id = 0;
+
+    if (scene_ == nullptr) return;
+    if (solver_ == nullptr) return;
+
     scene_->state_in() = scene_->model_.MakeState();
     scene_->state_out() = scene_->model_.MakeState();
+
+    // reset solver, mainly debugger
+    if (dbg_) dbg_->reset();
+
+    // move model to init position
+    if (ctx.paused)
+        renderHelper_.Update(scene_->state_out());
+
 }
 
 void Sample::CleanUp() {
     solver_.reset();
     scene_.reset();
+    dbg_.reset();
 }
 
 void Sample::BuildRenderResources() {
+    if (scene_ == nullptr)
+        return;
+
     renderHelper_.BindModel(scene_->model_);
     renderHelper_.Update(scene_->state_out());      // need update once manually in case app is paused and pass sample update in main loop
 }
@@ -94,8 +118,17 @@ void Sample:: DestroyRenderResources() {
 
 void Sample::CreateWorld([[maybe_unused]]AppContext& ctx) {
     // just a scene with floor
-    MModel model;
-    scene_ = std::make_unique<Scene>(std::move(model));
+    /*MModel model;
+    scene_ = std::make_unique<Scene>(std::move(model));*/
+}
+
+void Sample::Step(const float dt) {
+
+    if (scene_ == nullptr) return;
+    if (solver_ == nullptr) return;
+
+    solver_->Step(scene_->state_in(), scene_->state_out(), dt);
+    scene_->SwapStates();
 };
 
 void Sample::CreateFloor([[maybe_unused]]AppContext& ctx) {

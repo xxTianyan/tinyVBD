@@ -5,13 +5,7 @@
 #ifndef TAIYI_SCENE_H
 #define TAIYI_SCENE_H
 
-
-
-
-
-
 // all static values are stored in model struct, all changing values are stored in state struct
-
 #include <array>
 #include <cstdint>
 #include <utility>  // std::swap

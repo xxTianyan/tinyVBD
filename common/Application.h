@@ -37,6 +37,7 @@ struct ScopeTimer {
 struct AppContext {
     float dt = 0.0f;
     bool paused = true;
+    size_t frame_id = 0;
     int target_fps = 0;
     bool is_wire_mode = false;
 

@@ -49,6 +49,8 @@ void Application::EnterSample_(const SampleId id) {
     if (!current_) throw std::runtime_error("Create sample returned null");
 
     current_->OnEnter(ctx_);
+
+    ctx_.frame_id = 0;
 }
 
 void Application::ExitCurrentSample_() {
@@ -59,6 +61,7 @@ void Application::ExitCurrentSample_() {
 }
 
 void Application::RequestSwitchSample_(const SampleId id) {
+    if (current_id_ == id) return;
     pending_.type = PendingActionType::SwitchSample;
     pending_.target = id;
 }
@@ -184,6 +187,7 @@ void Application::Run(const SampleId start_sample) {
 
         const float dt = GetFrameTime();
         ctx_.dt = dt;
+        ctx_.frame_id++;
 
         // common updates
         perfMonitor_.Update(dt);
@@ -199,7 +203,7 @@ void Application::Run(const SampleId start_sample) {
         if (!ImGui::GetIO().WantCaptureMouse) {
             auto [x, y] = GetMouseDelta();
             const float wheel = GetMouseWheelMove();
-            UpdateOrbitCameraMouse(orbitCam_, Vector2{(float)x, (float)y}, wheel,
+            UpdateOrbitCameraMouse(orbitCam_, Vector2{x, y}, wheel,
                                    IsMouseButtonDown(MOUSE_RIGHT_BUTTON), IsMouseButtonDown(MOUSE_MIDDLE_BUTTON));
         }
 

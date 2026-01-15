@@ -18,9 +18,9 @@ void FallingBunny::CreateWorld(AppContext &ctx) {
     Builder builder(model);
     // m_bunny_id_ = builder.add_sphere(.5f, 10, Vec3{0.0f,10.0f,0.0f}, .3f, "sphere");
     m_bunny_id_ = builder.add_bunny(3.0, 0.5);
-    // m_bunny_id_ = builder.add_single_tet();
     scene_ = std::make_unique<Scene>(std::move(model));
-    solver_ = std::make_unique<VBDSolver>(&scene_->model_, 4, soft_bunny());
+    dbg_ = std::make_unique<SolverDebugger>();
+    solver_ = std::make_unique<VBDSolver>(&scene_->model_, 4, soft_bunny(), dbg_.get());
 }
 
 void FallingBunny::Step(const float dt) {
@@ -37,5 +37,4 @@ void FallingBunny::BindShaders(AppContext &ctx) {
     auto m_bunny_model = renderHelper_.GetRLModel(m_bunny_id_);
     m_bunny_model.materials[0].shader = bunny_shader;
     m_bunny_model.materials[0].maps[MATERIAL_MAP_ALBEDO].color = Color{230, 200, 160, 255};
-
 }
