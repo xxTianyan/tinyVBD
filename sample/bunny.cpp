@@ -24,15 +24,8 @@ void FallingBunny::CreateWorld(AppContext &ctx) {
 }
 
 void FallingBunny::Step(const float dt) {
-    if (solver_->DebugPaused()) {
-        // 不推进仿真，只渲染 + ImGui
-        // 你也可以在 ImGui 里加一个按钮：solver.ClearDebugPause();
-    }
-    else {
-        solver_->Step(scene_->state_in(), scene_->state_out(), dt);
-        scene_->SwapStates();
-    }
-
+    solver_->Step(scene_->state_in(), scene_->state_out(), dt);
+    scene_->SwapStates();
 }
 
 void FallingBunny::BindShaders(AppContext &ctx) {

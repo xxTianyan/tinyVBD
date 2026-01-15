@@ -8,160 +8,115 @@
 #include <iostream>
 #include "Math.hpp"
 
-namespace {
-    void AssignOffsets(const size_t num_nodes, std::vector<uint32_t>& offsets) {
-        offsets.assign(num_nodes + 1, 0u);
-    }
-
-    Mat3 Cofactor(const Mat3& F)
-    {
-        const Vec3 f0 = F.col(0);
-        const Vec3 f1 = F.col(1);
-        const Vec3 f2 = F.col(2);
-
-        Mat3 C;
-        C.col(0) = f1.cross(f2);
-        C.col(1) = f2.cross(f0);
-        C.col(2) = f0.cross(f1);
-        return C; // == cof(F)
-    }
-
-    template <class Elem, class GetVertex>
-    void BuildVertexIncidentCSR(const size_t num_nodes,
-                                const std::vector<Elem>& elems,
-                                const uint32_t verts_per_elem,
-                                GetVertex get_vertex,
-                                AdjacencyCSR& adj) {
-        auto& offsets = adj.offsets;
-        auto& incidents = adj.incidents;
-
-        offsets.assign(num_nodes + 1, 0u);
-        incidents.clear();
-
-        if (elems.empty()) {
-            return;
-        }
-
-        for (uint32_t elem_id = 0; elem_id < static_cast<uint32_t>(elems.size()); ++elem_id) {
-            const auto& elem = elems[elem_id];
-            for (uint32_t k = 0; k < verts_per_elem; ++k) {
-                const auto v = static_cast<uint32_t>(get_vertex(elem, k));
-                offsets[v + 1] += 1u;
-            }
-        }
-
-        for (size_t i = 1; i < offsets.size(); ++i) {
-            offsets[i] += offsets[i - 1];
-        }
-
-        incidents.resize(offsets.back());
-        std::vector<uint32_t> cursor = offsets;
-
-        for (uint32_t elem_id = 0; elem_id < static_cast<uint32_t>(elems.size()); ++elem_id) {
-            const auto& elem = elems[elem_id];
-            for (uint32_t k = 0; k < verts_per_elem; ++k) {
-                const auto v = static_cast<uint32_t>(get_vertex(elem, k));
-                const uint32_t dst = cursor[v]++;
-                incidents[dst] = AdjacencyCSR::pack(elem_id, k);
-            }
-        }
-    }
-
-    // -------- friction (IPC-like smooth) --------
-    void compute_projected_isotropic_friction_ipc(
-        float mu, float fn, const Vec3& n_unit,
-        const Vec3& rel_translation, float eps_u,
-        Vec3& f_out, Mat3& H_out)
-    {
-        // P = I - n n^T
-        const Mat3 P = Mat3::Identity() - n_unit * n_unit.transpose();
-
-        // tangential relative displacement
-        const Vec3 t = P * rel_translation;
-
-        const float t2 = t.squaredNorm();
-        const float d  = std::sqrt(t2 + eps_u * eps_u);
-
-        if (!(std::isfinite(d)) || d <= 0.0f || fn <= 0.0f || mu <= 0.0f) {
-            f_out.setZero();
-            H_out.setZero();
-            return;
-        }
-
-        const float k = mu * fn;         // friction magnitude scale
-        const float inv_d  = 1.0f / d;
-        const float inv_d3 = inv_d * inv_d * inv_d;
-
-        // force = -∂φ/∂x,  φ = k * sqrt(||t||^2 + eps^2)
-        f_out = -k * (t * inv_d);
-
-        // Hessian (PSD for this regularizer)
-        // H = k * ( P/d - (t t^T)/d^3 )
-        H_out = k * (P * inv_d - (t * t.transpose()) * inv_d3);
-    }
-
-
-    // -------- static plane contact (y=0 plane is a special case of this) --------
-    void evaluate_static_plane_particle_contact(
-        const Vec3& x, const Vec3& x_prev,
-        const Vec3& plane_point, const Vec3& plane_n_unit,
-        float radius,
-        float ke, float kd_ratio,       // Newton: damping_coeff = kd_ratio * ke
-        float friction_mu, float friction_epsilon,
-        float dt,
-        Vec3& f_out, Mat3& H_out)
-    {
-        const Vec3 n = plane_n_unit; // must be unit length
-
-        // signed distance along n: s = n·(x - p)
-        const float s = n.dot(x - plane_point);
-
-        // penetration depth: d = r - s
-        float d = radius - s;
-
-        if (!(std::isfinite(d)) || d <= 0.0f) {
-            f_out.setZero();
-            H_out.setZero();
-            return;
-        }
-
-        // Optional: clamp penetration to avoid extreme impulses when tunneling
-        d = std::min(d, 0.01f); // tune in length units (or 0.2*avg_edge_length)
-
-        // Normal spring
-        const float fn = ke * d;
-        Vec3 f = n * fn;
-        Mat3 K = ke * (n * n.transpose());
-
-        // Finite-difference displacement over dt (particle vs static plane)
-        const Vec3 dx = x - x_prev;
-
-        // Normal damping only when approaching: dot(n, dx) < 0
-        if (n.dot(dx) < 0.0f) {
-            const float dt_safe = std::max(dt, 1.0e-8f);
-            const float damping_coeff = kd_ratio * ke; // Newton-style
-            const float c_over_dt = damping_coeff / dt_safe;
-
-            const Mat3 Kd = c_over_dt * (n * n.transpose());
-            K += Kd;
-            f -= Kd * dx; // = -c v_n n
-        }
-
-        // Friction (projected + regularized)
-        if (friction_mu > 0.0f) {
-            const float eps_u = friction_epsilon * dt; // Newton uses eps*dt
-            Vec3 ff; Mat3 Kf;
-            compute_projected_isotropic_friction_ipc(
-                friction_mu, fn, n, dx /* relative_translation */, eps_u, ff, Kf
-            );
-            f += ff;
-            K += Kf;
-        }
-
-        f_out = f;
-        H_out = K;
-    }
+inline void AssignOffsets(const size_t num_nodes, std::vector<uint32_t>& offsets) {
+    offsets.assign(num_nodes + 1, 0u);
 }
+
+inline Mat3 Cofactor(const Mat3& F){
+    const Vec3 f0 = F.col(0);
+    const Vec3 f1 = F.col(1);
+    const Vec3 f2 = F.col(2);
+
+    Mat3 C;
+    C.col(0) = f1.cross(f2);
+    C.col(1) = f2.cross(f0);
+    C.col(2) = f0.cross(f1);
+    return C; // == cof(F)
+}
+
+
+// -------- friction (IPC-like smooth) --------
+inline void compute_projected_isotropic_friction_ipc(
+    const float mu, const float fn, const Vec3& n_unit,
+    const Vec3& rel_translation, const float eps_u,
+    Vec3& f_out, Mat3& H_out) {
+    // P = I - n n^T
+    const Mat3 P = Mat3::Identity() - n_unit * n_unit.transpose();
+
+    // tangential relative displacement
+    const Vec3 t = P * rel_translation;
+    const float t2 = t.squaredNorm();
+    const float d  = std::sqrt(t2 + eps_u * eps_u);
+
+    if (!(std::isfinite(d)) || d <= 0.0f || fn <= 0.0f || mu <= 0.0f) {
+        f_out.setZero();
+        H_out.setZero();
+        return;
+    }
+
+    const float k = mu * fn;         // friction magnitude scale
+    const float inv_d  = 1.0f / d;
+    const float inv_d3 = inv_d * inv_d * inv_d;
+
+    // force = -∂φ/∂x,  φ = k * sqrt(||t||^2 + eps^2)
+    f_out = -k * (t * inv_d);
+
+    // Hessian (PSD for this regularizer)
+    // H = k * ( P/d - (t t^T)/d^3 )
+    H_out = k * (P * inv_d - (t * t.transpose()) * inv_d3);
+}
+
+
+// -------- static plane contact (y=0 plane is a special case of this) --------
+inline void evaluate_static_plane_particle_contact(
+    const Vec3& x, const Vec3& x_prev,
+    const Vec3& plane_point, const Vec3& plane_n_unit,
+    const float radius,
+    const float ke, float kd_ratio,       // Newton: damping_coeff = kd_ratio * ke
+    const float friction_mu, float friction_epsilon,
+    const float dt,
+    Vec3& f_out, Mat3& H_out){
+    const Vec3& n = plane_n_unit; // must be unit length
+
+    // signed distance along n: s = n·(x - p)
+    const float s = n.dot(x - plane_point);
+
+    // penetration depth: d = r - s
+    float d = radius - s;
+
+    if (!(std::isfinite(d)) || d <= 0.0f) {
+        f_out.setZero();
+        H_out.setZero();
+        return;
+    }
+
+    // Optional: clamp penetration to avoid extreme impulses when tunneling
+    d = std::min(d, 0.01f); // tune in length units (or 0.2*avg_edge_length)
+
+    // Normal spring
+    const float fn = ke * d;
+    Vec3 f = n * fn;
+    Mat3 K = ke * (n * n.transpose());
+
+    // Finite-difference displacement over dt (particle vs static plane)
+    const Vec3 dx = x - x_prev;
+
+    // Normal damping only when approaching: dot(n, dx) < 0
+    if (n.dot(dx) < 0.0f) {
+        const float dt_safe = std::max(dt, 1.0e-8f);
+        const float damping_coeff = kd_ratio * ke; // Newton-style
+        const float c_over_dt = damping_coeff / dt_safe;
+
+        const Mat3 Kd = c_over_dt * (n * n.transpose());
+        K += Kd;
+        f -= Kd * dx; // = -c v_n n
+    }
+
+    // Friction (projected + regularized)
+    if (friction_mu > 0.0f) {
+        const float eps_u = friction_epsilon * dt; // Newton uses eps*dt
+        Vec3 ff; Mat3 Kf;
+        compute_projected_isotropic_friction_ipc(
+            friction_mu, fn, n, dx /* relative_translation */, eps_u, ff, Kf
+            );
+        f += ff;
+        K += Kf;
+    }
+
+    f_out = f;
+    H_out = K;
+}
+
 
 void VBDSolver::Init() {
 
@@ -835,93 +790,13 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
         float n = dx.norm();
         if (n > maxStep) dx *= (maxStep / n);*/
 
-        /*ApplyTetVolumeStepFilter(
-            vtex_id, dx,
-            state_in.particle_pos,
-            adjacency_info_.vertex_tets,
-            model_->tets,
-            /*vol_floor_ratio=#1#0.1f  // 0.05~0.2 可调，越大越“防扁”
-        );*/
-        /*constexpr float J_min = 0.2f; // 先用 0.2，想更稳就 0.3，想更软（但更危险）就 0.1
-        auto jr = ApplyTetJStepFilter(
-            vtex_id,
-            dx,
-            state_in.particle_pos,
-            adjacency_info_.vertex_tets,
-            model_->tets,
-            J_min,
-            /*max_iters=#1#12,
-            /*safety=#1#0.99f
-        );*/
 
         pos_new = pos + dx;
-        /*if (surface_vertices[vtex_id])
-            if (pos_new.y() < radius) pos_new.y() = radius;*/
+
 
         // if parallel with color group, need to copy new pos back to state_in to satisfy GS.
         // state_in.pos = state_out.pos ...
         pos = pos_new;
-
-
-        // ---- debug trigger (after dx computed, before applying) ----
-        if (debug_cfg_.enabled && !debug_pause_) {
-            const float dx_norm = dx.norm();
-            const float dx_limit = debug_cfg_.dx_limit_scale * 0.5f;
-
-            // 当前顶点（若更新后）对地面穿透（无 radius）
-            const float pen = std::max(0.0f, 0.0f - (pos.y() + dx.y())); // ground_y=0
-
-            if (debug_cfg_.trigger_on_nan) {
-                if (!dx.allFinite() || !force.allFinite() || !hessian.allFinite()) {
-                    trigger = true;
-                }
-            }
-
-            // too large dx step
-            if (!trigger && dx_norm > dx_limit) {
-                trigger = true;
-            }
-
-            // stop when penatration happen
-            /*if (!trigger && debug_cfg_.trigger_on_first_contact && pen > 0.0f) {
-                trigger = true;
-            }*/
-
-            if (trigger && trigger_dx_norm < 0) {
-                trigger_vertex = vtex_id;
-                trigger_dx_norm = dx_norm;
-                trigger_pen = pen;
-                trigger_dx_limit = dx_limit;
-            }
-        }
-    }
-
-    if (trigger) {
-        DebugFrameStats stats = ComputeDebugStats(state_in.particle_pos, /*ground_y=*/0.015f);
-        stats.trigger_vertex = trigger_vertex;
-        stats.trigger_dx_norm = trigger_dx_norm;
-        stats.trigger_pen = trigger_pen;
-        stats.trigger_dx_limit = trigger_dx_limit;
-        // 如果你有 frame_id，把它写进去
-        // stats.frame_id = frame_id_;
-
-        /*DebugFrameStats stats = ComputeDebugStats(state_in.particle_pos, /*ground_y=#1#0.015f);
-        // J become too small
-        if (stats.minJ < debug_cfg_.J_min) {
-            trigger = true;
-        }
-
-        // tet volume less than 0
-        if (debug_cfg_.trigger_on_inversion && stats.minSignedVol <= 0.0f) {
-            trigger = true;
-        }*/
-
-        last_debug_stats_ = stats;
-        DumpDebugStats(last_debug_stats_);
-
-        if (debug_cfg_.freeze_on_trigger) {
-            debug_pause_ = true;
-        }
     }
 }
 
@@ -989,74 +864,9 @@ static inline float SignedTetVolume6(const Vec3& x0, const Vec3& x1, const Vec3&
     return a.dot(b.cross(c));
 }
 
-DebugFrameStats VBDSolver::ComputeDebugStats(std::span<const Vec3> pos, float ground_y) const {
-    DebugFrameStats s;
 
-    // --- penetration over ground plane y=ground_y ---
-    // 你没有 radius 的话 penetration = max(0, ground_y - y)
-    const size_t n = pos.size();
-    for (size_t i = 0; i < n; ++i) {
-        const float pen = std::max(0.0f, ground_y - pos[i].y());
-        if (pen > s.maxPenetration) {
-            s.maxPenetration = pen;
-            s.maxPen_vtx = i;
-        }
-    }
 
-    // --- per-tet minJ / minVol ---
-    const auto& tets = model_->tets;
-    for (size_t tid = 0; tid < tets.size(); ++tid) {
-        const auto& tet = tets[tid];
 
-        const Vec3& x0 = pos[tet.vertices[0]];
-        const Vec3& x1 = pos[tet.vertices[1]];
-        const Vec3& x2 = pos[tet.vertices[2]];
-        const Vec3& x3 = pos[tet.vertices[3]];
-
-        // current signed volume
-        const float v6 = SignedTetVolume6(x0, x1, x2, x3);
-        const float v  = v6 / 6.0f;
-        const float av = std::abs(v);
-
-        // rest volume
-        const float rest_vol = tet.restVolume;
-
-        if (v < s.minSignedVol) { s.minSignedVol = v;  s.minVol_tet = tid; }
-        if (av < s.minAbsVol)   { s.minAbsVol = av; s.minAbsVol_tet = tid; }
-        if (rest_vol < s.minRestVol) {s.minRestVol = rest_vol; s.minRestVol_tet = tid; }
-
-        // deformation gradient F = Ds * invDm
-        Mat3 Ds;
-        Ds.col(0) = x1 - x0;
-        Ds.col(1) = x2 - x0;
-        Ds.col(2) = x3 - x0;
-
-        const Mat3 F = Ds * tet.Dm_inv;     // 你 tet 里存的 invDm
-        const float J = F.determinant();    // det(F)
-
-        if (std::isfinite(J) && J < s.minJ) {
-            s.minJ = J;
-            s.minJ_tet = tid;
-        }
-    }
-
-    return s;
-}
-
-void VBDSolver::DumpDebugStats(const DebugFrameStats& s) const {
-    // 你可以换成 spdlog / ImGui log，这里用 printf 简单直接
-    std::printf("\n========== [VBD DEBUG TRIGGER] ==========\n");
-    std::printf("frame=%zu  trigger_vertex=%zu\n", s.frame_id, s.trigger_vertex);
-    std::printf("trigger_dx_norm=%.9g   trigger_dx_limit=%.9g   trigger_pen=%.9g\n", s.trigger_dx_norm, s.trigger_dx_limit, s.trigger_pen);
-
-    std::printf("minJ=%.9g  (tet=%zu)\n", s.minJ, s.minJ_tet);
-    std::printf("minSignedVol=%.9g  (tet=%zu)\n", s.minSignedVol, s.minVol_tet);
-    std::printf("minRestVol=%.9g  (tet=%zu)\n", s.minRestVol, s.minRestVol_tet);
-    std::printf("minAbsVol=%.9g  (tet=%zu)\n", s.minAbsVol, s.minAbsVol_tet);
-
-    std::printf("maxPenetration=%.9g  (vtx=%zu)\n", s.maxPenetration, s.maxPen_vtx);
-    std::printf("=========================================\n");
-}
 
 
 

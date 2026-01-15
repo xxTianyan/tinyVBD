@@ -12,46 +12,6 @@
 #include "ISolver.h"
 #include "MaterialParams.hpp"
 
-
-struct DebugTriggerConfig {
-    bool enabled = false;
-    bool freeze_on_trigger = true;
-
-    // 触发条件（可按你单位调）
-    float dx_limit_scale = 0.05f;     // dx_limit = dx_limit_scale * avg_edge_length
-    float J_min = 0.2f;               // min det(F) below this triggers
-    bool trigger_on_first_contact = true; // 一旦出现任何穿透就触发
-    bool trigger_on_inversion = true; // current signed volume <= 0 触发
-    bool trigger_on_nan = true;       // 任意 NaN/Inf 触发
-};
-
-struct DebugFrameStats {
-    // 全局统计
-    float minJ = std::numeric_limits<float>::infinity();
-    size_t minJ_tet = size_t(-1);
-
-    float minSignedVol = std::numeric_limits<float>::infinity();
-    size_t minVol_tet = size_t(-1);
-
-    float minAbsVol = std::numeric_limits<float>::infinity();
-    size_t minAbsVol_tet = size_t(-1);
-
-    float minRestVol = std::numeric_limits<float>::infinity();
-    size_t minRestVol_tet = size_t(-1);
-
-    float maxPenetration = 0.0f;
-    size_t maxPen_vtx = size_t(-1);
-
-    // 触发点信息
-    size_t trigger_vertex = size_t(-1);
-    float trigger_dx_norm = 0.0f;
-    float trigger_dx_limit = 0.0f;
-    float trigger_pen = 0.0f;
-
-    // 你也可以加 frame_id / iter_id
-    size_t frame_id = 0;
-};
-
 class VBDSolver final : public ISolver {
 
 public:
@@ -83,19 +43,6 @@ public:
 
     static void accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
                                         const tetrahedron& tet, uint32_t vtex_order, Vec3& force, Mat3& H);
-
-    // debug part
-    bool DebugPaused() const noexcept { return debug_pause_; }
-    void ClearDebugPause() noexcept { debug_pause_ = false; }
-    void SetDebugTriggerConfig(const DebugTriggerConfig& cfg) { debug_cfg_ = cfg; }
-    const DebugFrameStats& LastDebugStats() const noexcept { return last_debug_stats_; }
-
-    DebugTriggerConfig debug_cfg_{};
-    mutable bool debug_pause_ = false;
-    mutable DebugFrameStats last_debug_stats_{};
-
-    DebugFrameStats ComputeDebugStats(std::span<const Vec3> pos, float ground_y = 0.0f) const;
-    void DumpDebugStats(const DebugFrameStats& s) const;
 
 private:
 
