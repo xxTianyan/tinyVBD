@@ -62,7 +62,7 @@ protected:
     float sim_accum_ = 0.0f;
     float fixed_dt_ = 1.0f / 60.0f;  // physical time step
     int   max_ticks_per_frame_ = 8;
-    int   substeps_ = 8;              // step in ticks
+    int   substeps_ = 1;              // step in ticks
 
     // for simulation, remember to initialize
     std::unique_ptr<Scene> scene_;

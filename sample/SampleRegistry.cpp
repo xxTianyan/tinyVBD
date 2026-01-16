@@ -5,8 +5,8 @@
 #include "SampleRegistry.h"
 #include "VBDSolver.h"
 #include "Sample.h"
-#include "basic_cloth_example.h"
-#include "bunny.h"
+#include "hanging_cloth.hpp"
+#include "falling_bunny.hpp"
 
 void RegisterAllSamples(SampleRegistry& reg) {
 

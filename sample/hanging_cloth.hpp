@@ -6,7 +6,7 @@
 #define TAIYI_BASIC_CLOTH_EXAMPLE_H
 
 #include "Sample.h"
-#include "basic_cloth_example.h"
+#include "hanging_cloth.hpp"
 #include "Application.h"
 #include "Builder.h"
 #include "rlgl.h"
