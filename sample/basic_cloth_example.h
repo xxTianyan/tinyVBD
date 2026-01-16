@@ -19,7 +19,7 @@ public:
 
     BasicCloth() {
         max_ticks_per_frame_ = 8;
-        substeps_ = 2;
+        substeps_ = 4;
     }
 
     void CreateWorld([[maybe_unused]]AppContext &ctx) override {
@@ -27,7 +27,7 @@ public:
         Builder builder(model);
         m_cloth_id_ = builder.add_cloth(2.0f, 3.0f, 16, 24, Vec3{0.0f, 4.0f, 0.0f});
         scene_ = std::make_unique<Scene>(std::move(model));
-        solver_ = std::make_unique<VBDSolver>(&scene_->model_, 5, default_cloth());
+        solver_ = std::make_unique<VBDSolver>(&scene_->model_, 3, default_cloth());
     };
 
 
