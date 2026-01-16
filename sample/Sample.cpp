@@ -40,8 +40,8 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
     scene_->InitStep();
 
     // accumulate simulation time
-    const float frame_dt = ctx.dt;
-    // if (frame_dt > 0.05f) frame_dt = 0.05f; // prevent dt explosion
+    float frame_dt = ctx.dt;
+    if (frame_dt > 0.05f) frame_dt = 0.05f; // prevent dt explosion
     sim_accum_ += frame_dt;
 
     //run simulation time
@@ -52,7 +52,7 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
             Step(sub_dt);
         }
         sim_accum_ -= fixed_dt_;
-        // ++ticks;
+        ++ticks;
     }
 
     if (dbg_) dbg_->end_step();
@@ -75,7 +75,8 @@ void Sample::Render([[maybe_unused]]AppContext &ctx) {
 }
 
 void Sample::DrawUI([[maybe_unused]]AppContext &ctx) {
-    // no panel on default
+    if (dbg_)
+        dbg_ui_.Render(*dbg_);
 }
 
 void Sample::Reset([[maybe_unused]]AppContext &ctx) {

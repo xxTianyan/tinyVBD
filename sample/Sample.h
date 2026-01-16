@@ -11,10 +11,12 @@
 #include "Debugger.hpp"
 #include "ISample.h"
 #include "RenderHelper.h"
+#include "DbgUI.hpp"
 
 class Scene;
 class VBDSolver;
 struct AppContext;
+
 
 struct SimContext {
     float dt{};
@@ -62,8 +64,6 @@ protected:
     int   max_ticks_per_frame_ = 8;
     int   substeps_ = 8;              // step in ticks
 
-
-public:
     // for simulation, remember to initialize
     std::unique_ptr<Scene> scene_;
     // need to change to ISolver
@@ -73,6 +73,7 @@ public:
 
     // for rendering
     RenderHelper renderHelper_;
+    SolverDebuggerUI dbg_ui_;
     Model floor_{};
 
 };

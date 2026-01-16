@@ -797,7 +797,7 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
 
         // debug
         if (dbg_) {
-            dbg_->inspect_vertex(vtex_id, force, hessian, dx.norm(), 0.0, .001);
+            dbg_->inspect_vertex(vtex_id, force, hessian, dx.norm(), 0.0, .1);
         }
 
     }

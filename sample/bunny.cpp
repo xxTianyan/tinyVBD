@@ -3,9 +3,7 @@
 //
 
 #include "bunny.h"
-
 #include <iostream>
-
 #include "Application.h"
 #include "Builder.h"
 #include "Scene.h"

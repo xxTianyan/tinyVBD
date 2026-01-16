@@ -19,7 +19,7 @@ struct DebugTriggerConfig {
     bool break_on_inversion = true;   // 遇到翻转 (Signed Vol < 0) 立刻暂停
     float dx_limit_scale = 0.5f;      // 允许稍大的位移，过于灵敏会频繁打断
     float J_min_trigger = 0.01f;      // J 小于此值触发
-    float max_pen_trigger = 1e5f;     // 穿透深度阈值
+    float max_pen_trigger = .8f;     // 穿透深度阈值
 };
 
 // --- 错误类型 ---
