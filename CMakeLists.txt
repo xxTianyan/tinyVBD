@@ -67,7 +67,6 @@ add_executable(Taiyi sample/main.cpp
         raylib_plugin/CameraController.cpp
         raylib_plugin/ShaderManager.cpp
         sample/Sample.cpp
-        sample/basic_cloth_example.cpp
         sample/SampleRegistry.cpp
         common/Application.cpp
         collision/BroadPhase.cpp

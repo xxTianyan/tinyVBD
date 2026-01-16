@@ -60,7 +60,7 @@ protected:
     virtual void DestroyRenderResources();
 
     float sim_accum_ = 0.0f;
-    float fixed_dt_ = 1.0f / 120.0f;  // physical time step
+    float fixed_dt_ = 1.0f / 60.0f;  // physical time step
     int   max_ticks_per_frame_ = 8;
     int   substeps_ = 8;              // step in ticks
 
