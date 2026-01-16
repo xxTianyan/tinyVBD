@@ -3,9 +3,8 @@
 //
 
 #include "Builder.h"
-
-#include <map>
-
+#include <vector>
+#include <cmath>
 #include "AdjacencyCSR.hpp"
 #include "Model.h"
 
@@ -114,6 +113,7 @@ size_t Builder::add_cloth(const float width, const float height,
 
             for (const auto& t : subs) {
                 model_.tris.emplace_back(t.a, t.b, t.c, t.pa, t.pb, t.pc);
+                model_.render_tris.emplace_back(t.a,t.b,t.c);
                 const float m_sub = areal_density * tri_area(t.pa, t.pb, t.pc);
                 const float lumped_m = m_sub / 3.0f;
                 mass_local[t.a - base_particle] += lumped_m;
@@ -150,7 +150,7 @@ size_t Builder::add_cloth(const float width, const float height,
         }
     }
 
-    AddMeshInfo(name, local_particle_count, local_edge_count, local_tri_count, 0);
+    AddMeshInfo(name, local_particle_count, local_edge_count, local_tri_count, local_tri_count, 0);
 
     // 7. Assign mass and handle fixed boundaries
     for (size_t local_i = 0; local_i < local_particle_count; ++local_i) {
@@ -276,7 +276,7 @@ size_t Builder::add_bunny(float height, const float mass) const {
         const Vec3& p1 = model_.particle_pos0[v1];
         const Vec3& p2 = model_.particle_pos0[v2];
 
-        model_.tris.emplace_back(v0, v1, v2, p0, p1, p2);
+        model_.render_tris.emplace_back(v0,v1,v2);
     }
 
     // ---------- distribute mass by tet volumes ----------
@@ -330,7 +330,7 @@ size_t Builder::add_bunny(float height, const float mass) const {
         }
     }
 
-    AddMeshInfo("bunny", local_particle_count, 0, local_surf_tri_count, local_tet_count);
+    AddMeshInfo("bunny", local_particle_count, 0, 0, local_surf_tri_count, local_tet_count);
 
     model_.topology_version++;
     return model_.mesh_infos.size() - 1;
@@ -353,10 +353,10 @@ size_t Builder::add_single_tet() const {
     model_.particle_pos0[3] = p3;
 
     // add tri
-    model_.tris.emplace_back(0,2,1,p0,p2,p1);
-    model_.tris.emplace_back(0,3,2,p0,p3,p2);
-    model_.tris.emplace_back(0,1,3,p0,p1,p3);
-    model_.tris.emplace_back(1,2,3,p1,p2,p3);
+    model_.render_tris.emplace_back(0,2,1);
+    model_.render_tris.emplace_back(0,3,2);
+    model_.render_tris.emplace_back(0,1,3);
+    model_.render_tris.emplace_back(1,2,3);
 
     // add tet
     model_.tets.emplace_back(0,1,2,3,p0,p1,p2,p3);
@@ -368,15 +368,12 @@ size_t Builder::add_single_tet() const {
     model_.particle_inv_mass[0] = 1.0f;
 
     // add mesh info
-    AddMeshInfo("tet", 4,0,4,1);
+    AddMeshInfo("tet", 4,0, 0, 4,1);
 
     model_.topology_version++;
     return model_.mesh_infos.size() - 1;
 }
 
-#include <vector>
-#include <cmath>
-#include <algorithm>
 
 // 辅助函数：将立方体空间的坐标映射到球体空间
 // 输入: x, y, z 在 [-1, 1] 范围内
@@ -508,8 +505,8 @@ size_t Builder::add_sphere(const float radius,
         const Vec3 &p1 = model_.particle_pos0[v1];
         const Vec3 &p2 = model_.particle_pos0[v2];
         const Vec3 &p3 = model_.particle_pos0[v3];
-        model_.tris.emplace_back(v0, v1, v2, p0, p1, p2);
-        model_.tris.emplace_back(v0, v2, v3, p0, p2, p3);
+        model_.render_tris.emplace_back(v0, v1, v2);
+        model_.render_tris.emplace_back(v0, v2, v3);
     };
 
     // 遍历6个面提取三角形
@@ -537,8 +534,8 @@ size_t Builder::add_sphere(const float radius,
     for (int j = 0; j < res; ++j) for (int i = 0; i < res; ++i)
         add_quad_as_tris(get_idx(i+1, j, res), get_idx(i+1, j+1, res), get_idx(i, j+1, res), get_idx(i, j, res));
 
-
-    AddMeshInfo(name, num_particles, 0, model_.tris.size() - (model_.mesh_infos.empty() ? 0 : model_.mesh_infos.back().tri.end()), num_tets);
+    const auto num_render_tri = model_.tris.size() - (model_.mesh_infos.empty() ? 0 : model_.mesh_infos.back().render_tri.end());
+    AddMeshInfo(name, num_particles, 0, 0, num_render_tri, num_tets);
 
     // 5. Finalize Mass
     float density_scaling = (total_vol_calculated > 1e-9f) ? (mass / total_vol_calculated) : 0.0f;
@@ -561,6 +558,7 @@ void Builder::PrepareCapacity(const size_t num) const {
     ensure_capacity(model_.particle_inv_mass, num);
     ensure_capacity(model_.edges, num*2);
     ensure_capacity(model_.tris, num*2);
+    ensure_capacity(model_.render_tris, num*2);
     ensure_capacity(model_.tets, num*2);
     model_.num_particles += num;
 
@@ -571,7 +569,7 @@ void Builder::PrepareCapacity(const size_t num) const {
 }
 
 void Builder::AddMeshInfo(const char* name, const size_t n_particle, const size_t n_edge,
-            const size_t n_tri, const size_t n_tet) const {
+            const size_t n_tri,  const size_t n_render_tri, const size_t n_tet) const {
 
     MeshInfo info{};
     info.name = name;
@@ -579,14 +577,14 @@ void Builder::AddMeshInfo(const char* name, const size_t n_particle, const size_
     if (model_.mesh_infos.empty()) {
         info.particle = range{0, n_particle};
         info.edge = range{0, n_edge};
-        info.tri = range{0, n_tri};
+        info.render_tri = range{0, n_render_tri};
         info.tet = range{0, n_tet};
     }
     else {
         const auto& last_mesh = model_.mesh_infos.back();
         info.particle = range{last_mesh.particle.end(), n_particle};
         info.edge = range{last_mesh.edge.end(), n_edge};
-        info.tri = range{last_mesh.tri.end(), n_tri};
+        info.render_tri = range{last_mesh.render_tri.end(), n_render_tri};
         info.tet = range{last_mesh.tet.end(), n_tet};
     }
 

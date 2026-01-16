@@ -133,7 +133,7 @@ void VBDSolver::Init() {
 
         // record surface vertex
         surface_vertices.resize(model_->num_particles, 0);
-        for (const auto& tri: model_->tris) {
+        for (const auto& tri: model_->render_tris) {
             surface_vertices[tri.vertices[0]] = 1;
             surface_vertices[tri.vertices[1]] = 1;
             surface_vertices[tri.vertices[2]] = 1;
@@ -760,7 +760,7 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
 
         {
             ScopeTimer gradient_timer = dbg_ ? dbg_->timer_gradient() : ScopeTimer(nullptr);
-            /*for (uint32_t f = face_adjacency.begin(vtex_id); f < face_adjacency.end(vtex_id); ++f) {
+            for (uint32_t f = face_adjacency.begin(vtex_id); f < face_adjacency.end(vtex_id); ++f) {
                 const auto pack = face_adjacency.incidents[f];
                 const auto face_id = AdjacencyCSR::unpack_id(pack);
                 const auto order = AdjacencyCSR::unpack_order(pack);
@@ -774,7 +774,7 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
                 const auto order = AdjacencyCSR::unpack_order(pack);
                 const auto& edge = model_->edges[edge_id];
                 accumulate_dihedral_angle_based_bending_force_hessian(state_in.particle_pos, material_, edge, order, force, hessian);
-            }*/
+            }
 
             for (uint32_t t = tet_adjacency.begin(vtex_id); t < tet_adjacency.end(vtex_id); ++t) {
                 const auto pack = tet_adjacency.incidents[t];

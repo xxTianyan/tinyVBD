@@ -69,7 +69,7 @@ void RenderHelper::Rebuild() {
 
         const size_t particle_begin = rm.info.particle.begin;
         const size_t particle_count = rm.info.particle.count;
-        const size_t tri_count      = rm.info.tri.count;
+        const size_t tri_count      = rm.info.render_tri.count;
 
         // important
         if (particle_count == 0 || tri_count == 0) {
@@ -87,8 +87,8 @@ void RenderHelper::Rebuild() {
         if (particle_begin + particle_count > model_->num_particles) {
             throw std::runtime_error("RenderHelper::Rebuild: particle range out of model.num_particles");
         }
-        if (rm.info.tri.end() > model_->tris.size()) {
-            throw std::runtime_error("RenderHelper::Rebuild: tri range out of model.tris");
+        if (rm.info.render_tri.end() > model_->render_tris.size()) {
+            throw std::runtime_error("RenderHelper::Rebuild: tri range out of model.render_tris");
         }
 
         // -------- build CPU mesh arrays (MemAlloc, owned by raylib) --------
@@ -109,7 +109,7 @@ void RenderHelper::Rebuild() {
         std::memset(mesh.vertices, 0, particle_count * 3 * sizeof(float));
         std::memset(mesh.normals,  0, particle_count * 3 * sizeof(float));
 
-        BuildIndicesU16(*model_, rm.info.tri, particle_begin, particle_count, (unsigned short*)mesh.indices);
+        BuildIndicesU16(*model_, rm.info.render_tri, particle_begin, particle_count, (unsigned short*)mesh.indices);
 
         // Upload as dynamic: positions/normals 每帧更新
         UploadMesh(&mesh, true);
@@ -143,7 +143,7 @@ void RenderHelper::UpdateDynamic(const State& state) const {
         }
 
         FillPositionsXYZ(state, particle_begin, particle_count, mesh.vertices);
-        ComputeNormalsXYZ(*model_, state, rm.info.tri, particle_begin, particle_count, mesh.normals);
+        ComputeNormalsXYZ(*model_, state, rm.info.render_tri, particle_begin, particle_count, mesh.normals);
 
         // raylib buffer slots: 0=positions, 2=normals
         UpdateMeshBuffer(mesh, 0, mesh.vertices, mesh.vertexCount * 3 * static_cast<int>(sizeof(float)), 0);
@@ -188,12 +188,12 @@ void RenderHelper::BuildIndicesU16(const MModel& model,
                                   const size_t particle_count,
                                   unsigned short* dst_indices) {
     if (!dst_indices) throw std::runtime_error("BuildIndicesU16: dst null");
-    if (tri_range.end() > model.tris.size()) {
-        throw std::runtime_error("BuildIndicesU16: tri range out of model.tris");
+    if (tri_range.end() > model.render_tris.size()) {
+        throw std::runtime_error("BuildIndicesU16: tri range out of model.render_tris");
     }
 
     for (size_t t = 0; t < tri_range.count; ++t) {
-        const triangle& tri = model.tris[tri_range.begin + t];
+        const auto& tri = model.render_tris[tri_range.begin + t];
 
         const VertexID g0 = tri.vertices[0];
         const VertexID g1 = tri.vertices[1];
@@ -227,14 +227,14 @@ void RenderHelper::ComputeNormalsXYZ(const MModel& model,
     if (particle_begin + particle_count > state.particle_pos.size()) {
         throw std::runtime_error("ComputeNormalsXYZ: particle range out of state.particle_pos");
     }
-    if (tri_range.end() > model.tris.size()) {
-        throw std::runtime_error("ComputeNormalsXYZ: tri range out of model.tris");
+    if (tri_range.end() > model.render_tris.size()) {
+        throw std::runtime_error("ComputeNormalsXYZ: tri range out of model.render_tris");
     }
 
     std::memset(dst_nxyz, 0, particle_count * 3 * sizeof(float));
 
     for (size_t t = 0; t < tri_range.count; ++t) {
-        const triangle& tri = model.tris[tri_range.begin + t];
+        const auto& tri = model.render_tris[tri_range.begin + t];
 
         const VertexID g0 = tri.vertices[0];
         const VertexID g1 = tri.vertices[1];

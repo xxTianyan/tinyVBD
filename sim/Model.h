@@ -116,6 +116,12 @@ struct triangle {
     };
 };
 
+struct render_trangle {
+    std::array<VertexID, 3> vertices{0,0,0};
+    render_trangle(const VertexID vtex0, const VertexID vtex1, const VertexID vtex2) :
+    vertices{vtex0, vtex1, vtex2} {}
+};
+
 struct edge {
     // convention [opp0, opp1, edge_start, edge_end]
     std::array<VertexID, 4> vertices{0,0,0,0};
@@ -173,6 +179,7 @@ struct MeshInfo {
     range particle;
     range edge;
     range tri;
+    range render_tri;
     range tet;
 };
 struct RigidBodyInfo {
@@ -220,6 +227,7 @@ struct MModel {
     // topology
     std::vector<tetrahedron> tets;
     std::vector<triangle> tris;
+    std::vector<render_trangle> render_tris;
     std::vector<edge> edges;
     // particle initial date
     std::vector<Vec3> particle_pos0; // initial positions
