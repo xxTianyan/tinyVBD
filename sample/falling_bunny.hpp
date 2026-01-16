@@ -32,8 +32,8 @@ public:
 
     };
     void BindShaders(AppContext &ctx) override {
-        ctx.shader_manager->LoadShaderProgram("bunny", "../resources/shaders/bunny.vs", "../resources/shaders/bunny.fs");
-        const auto bunny_shader = ctx.shader_manager->Get("bunny")->shader;
+        ctx.shader_manager->LoadShaderProgram("rubber", "../resources/shaders/rubber.vs", "../resources/shaders/rubber.fs");
+        const auto bunny_shader = ctx.shader_manager->Get("rubber")->shader;
         ShaderManager::BindMatrices(bunny_shader);
         ShaderManager::SetCommonShaderParams(bunny_shader);
         bunny_shader.locs[SHADER_LOC_MAP_DIFFUSE] = GetShaderLocation(bunny_shader, "texture0");
