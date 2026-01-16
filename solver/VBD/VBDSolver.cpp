@@ -163,7 +163,7 @@ void VBDSolver::accumulate_stvk_triangle_force_hessian_serial(
     const triangle& face,
     const uint32_t vtex_order,
     Vec3& force,
-    Mat3& H){
+    Mat3& H) const{
     // StVK energy density: psi = mu * ||G||_F^2 + 0.5 * lambda * (trace(G))^2
 
     if (vtex_order > 2u)
@@ -273,7 +273,7 @@ void VBDSolver::accumulate_stvk_triangle_force_hessian(const std::span<const Vec
     const triangle& face,
     const uint32_t vtex_order,
     Vec3& force,
-    Mat3& H) {
+    Mat3& H) const{
     // advised by newton physics, evaluate_stvk_force_hessian function
     // StVK energy density: psi = mu * ||G||_F^2 + 0.5 * lambda * (trace(G))^2
 
@@ -369,7 +369,7 @@ void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian(const std:
     const edge& e,
     const uint32_t vtex_order,
     Vec3& force,
-    Mat3& H) {
+    Mat3& H) const {
     // advised by function with the same name in newton physics.
     constexpr float eps = 1e-6f;
 
@@ -469,7 +469,7 @@ void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian_serial(
     const edge& e,
     const uint32_t vtex_order,
     Vec3& force,
-    Mat3& H) {
+    Mat3& H) const{
     constexpr float eps = 1e-6f;
 
     if (vtex_order > 3u)
@@ -566,9 +566,8 @@ void VBDSolver::accumulate_dihedral_angle_based_bending_force_hessian_serial(
     H += bending_hessian;
 }
 
-void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(
-    const std::span<const Vec3> pos, const MMaterial &mat,
-    const tetrahedron &tet, const uint32_t vtex_order, Vec3 &force, Mat3 &H) {
+void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(const std::span<const Vec3> pos, const MMaterial &mat,
+    const tetrahedron &tet, const uint32_t vtex_order, Vec3 &force, Mat3 &H, const size_t tet_id) const{
 
     const float mu     = mat.mu();
     const float lambda = mat.lambda();
@@ -666,6 +665,11 @@ void VBDSolver::accumulate_neo_hookean_tetrahedron_force_hessian(
 
     force += fi;
     H += Hi;
+
+    if (dbg_) {
+        const auto signed_V = Ds.col((0)).dot(Ds.col(1).cross(Ds.col(2))) * (1.0f / 6.0f);
+        dbg_->inspect_tet(tet_id, J, signed_V);
+    }
 }
 
 
@@ -781,7 +785,7 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
                 const auto tet_id = AdjacencyCSR::unpack_id(pack);
                 const auto order = AdjacencyCSR::unpack_order(pack);
                 const auto& tet = model_->tets[tet_id];
-                accumulate_neo_hookean_tetrahedron_force_hessian(state_in.particle_pos, material_, tet, order, force, hessian);
+                accumulate_neo_hookean_tetrahedron_force_hessian(state_in.particle_pos, material_, tet, order, force, hessian, tet_id);
             }
 
         }

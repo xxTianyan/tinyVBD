@@ -31,20 +31,20 @@ public:
 
     void update_velocity(State& stat_out, float dt) const;
 
-    static void accumulate_stvk_triangle_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
-                                        const triangle& face, uint32_t vtex_order, Vec3& force, Mat3& H);
+    void accumulate_stvk_triangle_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
+        const triangle& face, uint32_t vtex_order, Vec3& force, Mat3& H) const;
 
-    static void accumulate_stvk_triangle_force_hessian_serial(std::span<const Vec3> pos, const MMaterial& mat,
-                                    const triangle& face, uint32_t vtex_order, Vec3& force, Mat3& H);
+    void accumulate_stvk_triangle_force_hessian_serial(std::span<const Vec3> pos, const MMaterial& mat,
+        const triangle& face, uint32_t vtex_order, Vec3& force, Mat3& H) const;
 
-    static void accumulate_dihedral_angle_based_bending_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
-                                        const edge& e, uint32_t vtex_order, Vec3& force, Mat3& H);
+    void accumulate_dihedral_angle_based_bending_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
+        const edge& e, uint32_t vtex_order, Vec3& force, Mat3& H) const;
 
-    static void accumulate_dihedral_angle_based_bending_force_hessian_serial(std::span<const Vec3> pos, const MMaterial& mat,
-                                    const edge& e, uint32_t vtex_order, Vec3& force, Mat3& H);
+    void accumulate_dihedral_angle_based_bending_force_hessian_serial(std::span<const Vec3> pos, const MMaterial& mat,
+        const edge& e, uint32_t vtex_order, Vec3& force, Mat3& H) const;
 
-    static void accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
-                                        const tetrahedron& tet, uint32_t vtex_order, Vec3& force, Mat3& H);
+    void accumulate_neo_hookean_tetrahedron_force_hessian(std::span<const Vec3> pos, const MMaterial& mat,
+        const tetrahedron& tet, uint32_t vtex_order, Vec3& force, Mat3& H, /*for debug*/ size_t tet_id) const;
 
 
 private:

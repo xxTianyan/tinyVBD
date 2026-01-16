@@ -15,6 +15,7 @@
 struct tetrahedron {
     std::array<VertexID, 4> vertices{0,0,0,0};
     float restVolume{};
+    float restSign{};       // +1 or -1
     Mat3 Dm_inv{};
 
     tetrahedron(const VertexID vtex0, const VertexID vtex1, const VertexID vtex2, const VertexID vtex3,
@@ -32,6 +33,7 @@ struct tetrahedron {
 
         // more stable det：det = dot(e1, cross(e2, e3))
         const auto detDm = e1.dot(e2.cross(e3));
+        restSign = detDm > 0 ? 1.0f : -1.0f;
 
         const float absDet = std::fabs(detDm);
 

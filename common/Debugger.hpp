@@ -43,8 +43,8 @@ struct ScopeTimer {
 struct DebugTriggerConfig {
     bool break_on_nan = true;         // 遇到 NaN 立刻暂停
     bool break_on_inversion = true;   // 遇到翻转 (Signed Vol < 0) 立刻暂停
+    bool break_on_small_J = false;      // 遇到 J 小于 0.1 触发
     float dx_limit_scale = 0.5f;      // 允许稍大的位移，过于灵敏会频繁打断
-    float J_min_trigger = 0.01f;      // J 小于此值触发
     float max_pen_trigger = .8f;     // 穿透深度阈值
 };
 
@@ -55,6 +55,7 @@ enum class DebugErrorType : uint8_t {
     Inverted_Element,
     Large_Deformation,
     Large_Penetration,
+    Low_Jacobian,
     User_Trigger
 };
 
@@ -81,6 +82,8 @@ struct DebugFrameStats {
     std::string trigger_msg;        // 详细描述
 
     // 现场数据 snapshot (导致错误的那个点的物理量)
+    std::vector<std::pair<std::string, Vec3>> component_forces;
+    std::vector<std::pair<std::string, Mat3>> component_hessians;
     Vec3 trigger_force{};
     Mat3 trigger_hessian{};
     float trigger_val_1 = 0.0f;     // 通用槽位，存 J, vol 或 dx
@@ -189,14 +192,17 @@ public:
         if (penetration > current_frame_.maxPenetration) current_frame_.maxPenetration = penetration;
         if (dx > current_frame_.maxDx) current_frame_.maxDx = dx;
 
+        current_frame_.trigger_force = force;
+        current_frame_.trigger_hessian = hessian;
+
         // 2. 触发逻辑
         if (has_nan) {
-            report_trigger(DebugErrorType::NaN_Detected, v_id, "NaN in Vertex (dx/pen/force)", force, hessian, dx);
+            report_trigger(DebugErrorType::NaN_Detected, v_id, "NaN in Vertex (dx/pen/force)", dx);
             return;
         }
 
         if (dx > cfg_.dx_limit_scale * avg_len) {
-            report_trigger(DebugErrorType::Large_Deformation, v_id, "Large dx detected", force, hessian, dx);
+            report_trigger(DebugErrorType::Large_Deformation, v_id, "Large dx detected", dx);
         }
     }
 
@@ -208,15 +214,15 @@ public:
         if (signed_vol < current_frame_.minSignedVol) current_frame_.minSignedVol = signed_vol;
 
         if (has_nan) {
-            report_trigger(DebugErrorType::NaN_Detected, t_id, "NaN in Tet (J/Vol)", {}, {}, J);
+            report_trigger(DebugErrorType::NaN_Detected, t_id, "NaN in Tet (J/Vol)", J);
             return;
         }
 
         if (cfg_.break_on_inversion && signed_vol <= 0.0f) {
-            report_trigger(DebugErrorType::Inverted_Element, t_id, "Element Inverted (Vol < 0)", {}, {}, signed_vol);
+            report_trigger(DebugErrorType::Inverted_Element, t_id, "Element Inverted (Vol < 0)", signed_vol);
         }
-        else if (J < cfg_.J_min_trigger) {
-            report_trigger(DebugErrorType::Large_Deformation, t_id, "Low Jacobian", {}, {}, J);
+        else if (cfg_.break_on_small_J && J < 1e-5) {
+            report_trigger(DebugErrorType::Low_Jacobian, t_id, "Low Jacobian", J);
         }
     }
 
@@ -281,7 +287,7 @@ private:
     // --- 内部辅助 ---
 
     // 线程安全的 Trigger 报告
-    void report_trigger(const DebugErrorType type, const size_t id, const std::string& msg, const Vec3& f, const Mat3& h, const float val) {
+    void report_trigger(const DebugErrorType type, const size_t id, const std::string& msg, const float val) {
         // Double-Check Locking: 只有第一个触发的人能写入，避免被后续报错覆盖
         bool expected = false;
         if (triggered_this_frame_.compare_exchange_strong(expected, true)) {
@@ -289,8 +295,6 @@ private:
             current_frame_.trigger_reason = type;
             current_frame_.trigger_element_id = id;
             current_frame_.trigger_msg = msg;
-            current_frame_.trigger_force = f;
-            current_frame_.trigger_hessian = h;
             current_frame_.trigger_val_1 = val;
 
             // 可选：在这里 print 到控制台，因为 Solver 可能马上就崩溃了

@@ -100,36 +100,113 @@ private:
         const auto& stats = debugger.get_current_stats();
         bool frozen = debugger.is_frozen();
 
-        if (frozen && stats.trigger_reason != DebugErrorType::None) {
-            ImGui::Separator();
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.6f, 1.0f));
-            ImGui::Text("[!] CRASH REPORT");
-            ImGui::PopStyleColor();
+        // 只有在冻结且有错误时才显示
+        if (!frozen || stats.trigger_reason == DebugErrorType::None) return;
 
-            if (ImGui::BeginTable("TriggerTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+        ImGui::Spacing();
+        ImGui::Separator();
 
+        // --- 1. 醒目的红色标题栏 ---
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.85f, 0.2f, 0.2f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+        bool show_details = ImGui::CollapsingHeader("!!! SIMULATION CRASH REPORT !!!", ImGuiTreeNodeFlags_DefaultOpen);
+        ImGui::PopStyleColor(2);
+
+        if (!show_details) return;
+
+        ImGui::Indent(); // 整体缩进，增加层次感
+
+        // --- 2. 基础信息表格 ---
+        if (ImGui::BeginTable("CrashBasic", 2, ImGuiTableFlags_BordersInnerH)) {
+            ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+            ImGui::TableSetupColumn("Value");
+
+            // Helper Lambda
+            auto DrawRow = [](const char* label, const char* val, const ImVec4& color) {
                 ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0); ImGui::Text("Reason");
-                ImGui::TableSetColumnIndex(1); ImGui::Text("%s", stats.trigger_msg.c_str());
+                ImGui::TableSetColumnIndex(0); ImGui::TextDisabled("%s", label);
+                ImGui::TableSetColumnIndex(1); ImGui::TextColored(color, "%s", val);
+            };
 
-                if (stats.trigger_element_id != static_cast<size_t>(-1)) {
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0); ImGui::Text("Element ID");
-                    ImGui::TableSetColumnIndex(1); ImGui::Text("%zu", stats.trigger_element_id);
-                }
+            DrawRow("Reason", stats.trigger_msg.c_str(), ImVec4(1, 0.4f, 0.4f, 1)); // Red
 
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0); ImGui::Text("Value");
-                ImGui::TableSetColumnIndex(1); ImGui::Text("%.6f", stats.trigger_val_1);
-
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0); ImGui::Text("Force");
-                ImGui::TableSetColumnIndex(1); ImGui::Text("(%.2f, %.2f, %.2f)",
-                    stats.trigger_force.x(), stats.trigger_force.y(), stats.trigger_force.z());
-
-                ImGui::EndTable();
+            if (stats.trigger_element_id != static_cast<size_t>(-1)) {
+                std::string id_str = std::to_string(stats.trigger_element_id);
+                DrawRow("Element ID", id_str.c_str(), ImVec4(1, 1, 0, 1)); // Yellow
             }
+
+            // 如果有特定的触发值 (比如 Jacobian 值)
+            if (std::abs(stats.trigger_val_1) > 1e-9) {
+                char val_buf[32]; snprintf(val_buf, 32, "%.6f", stats.trigger_val_1);
+                DrawRow("Bad Value", val_buf, ImVec4(0.7f, 0.7f, 0.7f, 1));
+            }
+
+            ImGui::EndTable();
         }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+
+        // --- 3. Force Breakdown (力的分析) ---
+        ImGui::TextColored(ImVec4(0.6f, 1.0f, 0.6f, 1.0f), "FORCE COMPOSITION");
+
+        // 3列：Name | Vector | Magnitude
+        if (ImGui::BeginTable("ForceTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable)) {
+            ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+            ImGui::TableSetupColumn("Vector (x, y, z)");
+            ImGui::TableSetupColumn("Norm", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+            ImGui::TableHeadersRow();
+
+            auto DrawForceRow = [](const char* name, const Vec3& f, bool highlight) {
+                ImGui::TableNextRow();
+
+                // Col 0: Name
+                ImGui::TableSetColumnIndex(0);
+                if (highlight) ImGui::TextColored(ImVec4(1, 0.8f, 0.2f, 1), "%s", name); // Gold
+                else           ImGui::Text("%s", name);
+
+                // Col 1: Vector
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("(% .2f, % .2f, % .2f)", f.x(), f.y(), f.z());
+
+                // Col 2: Norm
+                ImGui::TableSetColumnIndex(2);
+                ImGui::Text("%.2f", f.norm());
+            };
+
+            // A. 先画 Total Force (高亮)
+            DrawForceRow("TOTAL NET", stats.trigger_force, true);
+
+            // B. 遍历 component_forces 画分量
+            for (const auto& [name, vec] : stats.component_forces) {
+                DrawForceRow(name.c_str(), vec, false);
+            }
+
+            ImGui::EndTable();
+        }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+
+        // --- 4. Hessian Analysis (刚度矩阵分析) ---
+        ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "HESSIAN CONTRIBUTION");
+        ImGui::TextDisabled("(Red on diagonal = Indefinite/Negative Definite)");
+
+        // A. 先画 Total Hessian (如果有数据)
+        // 假设 stats.total_hessian 是你手动累加或者从 vector 里算出来的
+        // 如果你没有专门存 total，可以自己在这里累加一下用于显示
+        Mat3 sum_hessian = Mat3::Zero();
+        // 如果 stats 里有 total_hessian 字段最好，没有的话我们现场算：
+        for(const auto& pair : stats.component_hessians) sum_hessian += pair.second;
+
+        DrawHessianGrid("TOTAL HESSIAN (Sum)", sum_hessian, true);
+
+        // B. 遍历 component_hessians 画详细数据
+        for (const auto& [name, mat] : stats.component_hessians) {
+            DrawHessianGrid(name.c_str(), mat, false);
+        }
+
+        ImGui::Unindent(); // 结束缩进
     }
 
     void DrawLiveStats(const SolverDebugger& debugger) {
@@ -161,13 +238,13 @@ private:
 
         ImGui::TextDisabled("Triggers (Auto-Freeze)");
         ImGui::Checkbox("NaN Detected", &cfg.break_on_nan);
-        ImGui::Checkbox("Inverted (Vol<0)", &cfg.break_on_inversion);
+        ImGui::Checkbox("Inverted", &cfg.break_on_inversion);
+        ImGui::Checkbox("Extreme J", &cfg.break_on_small_J);
 
         ImGui::Separator();
         ImGui::TextDisabled("Thresholds");
 
         // 使用 SliderFloat 而不是 DragFloat，可以防止用户拖出离谱的值
-        ImGui::SliderFloat("Min Jacobian", &cfg.J_min_trigger, 0.0f, 0.5f);
         ImGui::SliderFloat("Max Penetration", &cfg.max_pen_trigger, 0.0f, 1.0f);
         ImGui::SliderFloat("Dx Limit Scale", &cfg.dx_limit_scale, 0.01f, 2.0f);
     }
@@ -224,6 +301,58 @@ private:
         std::ostringstream oss;
         oss << prefix << "_" << std::put_time(&tm, "%Y-%m-%d_%H-%M-%S") << ext;
         return oss.str();
+    }
+
+    // =========================================================
+    //  Helper: 画一个 3x3 矩阵 (带对角线负值警示)
+    // =========================================================
+    static void DrawHessianGrid(const char* label, const Mat3& H, bool is_total = false) {
+        // 如果是总矩阵，默认展开；如果是分量，默认折叠
+        ImGuiTreeNodeFlags flags = is_total ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None;
+
+        // 计算 Frobenius 范数，展示在标题上，方便一眼看出哪个矩阵数值炸了
+        float frob_norm = 0.0f;
+        for(int i=0; i<9; ++i) frob_norm += H.data()[i] * H.data()[i];
+        frob_norm = std::sqrt(frob_norm);
+
+        // 标题格式： "Name [Norm: 1.23e+05]"
+        std::string header_label = std::string(label) + " [Norm: " + std::to_string((int)frob_norm) + "]";
+
+        if (ImGui::TreeNodeEx(header_label.c_str(), flags)) {
+
+            // 使用 Table 保证 3x3 对齐
+            // SizingFixedFit 让列宽紧凑
+            if (ImGui::BeginTable("HGrid", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+
+                for (int r = 0; r < 3; ++r) {
+                    ImGui::TableNextRow();
+                    for (int c = 0; c < 3; ++c) {
+                        ImGui::TableSetColumnIndex(c);
+                        float val = H(r, c);
+
+                        // --- 颜色逻辑 ---
+                        ImVec4 color;
+                        if (r == c && val < 0) {
+                            // 严重警告：对角线为负 (非正定风险)
+                            color = ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
+                        } else if (std::abs(val) < 1e-6f) {
+                            // 几乎为 0，变暗
+                            color = ImVec4(0.5f, 0.5f, 0.5f, 0.5f);
+                        } else {
+                            // 正常数值，蓝色调
+                            color = ImVec4(0.4f, 0.8f, 1.0f, 1.0f);
+                        }
+
+                        ImGui::TextColored(color, "% .2e", val);
+
+                        // 鼠标悬停显示精确浮点值
+                        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%.6f", val);
+                    }
+                }
+                ImGui::EndTable();
+            }
+            ImGui::TreePop();
+        }
     }
 };
 
