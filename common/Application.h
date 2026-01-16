@@ -12,27 +12,6 @@
 #include "SampleRegistry.h"
 #include "ShaderManager.h"
 
-#include <chrono>
-struct ScopeTimer {
-    using clock = std::chrono::steady_clock;
-
-    double* accum_ms = nullptr;
-    clock::time_point t0;
-
-    explicit ScopeTimer(double* accum_ms_)
-        : accum_ms(accum_ms_), t0(clock::now()) {}
-
-    ~ScopeTimer() {
-        const auto t1 = clock::now();
-        const double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
-        *accum_ms += ms;
-    }
-
-    ScopeTimer(const ScopeTimer&) = delete;
-    ScopeTimer& operator=(const ScopeTimer&) = delete;
-};
-
-
 struct AppContext {
     float dt = 0.0f;
     bool paused = true;

@@ -9,7 +9,6 @@
 
 class FallingBunny final : public Sample {
     void CreateWorld(AppContext &ctx) override;
-    void Step(float dt) override;
     void BindShaders(AppContext &ctx) override;
 
 private:

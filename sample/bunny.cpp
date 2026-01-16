@@ -21,11 +21,6 @@ void FallingBunny::CreateWorld(AppContext &ctx) {
     solver_ = std::make_unique<VBDSolver>(&scene_->model_, 4, soft_bunny(), dbg_.get());
 }
 
-void FallingBunny::Step(const float dt) {
-    solver_->Step(scene_->state_in(), scene_->state_out(), dt);
-    scene_->SwapStates();
-}
-
 void FallingBunny::BindShaders(AppContext &ctx) {
     ctx.shader_manager->LoadShaderProgram("bunny", "../resources/shaders/bunny.vs", "../resources/shaders/bunny.fs");
     const auto bunny_shader = ctx.shader_manager->Get("bunny")->shader;

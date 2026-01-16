@@ -37,22 +37,30 @@ void Sample::Update([[maybe_unused]]AppContext &ctx) {
     if (dbg_ && !dbg_->begin_step(ctx.frame_id))
         return;
 
-    scene_->InitStep();
+    // physical frame
+    {
+        ScopeTimer frame_timer = dbg_ ? dbg_->timer_frame() : ScopeTimer(nullptr);
+        scene_->InitStep();
 
-    // accumulate simulation time
-    float frame_dt = ctx.dt;
-    if (frame_dt > 0.05f) frame_dt = 0.05f; // prevent dt explosion
-    sim_accum_ += frame_dt;
+        // accumulate simulation time
+        float frame_dt = ctx.dt;
+        if (frame_dt > 0.05f) frame_dt = 0.05f; // prevent dt explosion
+        sim_accum_ += frame_dt;
 
-    //run simulation time
-    int ticks = 0;
-    while (sim_accum_ >= fixed_dt_ && ticks < max_ticks_per_frame_) {
-        const float sub_dt = fixed_dt_ / static_cast<float>(substeps_);
-        for (int s = 0; s < substeps_; s++) {
-            Step(sub_dt);
+        //run simulation time
+        int ticks = 0;
+        while (sim_accum_ >= fixed_dt_ && ticks < max_ticks_per_frame_) {
+            const float sub_dt = fixed_dt_ / static_cast<float>(substeps_);
+            for (int s = 0; s < substeps_; s++) {
+                // single substep stack
+                {
+                    ScopeTimer substep_timer = dbg_ ? dbg_->timer_substep() : ScopeTimer(nullptr);
+                    Step(sub_dt);
+                }
+            }
+            sim_accum_ -= fixed_dt_;
+            ++ticks;
         }
-        sim_accum_ -= fixed_dt_;
-        ++ticks;
     }
 
     if (dbg_) dbg_->end_step();

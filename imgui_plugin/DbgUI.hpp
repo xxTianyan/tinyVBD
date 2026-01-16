@@ -5,14 +5,6 @@
 #ifndef TAIYI_DBGUI_HPP
 #define TAIYI_DBGUI_HPP
 
-//
-// Created by tianyan on 1/15/26.
-// SolverDebuggerUI.hpp
-// 依赖: imgui.h, TaiyiDebugger.hpp
-//
-
-#ifndef TAIYI_DEBUGGER_UI_HPP
-#define TAIYI_DEBUGGER_UI_HPP
 
 #include <string>
 #include <ctime>
@@ -27,7 +19,7 @@ public:
     // 在你的 ImGui 循环中调用此函数
     // p_open: 可选的关闭窗口布尔指针
     void Render(SolverDebugger& debugger, bool* p_open = nullptr) {
-        if (!ImGui::Begin("Solver Debugger Panel", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (!ImGui::Begin("Solver Debugger Panel", p_open)) {
             ImGui::End();
             return;
         }
@@ -36,6 +28,7 @@ public:
         DrawManualDump(debugger);
         DrawTriggerInfo(debugger);
         DrawLiveStats(debugger);
+        DrawPerformance(debugger);
         DrawSettings(debugger);
 
         ImGui::End();
@@ -150,7 +143,7 @@ private:
         auto StatRow = [](const char* name, float val, float limit, bool is_min_limit) {
             bool bad = is_min_limit ? (val < limit) : (val > limit);
             ImGui::Text("%s:", name);
-            ImGui::SameLine(280);
+            ImGui::SameLine(300);
             if (bad) ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "%.4f (BAD)", val);
             else     ImGui::Text("%.4f", val);
         };
@@ -179,6 +172,51 @@ private:
         ImGui::SliderFloat("Dx Limit Scale", &cfg.dx_limit_scale, 0.01f, 2.0f);
     }
 
+    void DrawPerformance(const SolverDebugger& debugger) {
+        if (!ImGui::CollapsingHeader("Performance (ms)", ImGuiTreeNodeFlags_DefaultOpen)) return;
+
+        const auto& stats = debugger.get_current_stats();
+
+        // Lambda: 增加了一个 color 参数
+        auto TimeBar = [](const char* label, double ms, double total_ms, const ImVec4& color) {
+            ImGui::Text("%s:", label);
+            ImGui::SameLine(300); // 对齐数值
+            ImGui::Text("%.3f ms", ms);
+
+            if (total_ms > 0.0001) {
+                float fraction = static_cast<float>(ms / total_ms);
+                fraction = std::clamp(fraction, 0.0f, 1.0f); // 防止溢出
+
+                ImGui::SameLine();
+
+                // --- 核心修改：改变颜色 ---
+                // ImGuiCol_PlotHistogram 控制进度条填充部分的颜色
+                ImGui::PushStyleColor(ImGuiCol_PlotHistogram, color);
+
+                // 绘制进度条 (高度设为 ImGui::GetTextLineHeight() 让它看起来不像默认那么厚，更精致)
+                ImGui::ProgressBar(fraction, ImVec2(-1, ImGui::GetTextLineHeight() * 0.8f), "");
+
+                ImGui::PopStyleColor(); // 记得立刻还原，否则会影响后续控件
+                // -----------------------
+            }
+        };
+
+        const ImVec4 col_ = ImVec4(0.7f, 0.7f, 0.7f, 1.0f); // 灰色
+
+        // 显示总时间
+        ImGui::Text("Physical Frame:   %.3f ms", stats.time_total_physical_frame.avg_ms());
+        ImGui::Separator();
+
+        // 显示各部分时间 (以 Total Frame 为分母计算条形图)
+        TimeBar("One Substep", stats.time_single_substep.avg_ms(), stats.time_total_physical_frame.avg_ms(), col_);
+
+        // ImGui::Indent();
+        TimeBar("One Iteration", stats.time_single_iteration.avg_ms(), stats.time_total_physical_frame.avg_ms(), col_);
+        TimeBar("Accumulate Gradient", stats.time_gradient_update.avg_ms(), stats.time_total_physical_frame.avg_ms(), col_);
+        TimeBar("Linear Solve", stats.time_linear_solve.avg_ms(), stats.time_total_physical_frame.avg_ms(), col_);
+        // ImGui::Unindent();
+    }
+
     // --- 工具函数 ---
     std::string GenerateTimestampFilename(const std::string& prefix, const std::string& ext) {
         auto now = std::time(nullptr);
@@ -189,6 +227,5 @@ private:
     }
 };
 
-#endif // TAIYI_DEBUGGER_UI_HPP
 
 #endif //TAIYI_DBGUI_HPP

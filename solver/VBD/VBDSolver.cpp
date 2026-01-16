@@ -151,6 +151,7 @@ void VBDSolver::Step(State& state_in, State& state_out, const float dt) {
 
     forward_step(state_in, dt);
     for (int iter = 0; iter < num_iters; ++iter) {
+        ScopeTimer iter_timer = dbg_ ? dbg_->timer_iteration() : ScopeTimer(nullptr);
         solve_serial(state_in, state_out, dt);
     }
     update_velocity(state_out, dt);
@@ -757,31 +758,41 @@ void VBDSolver::solve_serial(State& state_in, State& state_out, const float dt) 
             hessian += Hc;
         }
 
-        /*for (uint32_t f = face_adjacency.begin(vtex_id); f < face_adjacency.end(vtex_id); ++f) {
-            const auto pack = face_adjacency.incidents[f];
-            const auto face_id = AdjacencyCSR::unpack_id(pack);
-            const auto order = AdjacencyCSR::unpack_order(pack);
-            const auto& face = model_->tris[face_id];
-            accumulate_stvk_triangle_force_hessian(state_in.particle_pos, material_, face, order, force, hessian);
-        }*/
+        {
+            ScopeTimer gradient_timer = dbg_ ? dbg_->timer_gradient() : ScopeTimer(nullptr);
+            /*for (uint32_t f = face_adjacency.begin(vtex_id); f < face_adjacency.end(vtex_id); ++f) {
+                const auto pack = face_adjacency.incidents[f];
+                const auto face_id = AdjacencyCSR::unpack_id(pack);
+                const auto order = AdjacencyCSR::unpack_order(pack);
+                const auto& face = model_->tris[face_id];
+                accumulate_stvk_triangle_force_hessian(state_in.particle_pos, material_, face, order, force, hessian);
+            }
 
-        /*for (uint32_t e = edge_adjacency.begin(vtex_id); e < edge_adjacency.end(vtex_id); ++e) {
-            const auto pack = edge_adjacency.incidents[e];
-            const auto edge_id = AdjacencyCSR::unpack_id(pack);
-            const auto order = AdjacencyCSR::unpack_order(pack);
-            const auto& edge = model_->edges[edge_id];
-            accumulate_dihedral_angle_based_bending_force_hessian(state_in.particle_pos, material_, edge, order, force, hessian);
-        }*/
+            for (uint32_t e = edge_adjacency.begin(vtex_id); e < edge_adjacency.end(vtex_id); ++e) {
+                const auto pack = edge_adjacency.incidents[e];
+                const auto edge_id = AdjacencyCSR::unpack_id(pack);
+                const auto order = AdjacencyCSR::unpack_order(pack);
+                const auto& edge = model_->edges[edge_id];
+                accumulate_dihedral_angle_based_bending_force_hessian(state_in.particle_pos, material_, edge, order, force, hessian);
+            }*/
 
-        for (uint32_t t = tet_adjacency.begin(vtex_id); t < tet_adjacency.end(vtex_id); ++t) {
-            const auto pack = tet_adjacency.incidents[t];
-            const auto tet_id = AdjacencyCSR::unpack_id(pack);
-            const auto order = AdjacencyCSR::unpack_order(pack);
-            const auto& tet = model_->tets[tet_id];
-            accumulate_neo_hookean_tetrahedron_force_hessian(state_in.particle_pos, material_, tet, order, force, hessian);
+            for (uint32_t t = tet_adjacency.begin(vtex_id); t < tet_adjacency.end(vtex_id); ++t) {
+                const auto pack = tet_adjacency.incidents[t];
+                const auto tet_id = AdjacencyCSR::unpack_id(pack);
+                const auto order = AdjacencyCSR::unpack_order(pack);
+                const auto& tet = model_->tets[tet_id];
+                accumulate_neo_hookean_tetrahedron_force_hessian(state_in.particle_pos, material_, tet, order, force, hessian);
+            }
+
         }
 
-        auto dx = TY::SolveSPDOrRegularize(hessian, force);
+        Vec3 dx{};
+
+        {
+            ScopeTimer liner_solve_timer = dbg_ ? dbg_->timer_linear_solve() : ScopeTimer(nullptr);
+            dx = TY::SolveSPDOrRegularize(hessian, force);
+        }
+
 
         /*const float maxStep = 0.05f * model_->avg_edge_length; // model average edge length
         float n = dx.norm();

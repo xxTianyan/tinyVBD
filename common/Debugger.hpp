@@ -6,12 +6,38 @@
 #define TAIYI_DEBUGGER_HPP
 
 #include <limits>
-#include <cstddef>   // std::size_t
-#include <cstdint>
 #include <fstream>
 #include <vector>
-
 #include "Types.h"
+#include <chrono>
+
+struct TimerStat {
+    double sum_ms = 0.0;
+    uint32_t count = 0;
+
+    double avg_ms() const { return count ? (sum_ms / static_cast<double>(count)) : 0.0; }
+};
+
+
+struct ScopeTimer {
+    using clock = std::chrono::steady_clock;
+
+    TimerStat* stat = nullptr;
+    clock::time_point t0;
+
+    explicit ScopeTimer(TimerStat* s) noexcept : stat(s), t0(clock::now()) {}
+
+    ~ScopeTimer() noexcept {
+        if (!stat) return;
+        const auto t1 = clock::now();
+        const double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+        stat->sum_ms += ms;
+        stat->count  += 1;
+    }
+
+    ScopeTimer(const ScopeTimer&) = delete;
+    ScopeTimer& operator=(const ScopeTimer&) = delete;
+};
 
 // --- 配置结构 ---
 struct DebugTriggerConfig {
@@ -42,6 +68,13 @@ struct DebugFrameStats {
     float maxPenetration = -std::numeric_limits<float>::infinity();
     float maxDx = 0.0f;
 
+    // --- 性能统计 (毫秒) ---
+    TimerStat time_total_physical_frame;     // 整帧耗时
+    TimerStat time_single_substep;   // 所有子步总耗时
+    TimerStat time_single_iteration;
+    TimerStat time_linear_solve;    // 线性方程组求解耗时
+    TimerStat time_gradient_update; // 梯度/Hessian构建耗时
+
     // 触发信息 (记录到底是谁导致了暂停)
     DebugErrorType trigger_reason = DebugErrorType::None;
     size_t trigger_element_id = -1; // Vertex ID or Tet ID
@@ -53,18 +86,13 @@ struct DebugFrameStats {
     float trigger_val_1 = 0.0f;     // 通用槽位，存 J, vol 或 dx
 
     void reset(const size_t fid) {
+        *this = DebugFrameStats{}; //通过重置整个结构体清零时间
         frame_id = fid;
         minJ = std::numeric_limits<float>::infinity();
         minSignedVol = std::numeric_limits<float>::infinity();
         maxPenetration = -std::numeric_limits<float>::infinity();
-        maxDx = 0.0f;
-
-        trigger_reason = DebugErrorType::None;
-        trigger_element_id = -1;
-        trigger_msg.clear();
     }
 };
-
 
 class SolverDebugger {
 public:
@@ -135,6 +163,16 @@ public:
 
     bool is_frozen() const { return state_ == RunState::Frozen; }
     const DebugFrameStats& get_current_stats() const { return current_frame_; }
+
+    // ---- Timer -----
+    ScopeTimer timer_frame() { return ScopeTimer(&current_frame_.time_total_physical_frame); }
+    ScopeTimer timer_substep() { return ScopeTimer(&current_frame_.time_single_substep); }
+    ScopeTimer timer_iteration() { return ScopeTimer(&current_frame_.time_single_iteration); }
+    ScopeTimer timer_linear_solve() { return ScopeTimer(&current_frame_.time_linear_solve); }
+    ScopeTimer timer_gradient() { return ScopeTimer(&current_frame_.time_gradient_update); }
+
+    // 通用接口，如果你想计时一些临时变量
+    ScopeTimer timer_custom(TimerStat* target_ptr) { return ScopeTimer(target_ptr); }
 
     // --- Solver 内部检测函数 (支持多线程调用) ---
 
