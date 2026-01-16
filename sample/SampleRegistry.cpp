@@ -11,12 +11,12 @@
 void RegisterAllSamples(SampleRegistry& reg) {
 
     // Empty Scene
-    reg.Register(SampleId::EMPTY_SCENE, "Dummy Sample",
+    reg.Register(SampleId::EMPTY_SCENE, "Empty Scene",
         []() -> SamplePtr { return std::make_unique<Sample>(); });
 
-    reg.Register(SampleId::BASIC_CLOTH_EXAMPLE, "Basic Cloth Example",
-        []()->SamplePtr { return std::make_unique<BasicCloth>();});
+    reg.Register(SampleId::HANGING_CLOTH, "Hanging Cloth",
+        []()->SamplePtr { return std::make_unique<HangingCloth>();});
 
-    reg.Register(SampleId::BUNNY, "Falling Bunny",
+    reg.Register(SampleId::FALLING_BUNNY, "Falling Bunny",
     []()->SamplePtr { return std::make_unique<FallingBunny>();});
 }

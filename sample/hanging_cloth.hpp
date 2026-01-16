@@ -13,11 +13,11 @@
 #include "Scene.h"
 #include "VBDSolver.h"
 
-class BasicCloth final : public Sample {
+class HangingCloth final : public Sample {
 
 public:
 
-    BasicCloth() {
+    HangingCloth() {
         max_ticks_per_frame_ = 8;
         substeps_ = 4;
     }

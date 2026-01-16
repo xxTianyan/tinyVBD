@@ -11,7 +11,7 @@ int main(){
     constexpr Application::Desc Desc;
     Application app(Desc);
     RegisterAllSamples(app.Registry());
-    app.Run(SampleId::BASIC_CLOTH_EXAMPLE);
+    app.Run(SampleId::HANGING_CLOTH);
 
     return 0;
 }
