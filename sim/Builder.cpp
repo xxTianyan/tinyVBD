@@ -575,10 +575,20 @@ void Builder::AddMeshInfo(const char* name, const size_t n_particle, const size_
 
     MeshInfo info{};
     info.name = name;
-    info.particle = range{model_.particle_pos0.size() - n_particle, n_particle};
-    info.edge = range{model_.edges.size() - n_edge, n_edge};
-    info.tri = range{model_.tris.size() - n_tri, n_tri};
-    info.tet = range{model_.tets.size() - n_tet, n_tet};
+
+    if (model_.mesh_infos.empty()) {
+        info.particle = range{0, n_particle};
+        info.edge = range{0, n_edge};
+        info.tri = range{0, n_tri};
+        info.tet = range{0, n_tet};
+    }
+    else {
+        const auto& last_mesh = model_.mesh_infos.back();
+        info.particle = range{last_mesh.particle.end(), n_particle};
+        info.edge = range{last_mesh.edge.end(), n_edge};
+        info.tri = range{last_mesh.tri.end(), n_tri};
+        info.tet = range{last_mesh.tet.end(), n_tet};
+    }
 
     model_.mesh_infos.emplace_back(info);
 }
