@@ -534,7 +534,7 @@ size_t Builder::add_sphere(const float radius,
     for (int j = 0; j < res; ++j) for (int i = 0; i < res; ++i)
         add_quad_as_tris(get_idx(i+1, j, res), get_idx(i+1, j+1, res), get_idx(i, j+1, res), get_idx(i, j, res));
 
-    const auto num_render_tri = model_.tris.size() - (model_.mesh_infos.empty() ? 0 : model_.mesh_infos.back().render_tri.end());
+    const auto num_render_tri = model_.render_tris.size() - (model_.mesh_infos.empty() ? 0 : model_.mesh_infos.back().render_tri.end());
     AddMeshInfo(name, num_particles, 0, 0, num_render_tri, num_tets);
 
     // 5. Finalize Mass

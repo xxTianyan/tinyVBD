@@ -2,8 +2,8 @@
 // Created by 徐天焱 on 2025/11/4.
 //
 
-#ifndef TAIYI_MESH_H
-#define TAIYI_MESH_H
+#ifndef TAIYI_MODEL_H
+#define TAIYI_MODEL_H
 
 #include <vector>
 #include <string>
@@ -293,4 +293,4 @@ struct MModel {
 
 
 
-#endif //TAIYI_MESH_H
+#endif //TAIYI_MODEL_H

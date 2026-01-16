@@ -50,13 +50,5 @@ private:
 
 void RegisterAllSamples(SampleRegistry& reg);
 
-/*static SamplePtr BuildDummySample() {
-    return std::make_unique<Sample>();
-}
-
-static void RegistryAllSamples(SampleRegistry& registry) {
-    registry.Register(SampleId::DUMMY_SAMPLE, "Dummy Sample", &BuildDummySample);
-}*/
-
 
 #endif //TAIYI_SAMPLEREGISTRY_H

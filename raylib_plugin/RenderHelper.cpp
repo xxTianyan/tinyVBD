@@ -73,6 +73,7 @@ void RenderHelper::Rebuild() {
 
         // important
         if (particle_count == 0 || tri_count == 0) {
+            throw std::runtime_error("RenderHelper::Rebuild: particle_count or tri_count is 0");
             rm.valid = false;
             meshes_.push_back(rm);
             continue;

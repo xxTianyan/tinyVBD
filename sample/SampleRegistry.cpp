@@ -7,6 +7,7 @@
 #include "Sample.h"
 #include "hanging_cloth.hpp"
 #include "falling_bunny.hpp"
+#include "rubber_ball.hpp"
 
 void RegisterAllSamples(SampleRegistry& reg) {
 
@@ -19,4 +20,7 @@ void RegisterAllSamples(SampleRegistry& reg) {
 
     reg.Register(SampleId::FALLING_BUNNY, "Falling Bunny",
     []()->SamplePtr { return std::make_unique<FallingBunny>();});
+
+    reg.Register(SampleId::RUBBER_BALL, "Rubber Ball",
+        []()->SamplePtr {return std::make_unique<RubberBall>();});
 }
